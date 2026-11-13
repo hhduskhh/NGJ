@@ -76,13 +76,32 @@ Shader "Echoes/DungeonDarkness"
                 return false;
             }
 
+            bool WallFaceVisible(float2 origin, int2 cell, int2 normal)
+            {
+                if (!IsWalkable(cell + normal)) return false;
+                return HasLineOfSight(origin, float2(cell) + float2(normal) * .501);
+            }
+
+            bool SurfaceVisible(float2 origin, float2 worldPosition)
+            {
+                int2 cell = int2(floor(worldPosition + .5));
+                if (!InBounds(cell)) return false;
+                if (IsWalkable(cell)) return HasLineOfSight(origin, worldPosition);
+                // Resolve the whole wall tile from its exposed faces. Fragment rays can
+                // hit an adjacent wall tile and cut triangular gaps into a flat wall.
+                if (WallFaceVisible(origin, cell, int2(1, 0))) return true;
+                if (WallFaceVisible(origin, cell, int2(-1, 0))) return true;
+                if (WallFaceVisible(origin, cell, int2(0, 1))) return true;
+                return WallFaceVisible(origin, cell, int2(0, -1));
+            }
+
             float InCircle(float2 worldPosition, float4 circle, float alreadyVisible)
             {
                 float distanceFromCenter = length(worldPosition - circle.xy);
                 float coverage = 1 - smoothstep(circle.z, circle.z + circle.w, distanceFromCenter);
                 // Avoid grid walks for circles that cannot brighten this pixel.
                 [branch] if (coverage <= alreadyVisible) return 0;
-                return HasLineOfSight(circle.xy, worldPosition) ? coverage : 0;
+                return SurfaceVisible(circle.xy, worldPosition) ? coverage : 0;
             }
 
             half4 Frag(Varyings input) : SV_Target

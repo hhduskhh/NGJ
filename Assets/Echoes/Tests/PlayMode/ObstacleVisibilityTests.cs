@@ -105,6 +105,71 @@ namespace Echoes.Tests
         }
 
         [UnityTest]
+        public IEnumerator FacingWallTilesHaveNoTriangularDarkGaps()
+        {
+            Vector2 source = new Vector2(8, 6);
+            yield return LoadFloor(source);
+            run.Visibility.Reveal(source, 14);
+            yield return new WaitForSeconds(run.Config.visionExpandDuration + .02f);
+            run.Visibility.RefreshMask();
+
+            // A white backing makes dark cuts inside wall tiles measurable without depending on art.
+            var sprite = Sprite.Create(Texture2D.whiteTexture, new Rect(0, 0, 1, 1), Vector2.one * .5f, 1);
+            var backing = new GameObject("WallSurfaceProbe").AddComponent<SpriteRenderer>();
+            backing.sprite = sprite;
+            backing.sharedMaterial = PixelArt.LineMaterial;
+            backing.sortingOrder = 39;
+            backing.transform.position = source;
+            backing.transform.localScale = new Vector3(24, 20, 1);
+            var camera = new GameObject("WallSurfaceTestCamera").AddComponent<Camera>();
+            camera.transform.position = new Vector3(8, 6, -10);
+            camera.orthographic = true;
+            camera.orthographicSize = 9;
+            var target = new RenderTexture(800, 600, 24);
+            var image = new Texture2D(800, 600, TextureFormat.RGB24, false);
+            var previousActive = RenderTexture.active;
+            try
+            {
+                camera.targetTexture = target;
+                camera.Render();
+                RenderTexture.active = target;
+                image.ReadPixels(new Rect(0, 0, 800, 600), 0, 0);
+                image.Apply();
+                Directory.CreateDirectory("TestResults");
+                File.WriteAllBytes("TestResults/11-wall-surface-probes.png", image.EncodeToPNG());
+                float Brightness(Vector2 point)
+                {
+                    Vector3 pixel = camera.WorldToScreenPoint(point);
+                    return image.GetPixel(Mathf.RoundToInt(pixel.x), Mathf.RoundToInt(pixel.y)).maxColorComponent;
+                }
+                for (int x = 1; x <= 15; x++)
+                    foreach (float offsetX in new[] { -.35f, .35f })
+                        foreach (float offsetY in new[] { -.35f, .35f })
+                        {
+                            Vector2 point = new Vector2(x + offsetX, offsetY);
+                            Assert.Greater(Brightness(point), .95f, "Bottom wall surface " + point);
+                        }
+                for (int y = 1; y <= 11; y++)
+                    foreach (float offsetX in new[] { -.35f, .35f })
+                        foreach (float offsetY in new[] { -.35f, .35f })
+                        {
+                            Vector2 point = new Vector2(offsetX, y + offsetY);
+                            Assert.Greater(Brightness(point), .95f, "Left wall surface " + point);
+                        }
+                Assert.Less(Brightness(new Vector2(5, -1)), .01f, "Space beyond the wall stays dark");
+                Assert.Less(Brightness(new Vector2(-1, 5)), .01f, "Space beyond the wall stays dark");
+                Assert.Less(Brightness(new Vector2(20, 2)), .01f, "The neighboring floor behind a wall stays dark");
+            }
+            finally
+            {
+                RenderTexture.active = previousActive;
+                camera.targetTexture = null;
+                Object.Destroy(camera.gameObject); Object.Destroy(backing.gameObject);
+                Object.Destroy(target); Object.Destroy(image); Object.Destroy(sprite);
+            }
+        }
+
+        [UnityTest]
         public IEnumerator SeparateSourcesRevealTheirOwnSideWhileSoundCrossesWalls()
         {
             Vector2 source = new Vector2(16, 3);
