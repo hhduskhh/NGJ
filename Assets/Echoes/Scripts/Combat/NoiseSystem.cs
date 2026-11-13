@@ -3,13 +3,13 @@ using UnityEngine;
 
 namespace Echoes
 {
-    public enum NoiseKind { Gunshot, Decoy }
+    public enum NoiseKind { Gunshot, Decoy, Footstep }
 
     public sealed class NoiseSystem : MonoBehaviour
     {
         private RunController run;
         private AudioSource audioSource;
-        private AudioClip shot, bell;
+        private AudioClip shot, bell, footstep;
         public void Initialize(RunController controller)
         {
             run = controller;
@@ -17,6 +17,7 @@ namespace Echoes
             audioSource.volume = .12f;
             shot = Tone("ShotPlaceholder", 100, .06f);
             bell = Tone("BellPlaceholder", 640, .2f);
+            footstep = Tone("FootstepPlaceholder", 75, .045f);
         }
         private static AudioClip Tone(string name, float frequency, float duration)
         {
@@ -35,6 +36,7 @@ namespace Echoes
             go.transform.position = origin;
             go.AddComponent<NoiseWave>().Initialize(run, radius);
             if (kind == NoiseKind.Decoy) audioSource.PlayOneShot(bell);
+            else if (kind == NoiseKind.Footstep) audioSource.PlayOneShot(footstep, .4f);
         }
     }
 

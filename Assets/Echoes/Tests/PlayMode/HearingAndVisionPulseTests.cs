@@ -52,7 +52,7 @@ namespace Echoes.Tests
             var run = Object.FindObjectOfType<RunController>();
             var enemy = run.Enemies[0];
             Vector2 player = run.Player.transform.position;
-            enemy.GetComponent<Rigidbody2D>().position = player + Vector2.right * 6;
+            enemy.GetComponent<Rigidbody2D>().position = player + Vector2.right * (run.Config.WalkingDetectionRadius + 1);
             yield return new WaitForSeconds(.04f);
             Vector2 source = new Vector2(15, 10);
             enemy.Hear(source);
@@ -85,8 +85,16 @@ namespace Echoes.Tests
             var body = run.Player.GetComponent<Rigidbody2D>();
             Assert.AreEqual(0, run.Visibility.Pulses.Count);
             Vector2 player = run.Player.transform.position;
+            Assert.AreEqual(3, run.Config.gradientVisionRange, "The initial gradient width is doubled from 1.5");
             Assert.AreEqual(.5f, run.Visibility.VisibilityAt(player + Vector2.up * (run.Config.gradientVisionRange / 2)), .01f);
             Assert.IsFalse(run.Visibility.IsVisible(player + Vector2.up * (run.Config.gradientVisionRange + .1f)));
+            var nearby = run.Enemies[0];
+            var gradientOnly = run.Enemies[1];
+            nearby.GetComponent<Rigidbody2D>().position = player + Vector2.up * 2;
+            gradientOnly.GetComponent<Rigidbody2D>().position = player + Vector2.up * (run.Config.playerVisionRadius + 1.25f);
+            yield return new WaitForSeconds(.04f);
+            Assert.IsFalse(nearby.Awake, "Remaining still must not emit footsteps");
+            AudioListener.volume = 0; // Muting sound must not disable gameplay hearing.
             Directory.CreateDirectory("TestResults");
             RuntimeSmokeTests.Capture("TestResults/07-stationary-gradient.png");
             int initialSteps = Mathf.CeilToInt(run.Config.walkFirstPulseDelay / Time.fixedDeltaTime);
@@ -95,6 +103,7 @@ namespace Echoes.Tests
                 body.position += Vector2.right * .05f;
                 yield return new WaitForFixedUpdate();
                 Assert.AreEqual(0, run.Visibility.Pulses.Count, "No pulse before the initial walking delay");
+                Assert.IsFalse(nearby.Awake, "No footstep can arrive before the first walking pulse");
             }
             body.position += Vector2.right * .05f;
             yield return new WaitForFixedUpdate();
@@ -112,7 +121,11 @@ namespace Echoes.Tests
             Assert.Greater(Vector2.Distance(first.Origin, run.Visibility.Pulses[1].Origin), 1);
             Assert.AreEqual(run.Config.walkPulseInterval,
                 run.Visibility.Pulses[1].StartedAt - first.StartedAt, Time.fixedDeltaTime * 2);
-            foreach (var enemy in run.Enemies) Assert.IsFalse(enemy.Awake, "Walking vision does not emit awakening noise");
+            Assert.IsTrue(nearby.Awake, "Actual walking must emit a sound wave that wakes a nearby enemy");
+            Assert.IsTrue(run.Visibility.IsVisible(gradientOnly.transform.position));
+            Assert.IsFalse(gradientOnly.Awake, "The gradient provides vision without extending footstep hearing");
+            for (int i = 1; i < run.Enemies.Count; i++) Assert.IsFalse(run.Enemies[i].Awake);
+            nearby.TakeDamage(99999); // Prevent contact pushes from affecting the stopping/cadence check.
             yield return null;
             RuntimeSmokeTests.Capture("TestResults/08-walking-pulses.png");
             yield return new WaitForSeconds(run.Config.VisionPulseDuration + .1f);

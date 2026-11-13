@@ -61,7 +61,7 @@ namespace Echoes
             }
             walkingTime += deltaTime;
             if (walkingTime + .00001f < nextWalkPulse) return;
-            Reveal(position, run.Config.playerVisionRadius);
+            run.Noise.Emit(position, run.Config.playerVisionRadius, NoiseKind.Footstep);
             nextWalkPulse += run.Config.walkPulseInterval;
         }
 

@@ -24,6 +24,10 @@ Unity 2D 俯视角像素风肉鸽射击原型。以可视声波惊醒有限敌�
 
 ## 审查与调参
 
+初始渐变宽度为 3。脚步会在每次步行圈生成时发出实际声音，惊醒步行主圈内的敌人；渐变带只提供视野。修改与验证记录见 `Docs/019`、`Docs/020`。
+
+初始渐变宽度为 3。脚步会在每次步行圈生成时发出实际声音，惊醒步行主圈内的敌人；渐变带只提供视野。修改与验证记录见 `Docs/019`、`Docs/020`。
+
 - `Assets/Echoes/Settings/DefaultGameConfig.asset`：集中配置战斗和成长数值。
 - `Assets/Echoes/Scripts/Core/`：整局流程、纯规则、升级定义。
 - `Assets/Echoes/Scripts/Combat/`：玩家、敌人状态、子弹、声波、诱饵。

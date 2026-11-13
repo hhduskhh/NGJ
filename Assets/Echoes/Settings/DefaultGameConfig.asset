@@ -18,7 +18,7 @@ MonoBehaviour:
   shotInterval: 0.28
   bulletSpeed: 22
   playerVisionRadius: 3
-  gradientVisionRange: 1.5
+  gradientVisionRange: 3
   walkFirstPulseDelay: 0.2
   walkPulseInterval: 0.5
   visionExpandDuration: 0.35

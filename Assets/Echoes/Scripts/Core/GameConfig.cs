@@ -14,7 +14,7 @@ namespace Echoes
         [Header("Visibility")]
         [Tooltip("Walking pulse main radius. The stationary main radius is always zero.")]
         [Min(1)] public float playerVisionRadius = 3;
-        [Min(.1f)] public float gradientVisionRange = 1.5f;
+        [Min(.1f)] public float gradientVisionRange = 3;
         [Min(.01f)] public float walkFirstPulseDelay = .2f;
         [Min(.01f)] public float walkPulseInterval = .5f;
         [Min(.01f)] public float visionExpandDuration = .35f;
