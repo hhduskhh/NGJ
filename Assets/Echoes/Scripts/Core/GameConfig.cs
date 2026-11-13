@@ -57,7 +57,10 @@ namespace Echoes
         [Min(.5f)] public float shopInteractRadius = 2.5f;
         [Min(1)] public int shopRefreshCost = 4;
         [Min(0)] public int shopRefreshIncrease = 2;
-        public float[] shopTierWeights = { 60, 28, 10, 2 };
+        public float[] shopTierWeights = { 65, 25, 8, 2 };
+        [Min(1)] public int shopQualityLevelStep = 5;
+        [Tooltip("每档从品质0转移给品质1、2、3的权重；品质0耗尽后停止增长。")]
+        public Vector3 shopQualityGains = new Vector3(2, 2, 1);
         public int[] passivePrices = { 18, 36, 60, 90 };
         public WeaponDefinition[] weapons = WeaponDefinition.Defaults();
         public PassiveDefinition[] passives = PassiveDefinition.Defaults();

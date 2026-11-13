@@ -9,6 +9,11 @@ namespace Echoes.Tests
     public sealed class ShopTests
     {
         private RunController run;
+        private sealed class QualitySample : System.Random
+        {
+            public override double NextDouble() => .63;
+            public override int Next(int maxValue) => 0;
+        }
         [UnitySetUp] public IEnumerator Load()
         {
             yield return SceneManager.LoadSceneAsync("Prototype"); yield return null;
@@ -52,6 +57,24 @@ namespace Echoes.Tests
             run.Shop.Close();
             yield return new WaitForSeconds(.1f);
             Assert.Greater(run.Elapsed, elapsed);
+        }
+        [UnityTest] public IEnumerator QualityChangesOnRefreshAfterFiveLevels()
+        {
+            typeof(ShopController).GetField("random", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
+                .SetValue(run.Shop, new QualitySample());
+            run.Shop.BeginFloor(run.Map.Rooms[0].Center);
+            Assert.AreEqual(4, run.Shop.Offers.Count);
+            foreach (var offer in run.Shop.Offers) Assert.AreEqual(0, offer.Tier);
+            var original = run.Shop.Offers[0];
+            typeof(RunController).GetProperty("Level").SetValue(run, 6);
+            Assert.IsTrue(run.Shop.Open());
+            Assert.AreSame(original, run.Shop.Offers[0], "Level increases do not silently replace stock");
+            run.Shop.Credit(100);
+            Assert.IsTrue(run.Shop.RefreshStock());
+            Assert.AreEqual(4, run.Shop.Offers.Count);
+            foreach (var offer in run.Shop.Offers) Assert.AreEqual(1, offer.Tier, "Weapons and passives use the level-6 distribution");
+            yield return null;
+            RuntimeSmokeTests.Capture("TestResults/23-shop-quality.png");
         }
         [UnityTest] public IEnumerator FullSlotsMergeSaleAndFloorReset()
         {

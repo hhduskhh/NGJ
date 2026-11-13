@@ -19,7 +19,9 @@ namespace Echoes
         private void DrawShop()
         {
             ShopLabel($"补 给 商 店     /     金币 {run.Shop.Gold}", 0, 20, 1300, 45, 32, PixelArt.Gold);
-            ShopLabel("购物时暂停 · 买走的商品不会自动补货 · 关闭再打开保留库存", 0, 68, 1300, 30, 18, muted);
+            var weights = run.Shop.QualityWeights;
+            float total = weights[0] + weights[1] + weights[2] + weights[3];
+            ShopLabel($"已暂停 · Lv.{run.Level} · 下次刷新品质：白 {weights[0] / total:P0} / 蓝 {weights[1] / total:P0} / 紫 {weights[2] / total:P0} / 红 {weights[3] / total:P0} · 关闭保留库存", 0, 68, 1300, 30, 18, muted);
             for (int i = 0; i < run.Shop.Offers.Count; i++)
             {
                 int index = i; var offer = run.Shop.Offers[i]; float x = (i - 1.5f) * 350;

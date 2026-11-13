@@ -17,6 +17,7 @@ namespace Echoes
         private readonly List<Offer> offers = new List<Offer>();
         public int Gold { get; private set; }
         public int Refreshes { get; private set; }
+        public float[] QualityWeights => ShopQualityRules.Weights(run.Config, run.Level);
         public Vector2 Position { get; private set; }
         public int RefreshPrice => run.Config.shopRefreshCost + Refreshes * run.Config.shopRefreshIncrease;
         public bool InRange => Vector2.Distance(run.Player.transform.position, Position) <= run.Config.shopInteractRadius &&
@@ -94,25 +95,25 @@ namespace Echoes
             if (other < 0 || !run.Player.Weapons.Merge(slot, other)) return false;
             run.Hud.RefreshModal(); return true;
         }
-        private int RollTier()
-        {
-            var weights = run.Config.shopTierWeights;
-            float total = 0; foreach (float weight in weights) total += Mathf.Max(0, weight);
-            double value = random.NextDouble() * total;
-            for (int i = 0; i < 4; i++) { value -= Mathf.Max(0, weights[i]); if (value < 0) return i; }
-            return 0;
-        }
         private void Roll()
         {
             offers.Clear();
-            for (int i = 0; i < 2; i++) offers.Add(new Offer { Weapon = random.Next(run.Config.weapons.Length), Tier = RollTier() });
+            var weights = QualityWeights;
+            for (int i = 0; i < 2; i++)
+            {
+                int weapon = random.Next(run.Config.weapons.Length);
+                int tier = ShopQualityRules.Select(weights, random.NextDouble());
+                if (tier >= 0) offers.Add(new Offer { Weapon = weapon, Tier = tier });
+            }
             var pool = new List<PassiveDefinition>();
             foreach (var item in run.Config.passives) if (run.Player.Passives.CanAdd(item)) pool.Add(item);
             for (int i = 0; i < 2 && pool.Count > 0; i++)
             {
-                int tier = RollTier();
+                var eligible = new bool[4];
+                foreach (var candidate in pool) eligible[candidate.tier] = true;
+                int tier = ShopQualityRules.Select(weights, random.NextDouble(), eligible);
+                if (tier < 0) break;
                 var matching = pool.FindAll(p => p.tier == tier);
-                if (matching.Count == 0) matching = pool;
                 var item = matching[random.Next(matching.Count)];
                 offers.Add(new Offer { Item = item, Tier = item.tier }); pool.Remove(item);
             }
