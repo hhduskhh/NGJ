@@ -1,0 +1,5 @@
+{
+  "name": "Echoes.Runtime",
+  "rootNamespace": "Echoes",
+  "references": ["Unity.TextMeshPro", "Unity.ugui", "Unity.RenderPipelines.Universal.Runtime", "Unity.RenderPipelines.Core.Runtime"]
+}

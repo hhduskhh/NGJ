@@ -1,0 +1,6 @@
+{
+  "name": "Echoes.Tests",
+  "references": ["Echoes.Runtime", "Echoes.Editor"],
+  "includePlatforms": ["Editor"],
+  "optionalUnityReferences": ["TestAssemblies"]
+}

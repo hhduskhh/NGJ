@@ -1,0 +1,5 @@
+{
+  "name": "Echoes.Editor",
+  "references": ["Echoes.Runtime", "Unity.TextMeshPro", "Unity.RenderPipelines.Universal.Runtime", "Unity.RenderPipelines.Core.Runtime"],
+  "includePlatforms": ["Editor"]
+}
