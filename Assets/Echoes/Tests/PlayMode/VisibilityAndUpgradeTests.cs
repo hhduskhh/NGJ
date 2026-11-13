@@ -30,7 +30,8 @@ namespace Echoes.Tests
             target.GetComponent<Rigidbody2D>().position = player + Vector2.right * 2;
             farther.GetComponent<Rigidbody2D>().position = player + Vector2.up * 2.5f;
             Physics2D.SyncTransforms();
-            yield return new WaitForSeconds(.04f);
+            run.Visibility.Reveal(player, run.Config.playerVisionRadius);
+            yield return new WaitForSeconds(run.Config.visionExpandDuration);
             Assert.IsTrue(run.Player.TryFire(player + Vector2.left * 5));
             Assert.AreEqual(target, run.Player.AimTarget);
             Assert.Greater(Vector2.Dot(Vector2.right, run.Player.AimDirection), .99f);
@@ -72,17 +73,17 @@ namespace Echoes.Tests
             Assert.AreEqual(target, run.Player.AimTarget, "A sonar-revealed enemy can be auto-targeted");
             // Use a separate, empty region to avoid subsequent gunshots extending its visibility.
             Vector2 probe = player + Vector2.up * 6;
-            float duration = 20 / run.Config.waveSpeed + run.Config.echoRevealDuration;
+            float duration = run.Config.VisionPulseDuration;
             yield return new WaitForSeconds(duration + .15f);
             Assert.IsFalse(run.Visibility.IsVisible(probe));
             run.Noise.Emit(player, 7, NoiseKind.Decoy);
             Assert.IsFalse(run.Visibility.IsVisible(probe), "The wave must arrive before revealing the floor");
-            yield return new WaitForSeconds(7 / run.Config.waveSpeed + .05f);
+            yield return new WaitForSeconds(run.Config.visionExpandDuration + .05f);
             Assert.IsTrue(run.Visibility.IsVisible(probe));
             run.Visibility.RefreshMask();
             Directory.CreateDirectory("TestResults");
             RuntimeSmokeTests.Capture("TestResults/04-sonar-visibility.png");
-            yield return new WaitForSeconds(run.Config.echoRevealDuration + .1f);
+            yield return new WaitForSeconds(run.Config.visionHoldDuration + run.Config.visionShrinkDuration + .1f);
             Assert.IsFalse(run.Visibility.IsVisible(probe));
             RuntimeSmokeTests.Capture("TestResults/05-darkness.png");
             var screenshot = new Texture2D(2, 2);

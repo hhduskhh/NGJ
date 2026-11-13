@@ -30,10 +30,10 @@ namespace Echoes
         public void PlayShot() => audioSource.PlayOneShot(shot);
         public void Emit(Vector2 origin, float radius, NoiseKind kind)
         {
-            run.Visibility.Reveal(origin, radius);
+            run.Visibility.Reveal(origin, radius, kind == NoiseKind.Gunshot ? PixelArt.Gold : PixelArt.Cyan);
             var go = new GameObject(kind + "SoundWave");
             go.transform.position = origin;
-            go.AddComponent<NoiseWave>().Initialize(run, radius, kind);
+            go.AddComponent<NoiseWave>().Initialize(run, radius);
             if (kind == NoiseKind.Decoy) audioSource.PlayOneShot(bell);
         }
     }
@@ -42,33 +42,24 @@ namespace Echoes
     {
         private RunController run;
         private float maxRadius, radius, age;
-        private Color color;
-        private LineRenderer wave, boundary;
         private readonly HashSet<EnemyController> heard = new HashSet<EnemyController>();
 
-        public void Initialize(RunController controller, float range, NoiseKind kind)
+        public void Initialize(RunController controller, float range)
         {
             run = controller; maxRadius = range;
-            color = kind == NoiseKind.Gunshot ? PixelArt.Gold : PixelArt.Cyan;
-            wave = PixelArt.Circle("ExpandingFront", transform, color);
-            boundary = PixelArt.Circle("ActualMaximumRange", transform, color * new Color(1, 1, 1, .18f), .025f);
-            wave.sortingOrder = boundary.sortingOrder = 50;
-            PixelArt.SetRadius(boundary, range);
-            PixelArt.SetRadius(wave, 0);
         }
         private void Update()
         {
             if (run.State != RunState.Playing) return;
             age += Time.deltaTime;
-            radius = Mathf.Min(maxRadius, age * run.Config.waveSpeed);
-            PixelArt.SetRadius(wave, radius);
+            // Match the visible pulse during expansion; its gradient does not wake enemies.
+            radius = VisionPulse.EvaluateRadius(Mathf.Min(age, run.Config.visionExpandDuration),
+                maxRadius, run.Config.visionExpandDuration, run.Config.visionHoldDuration, run.Config.visionShrinkDuration);
             foreach (var enemy in run.Enemies)
                 if (enemy && enemy.Alive && !heard.Contains(enemy) &&
                     Vector2.Distance(enemy.transform.position, transform.position) <= radius)
                 { heard.Add(enemy); enemy.Hear(transform.position); }
-            float duration = maxRadius / run.Config.waveSpeed + .16f;
-            var fading = color; fading.a = Mathf.Clamp01((duration - age) / .2f) * .55f;
-            wave.startColor = wave.endColor = fading;
+            float duration = run.Config.visionExpandDuration + .16f;
             if (age >= duration) Destroy(gameObject);
         }
     }

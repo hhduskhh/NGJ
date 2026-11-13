@@ -65,7 +65,7 @@ namespace Echoes.Tests
             Assert.Less(Vector2.Distance(enemy.InvestigationTarget, run.Map.NearestFloor(source)), .01f);
             Assert.Greater(run.Map.FindPath(enemy.transform.position, source).Count, 10);
             enemy.TakeDamage(1);
-            Assert.AreEqual(EnemyState.Chasing, enemy.State);
+            Assert.AreEqual(EnemyState.Investigating, enemy.State, "A distant hit reveals a source, not a live player target");
             Assert.AreEqual(run.Config.enemyHealth - 1, enemy.Health);
             var before = run.Boss.Health;
             run.Boss.TakeDamage(99999);

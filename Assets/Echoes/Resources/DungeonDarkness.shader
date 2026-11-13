@@ -36,8 +36,8 @@ Shader "Echoes/DungeonDarkness"
 
             float InCircle(float2 worldPosition, float4 circle)
             {
-                float2 offset = worldPosition - circle.xy;
-                return step(dot(offset, offset), circle.z * circle.z);
+                float distanceFromCenter = length(worldPosition - circle.xy);
+                return 1 - smoothstep(circle.z, circle.z + circle.w, distanceFromCenter);
             }
 
             half4 Frag(Varyings input) : SV_Target

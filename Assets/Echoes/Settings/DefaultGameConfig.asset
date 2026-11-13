@@ -18,9 +18,14 @@ MonoBehaviour:
   shotInterval: 0.28
   bulletSpeed: 22
   playerVisionRadius: 3
-  echoRevealDuration: 1.5
+  gradientVisionRange: 1.5
+  walkFirstPulseDelay: 0.2
+  walkPulseInterval: 0.5
+  visionExpandDuration: 0.35
+  visionHoldDuration: 0.5
+  visionShrinkDuration: 0.4
+  visionRingAlpha: 0.06
   gunNoiseRadius: 6
-  waveSpeed: 22
   pressureRadius: 5
   bonusPerEnemy: 0.08
   bonusEnemyCap: 8
@@ -28,7 +33,6 @@ MonoBehaviour:
   enemyHealth: 32
   enemySpeed: 1.7
   enemyDamage: 9
-  sightRange: 6
   enemyAttackInterval: 1
   playerInvulnerability: 0.65
   experiencePerKill: 1

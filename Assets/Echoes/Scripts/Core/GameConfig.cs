@@ -12,11 +12,19 @@ namespace Echoes
         [Min(.05f)] public float shotInterval = .28f;
         [Min(1)] public float bulletSpeed = 22;
         [Header("Visibility")]
+        [Tooltip("Walking pulse main radius. The stationary main radius is always zero.")]
         [Min(1)] public float playerVisionRadius = 3;
-        [Min(.1f)] public float echoRevealDuration = 1.5f;
+        [Min(.1f)] public float gradientVisionRange = 1.5f;
+        [Min(.01f)] public float walkFirstPulseDelay = .2f;
+        [Min(.01f)] public float walkPulseInterval = .5f;
+        [Min(.01f)] public float visionExpandDuration = .35f;
+        [Min(0)] public float visionHoldDuration = .5f;
+        [Min(.01f)] public float visionShrinkDuration = .4f;
+        [Range(0, .2f)] public float visionRingAlpha = .06f;
+        public float VisionPulseDuration => visionExpandDuration + visionHoldDuration + visionShrinkDuration;
+        public float WalkingDetectionRadius => playerVisionRadius + gradientVisionRange;
         [Header("Sound — ignores walls in this prototype")]
         [Min(1)] public float gunNoiseRadius = 6;
-        [Min(1)] public float waveSpeed = 22;
         [Min(1)] public float pressureRadius = 5;
         [Min(0)] public float bonusPerEnemy = .08f;
         [Min(1)] public int bonusEnemyCap = 8;
@@ -25,7 +33,6 @@ namespace Echoes
         [Min(1)] public float enemyHealth = 32;
         [Min(.1f)] public float enemySpeed = 1.7f;
         [Min(1)] public float enemyDamage = 9;
-        [Min(1)] public float sightRange = 6;
         [Min(.1f)] public float enemyAttackInterval = 1;
         [Min(.1f)] public float playerInvulnerability = .65f;
         [Header("Progression")]

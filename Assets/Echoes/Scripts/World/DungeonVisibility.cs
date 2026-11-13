@@ -7,18 +7,15 @@ namespace Echoes
     public sealed class DungeonVisibility : MonoBehaviour
     {
         private const int MaxEchoes = 32;
-        private struct Echo
-        {
-            public Vector2 Origin;
-            public float Range, StartedAt;
-        }
-
         private RunController run;
         private Camera viewCamera;
         private Material darkness;
         private Transform cover;
-        private readonly List<Echo> echoes = new List<Echo>();
+        private readonly List<VisionPulse> echoes = new List<VisionPulse>();
         private readonly Vector4[] shaderEchoes = new Vector4[MaxEchoes];
+        private Vector2 lastWalkPosition;
+        private float walkingTime, nextWalkPulse;
+        public IReadOnlyList<VisionPulse> Pulses => echoes;
 
         public void Initialize(RunController controller)
         {
@@ -28,35 +25,66 @@ namespace Echoes
             var renderer = PixelArt.Create("UnseenDungeon", "solid", Vector2.zero, 40, transform);
             renderer.sharedMaterial = darkness;
             cover = renderer.transform;
+            lastWalkPosition = run.Player.GetComponent<Rigidbody2D>().position;
+            nextWalkPulse = run.Config.walkFirstPulseDelay;
             RefreshMask();
         }
 
-        public void Reveal(Vector2 origin, float range)
+        public void Reveal(Vector2 origin, float range, Color? tint = null)
         {
             RemoveExpiredEchoes();
-            if (echoes.Count == MaxEchoes) echoes.RemoveAt(0);
-            echoes.Add(new Echo { Origin = origin, Range = range, StartedAt = Time.time });
+            if (echoes.Count == MaxEchoes) RemoveEcho(0);
+            var pulse = new VisionPulse(origin, range, Time.time);
+            Color color = tint ?? PixelArt.Cyan;
+            color.a = run.Config.visionRingAlpha;
+            pulse.Outline = PixelArt.Circle("VisionPulse", transform, color, .02f);
+            pulse.Outline.transform.position = origin;
+            pulse.Outline.sortingOrder = 50;
+            PixelArt.SetRadius(pulse.Outline, 0);
+            echoes.Add(pulse);
         }
 
-        public bool IsVisible(Vector2 position)
+        // Called at the physics cadence: holding a movement key against a wall is not walking.
+        public void UpdateWalking(Vector2 position, float deltaTime)
         {
-            if (((Vector2)run.Player.transform.position - position).sqrMagnitude <=
-                run.Config.playerVisionRadius * run.Config.playerVisionRadius) return true;
-            foreach (var echo in echoes)
-                if (!Expired(echo) && (echo.Origin - position).sqrMagnitude <= Radius(echo) * Radius(echo)) return true;
-            return false;
+            bool moved = (position - lastWalkPosition).sqrMagnitude > .000001f;
+            lastWalkPosition = position;
+            if (run.State != RunState.Playing) return;
+            if (!moved)
+            {
+                walkingTime = 0;
+                nextWalkPulse = run.Config.walkFirstPulseDelay;
+                return;
+            }
+            walkingTime += deltaTime;
+            if (walkingTime + .00001f < nextWalkPulse) return;
+            Reveal(position, run.Config.playerVisionRadius);
+            nextWalkPulse += run.Config.walkPulseInterval;
         }
 
-        private float Radius(Echo echo) => Mathf.Min(echo.Range,
-            Mathf.Max(0, Time.time - echo.StartedAt) * run.Config.waveSpeed);
+        public bool IsVisible(Vector2 position) => VisibilityAt(position) > .001f;
 
-        private bool Expired(Echo echo) => Time.time - echo.StartedAt >
-            echo.Range / run.Config.waveSpeed + run.Config.echoRevealDuration;
+        public float VisibilityAt(Vector2 position)
+        {
+            float visible = VisionPulse.Coverage(position, run.Player.transform.position, 0, run.Config.gradientVisionRange);
+            foreach (var echo in echoes)
+                if (!Expired(echo)) visible = Mathf.Max(visible, VisionPulse.Coverage(position,
+                    echo.Origin, echo.RadiusAt(Time.time, run.Config), run.Config.gradientVisionRange));
+            return visible;
+        }
+
+        private bool Expired(VisionPulse echo) => Time.time - echo.StartedAt >= run.Config.VisionPulseDuration;
+
+        private void RemoveEcho(int index)
+        {
+            Destroy(echoes[index].Outline.gameObject);
+            echoes.RemoveAt(index);
+        }
 
         private void RemoveExpiredEchoes()
         {
             for (int i = echoes.Count - 1; i >= 0; i--)
-                if (Expired(echoes[i])) echoes.RemoveAt(i);
+                if (Expired(echoes[i])) RemoveEcho(i);
         }
 
         private void LateUpdate() => RefreshMask();
@@ -65,9 +93,14 @@ namespace Echoes
         {
             RemoveExpiredEchoes();
             Vector2 player = run.Player.transform.position;
-            darkness.SetVector("_PlayerVision", new Vector4(player.x, player.y, run.Config.playerVisionRadius, 0));
+            darkness.SetVector("_PlayerVision", new Vector4(player.x, player.y, 0, run.Config.gradientVisionRange));
             for (int i = 0; i < echoes.Count; i++)
-                shaderEchoes[i] = new Vector4(echoes[i].Origin.x, echoes[i].Origin.y, Radius(echoes[i]), 0);
+            {
+                var pulse = echoes[i];
+                float radius = pulse.RadiusAt(Time.time, run.Config);
+                shaderEchoes[i] = new Vector4(pulse.Origin.x, pulse.Origin.y, radius, run.Config.gradientVisionRange);
+                PixelArt.SetRadius(pulse.Outline, radius);
+            }
             darkness.SetVectorArray("_Echoes", shaderEchoes);
             darkness.SetInt("_EchoCount", echoes.Count);
             cover.position = new Vector3(viewCamera.transform.position.x, viewCamera.transform.position.y, 0);

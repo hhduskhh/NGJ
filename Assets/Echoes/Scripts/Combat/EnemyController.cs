@@ -51,7 +51,7 @@ namespace Echoes
         public void Hear(Vector2 source)
         {
             // Gatekeeper is a deliberate opt-in challenge, activated at its altar.
-            if (!Alive || IsBoss || State == EnemyState.Chasing) return;
+            if (!Alive || IsBoss || (State == EnemyState.Chasing && CanDetectPlayer())) return;
             State = EnemyState.Investigating;
             destination = run.Map.NearestFloor(source);
             repath = 0; RefreshVisual();
@@ -60,13 +60,15 @@ namespace Echoes
         public void ActivateBoss()
         { State = EnemyState.Chasing; lastSeen = run.Player.transform.position; RefreshVisual(); }
 
+        private bool CanDetectPlayer() => Vector2.Distance(transform.position, run.Player.transform.position) <=
+            run.Config.WalkingDetectionRadius && run.Map.HasLineOfSight(transform.position, run.Player.transform.position);
+
         private void Update()
         {
             if (run.State != RunState.Playing || !Alive || !Awake) { body.velocity = Vector2.zero; return; }
             float dt = Time.deltaTime;
             Vector2 player = run.Player.transform.position;
-            bool seesPlayer = Vector2.Distance(transform.position, player) <= run.Config.sightRange &&
-                run.Map.HasLineOfSight(transform.position, player);
+            bool seesPlayer = CanDetectPlayer();
             if (seesPlayer)
             { State = EnemyState.Chasing; lastSeen = player; lostSight = 0; }
             else if (State == EnemyState.Chasing)
@@ -138,11 +140,13 @@ namespace Echoes
             }
         }
 
-        public void TakeDamage(float amount)
+        public void TakeDamage(float amount, Vector2? attackOrigin = null)
         {
             if (!Alive || (IsBoss && !run.BossActivated)) return;
-            State = EnemyState.Chasing; lastSeen = run.Player.transform.position;
-            lostSight = 0; Health = Mathf.Max(0, Health - amount);
+            if (CanDetectPlayer())
+            { State = EnemyState.Chasing; lastSeen = run.Player.transform.position; lostSight = 0; }
+            else if (!IsBoss) Hear(attackOrigin ?? (Vector2)run.Player.transform.position);
+            Health = Mathf.Max(0, Health - amount);
             if (Health > 0) { RefreshVisual(); return; }
             State = EnemyState.Dead;
             body.velocity = Vector2.zero;

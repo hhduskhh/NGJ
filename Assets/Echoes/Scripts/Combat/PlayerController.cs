@@ -56,6 +56,7 @@ namespace Echoes
 
         private void FixedUpdate()
         {
+            run.Visibility.UpdateWalking(body.position, Time.fixedDeltaTime);
             body.velocity = run.State == RunState.Playing ? movement * run.Config.moveSpeed * MoveScale : Vector2.zero;
         }
 

@@ -73,7 +73,7 @@ namespace Echoes
             bossText.alignment = TextAlignmentOptions.Center;
             bossBar = Bar(canvas, new Vector2(0, -145), new Vector2(450, 8), PixelArt.Red, new Vector2(.5f, 1));
             bossBar.transform.parent.gameObject.SetActive(false);
-            Notify("近身视野以外一片黑暗 · 射击或投掷诱饵，以声波短暂探路", 8);
+            Notify("静止仅保留渐变视野 · 移动或射击生成视野圈", 8);
         }
 
         private void Update()

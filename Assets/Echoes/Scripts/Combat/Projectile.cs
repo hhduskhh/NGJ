@@ -6,6 +6,7 @@ namespace Echoes
     {
         private RunController run;
         private Vector2 direction;
+        private Vector2 origin;
         private float speed, damage, life;
         private bool hostile;
         private readonly RaycastHit2D[] hits = new RaycastHit2D[16];
@@ -18,6 +19,7 @@ namespace Echoes
             renderer.color = hostile ? PixelArt.Red : PixelArt.Gold;
             var projectile = renderer.gameObject.AddComponent<Projectile>();
             projectile.run = run; projectile.direction = direction.normalized;
+            projectile.origin = position;
             projectile.speed = speed; projectile.damage = damage; projectile.hostile = hostile;
             projectile.life = hostile ? 8 : 1.8f;
         }
@@ -42,7 +44,7 @@ namespace Echoes
             if (nearest)
             {
                 if (hostile) nearest.GetComponent<PlayerController>()?.TakeDamage(damage);
-                else nearest.GetComponent<EnemyController>()?.TakeDamage(damage);
+                else nearest.GetComponent<EnemyController>()?.TakeDamage(damage, origin);
                 Destroy(gameObject); return;
             }
             transform.position += (Vector3)(direction * distance);
