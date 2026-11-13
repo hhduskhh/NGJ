@@ -10,6 +10,7 @@ namespace Echoes
         private RunController run;
         private Camera viewCamera;
         private Material darkness;
+        private Texture2D walkableTexture;
         private Transform cover;
         private readonly List<VisionPulse> echoes = new List<VisionPulse>();
         private readonly Vector4[] shaderEchoes = new Vector4[MaxEchoes];
@@ -22,6 +23,7 @@ namespace Echoes
             run = controller;
             viewCamera = Camera.main;
             darkness = new Material(Resources.Load<Shader>("DungeonDarkness"));
+            CreateObstacleMask();
             var renderer = PixelArt.Create("UnseenDungeon", "solid", Vector2.zero, 40, transform);
             renderer.sharedMaterial = darkness;
             cover = renderer.transform;
@@ -39,7 +41,8 @@ namespace Echoes
             color.a = run.Config.visionRingAlpha;
             pulse.Outline = PixelArt.Circle("VisionPulse", transform, color, .02f);
             pulse.Outline.transform.position = origin;
-            pulse.Outline.sortingOrder = 50;
+            // Let the same darkness mask clip the ring behind walls.
+            pulse.Outline.sortingOrder = 35;
             PixelArt.SetRadius(pulse.Outline, 0);
             echoes.Add(pulse);
         }
@@ -66,11 +69,37 @@ namespace Echoes
 
         public float VisibilityAt(Vector2 position)
         {
-            float visible = VisionPulse.Coverage(position, run.Player.transform.position, 0, run.Config.gradientVisionRange);
+            float visible = CoverageFrom(position, run.Player.transform.position, 0);
             foreach (var echo in echoes)
-                if (!Expired(echo)) visible = Mathf.Max(visible, VisionPulse.Coverage(position,
-                    echo.Origin, echo.RadiusAt(Time.time, run.Config), run.Config.gradientVisionRange));
+            {
+                if (visible >= 1) break;
+                if (!Expired(echo)) visible = Mathf.Max(visible, CoverageFrom(position,
+                    echo.Origin, echo.RadiusAt(Time.time, run.Config)));
+            }
             return visible;
+        }
+
+        private float CoverageFrom(Vector2 position, Vector2 origin, float radius)
+        {
+            float coverage = VisionPulse.Coverage(position, origin, radius, run.Config.gradientVisionRange);
+            return coverage > 0 && run.Map.HasLineOfSight(origin, position, true) ? coverage : 0;
+        }
+
+        private void CreateObstacleMask()
+        {
+            // The floor is static. Upload its collision grid once, with one texel per cell.
+            walkableTexture = new Texture2D(DungeonMap.Width, DungeonMap.Height, TextureFormat.RGBA32, false, true)
+                { name = "VisionWalkableCells", filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp };
+            var pixels = new Color32[DungeonMap.Width * DungeonMap.Height];
+            for (int y = 0; y < DungeonMap.Height; y++)
+                for (int x = 0; x < DungeonMap.Width; x++)
+                    pixels[y * DungeonMap.Width + x] = new Color32(
+                        run.Map.IsWalkable(new Vector2Int(x, y)) ? (byte)255 : (byte)0, 0, 0, 255);
+            walkableTexture.SetPixels32(pixels);
+            walkableTexture.Apply(false, true);
+            darkness.SetTexture("_Walkable", walkableTexture);
+            darkness.SetVector("_MapSize", new Vector4(DungeonMap.Width, DungeonMap.Height,
+                1f / DungeonMap.Width, 1f / DungeonMap.Height));
         }
 
         private bool Expired(VisionPulse echo) => Time.time - echo.StartedAt >= run.Config.VisionPulseDuration;
@@ -113,6 +142,7 @@ namespace Echoes
         private void OnDestroy()
         {
             if (darkness) Destroy(darkness);
+            if (walkableTexture) Destroy(walkableTexture);
         }
     }
 }

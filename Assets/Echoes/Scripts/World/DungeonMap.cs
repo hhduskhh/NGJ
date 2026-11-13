@@ -70,12 +70,37 @@ namespace Echoes
         }
 
         public bool IsWalkable(Vector2Int p) => p.x >= 0 && p.y >= 0 && p.x < Width && p.y < Height && walkable[p.x, p.y];
-        public bool HasLineOfSight(Vector2 from, Vector2 to)
+        // Traverse every crossed cell, including both sides of an exact corner.
+        // Keep this traversal in sync with DungeonDarkness.shader.
+        public bool HasLineOfSight(Vector2 from, Vector2 to, bool revealBlockingWall = false)
         {
-            int count = Mathf.CeilToInt(Vector2.Distance(from, to) * 4);
-            for (int i = 0; i <= count; i++)
-                if (!IsWalkable(Vector2Int.RoundToInt(Vector2.Lerp(from, to, count == 0 ? 0 : (float)i / count)))) return false;
-            return true;
+            var cell = Vector2Int.FloorToInt(from + Vector2.one * .5f);
+            var goal = Vector2Int.FloorToInt(to + Vector2.one * .5f);
+            if (!IsWalkable(cell)) return false;
+            Vector2 direction = to - from;
+            int stepX = direction.x > 0 ? 1 : -1;
+            int stepY = direction.y > 0 ? 1 : -1;
+            float deltaX = direction.x == 0 ? 1e20f : Mathf.Abs(1 / direction.x);
+            float deltaY = direction.y == 0 ? 1e20f : Mathf.Abs(1 / direction.y);
+            float nextX = direction.x == 0 ? 1e20f : (cell.x + stepX * .5f - from.x) / direction.x;
+            float nextY = direction.y == 0 ? 1e20f : (cell.y + stepY * .5f - from.y) / direction.y;
+            for (int i = 0; i < Width + Height; i++)
+            {
+                if (cell == goal) return true;
+                if (Mathf.Abs(nextX - nextY) <= .000001f)
+                {
+                    if (!IsWalkable(cell + new Vector2Int(stepX, 0)) ||
+                        !IsWalkable(cell + new Vector2Int(0, stepY))) return false;
+                    cell += new Vector2Int(stepX, stepY);
+                    nextX += deltaX; nextY += deltaY;
+                }
+                else if (nextX < nextY) { cell.x += stepX; nextX += deltaX; }
+                else { cell.y += stepY; nextY += deltaY; }
+                if (cell == goal && revealBlockingWall)
+                    return cell.x >= 0 && cell.y >= 0 && cell.x < Width && cell.y < Height;
+                if (!IsWalkable(cell)) return false;
+            }
+            return false;
         }
 
         public Vector2 NearestFloor(Vector2 point)
