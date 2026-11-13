@@ -8,6 +8,7 @@ namespace Echoes
         private Rigidbody2D body;
         private SpriteRenderer sprite;
         private Transform gun;
+        private CharacterArt art;
         private LineRenderer pressureRing;
         private Vector2 movement, aim = Vector2.right;
         private float shotTimer, invulnerableUntil, decoyReadyAt;
@@ -26,7 +27,7 @@ namespace Echoes
 
         public static PlayerController Create(RunController run, Vector2 position)
         {
-            var renderer = PixelArt.Create("Explorer", "player", position, 10, null, 1.1f);
+            var renderer = PixelArt.Create("Explorer", "player", position, 10);
             var player = renderer.gameObject.AddComponent<PlayerController>();
             player.run = run; player.sprite = renderer;
             player.MaxHealth = player.Health = run.Config.playerHealth;
@@ -34,11 +35,15 @@ namespace Echoes
             player.body.gravityScale = 0;
             player.body.freezeRotation = true;
             player.body.interpolation = RigidbodyInterpolation2D.Interpolate;
-            renderer.gameObject.AddComponent<CircleCollider2D>().radius = .3f;
-            player.gun = PixelArt.Create("Gun", "gun", position, 12, player.transform, .8f).transform;
+            var hitbox = renderer.gameObject.AddComponent<CircleCollider2D>();
+            hitbox.radius = .33f;
+            hitbox.offset = Vector2.zero; // Bottom-pivot sprites must not auto-fit the collider to the head.
+            player.art = renderer.gameObject.AddComponent<CharacterArt>();
+            player.art.Initialize("hero");
+            player.gun = PixelArt.Create("Gun", "gun", position, 25, player.transform).transform;
             player.pressureRing = PixelArt.Circle("PressureRadius", player.transform,
                 new Color(.36f, .89f, .86f, .16f), .025f);
-            PixelArt.SetRadius(player.pressureRing, run.Config.pressureRadius / 1.1f);
+            PixelArt.SetRadius(player.pressureRing, run.Config.pressureRadius);
             return player;
         }
 
@@ -48,7 +53,6 @@ namespace Echoes
             movement = new Vector2(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical")).normalized;
             AimPoint = Camera.main.ScreenToWorldPoint(Input.mousePosition);
             UpdateAim(AimPoint, false);
-            sprite.color = Time.time < invulnerableUntil && Mathf.Sin(Time.time * 35) > 0 ? PixelArt.Red : Color.white;
             shotTimer -= Time.deltaTime;
             if (Input.GetMouseButton(0)) TryFire(AimPoint);
             if (Input.GetKeyDown(KeyCode.Q) && DecoyCooldownRemaining <= 0) ThrowDecoy();
@@ -66,7 +70,7 @@ namespace Echoes
             var target = AimTarget ? (Vector2)AimTarget.transform.position : manualPoint;
             var direction = target - (Vector2)transform.position;
             if (direction.sqrMagnitude > .01f) aim = direction.normalized;
-            gun.position = (Vector2)transform.position + aim * .55f;
+            gun.position = (Vector2)transform.position + Vector2.up * .35f + aim * .55f;
             gun.rotation = Quaternion.Euler(0, 0, Mathf.Atan2(aim.y, aim.x) * Mathf.Rad2Deg);
             sprite.flipX = aim.x < 0;
         }
@@ -100,6 +104,8 @@ namespace Echoes
                 run.Config.bulletSpeed, run.Config.bulletDamage * DamageScale * run.DamageMultiplier, false);
             run.Noise.Emit(transform.position, NoiseRadius, NoiseKind.Gunshot);
             run.Noise.PlayShot();
+            art.Attack();
+            ArtEffect.Play((Vector2)gun.position + aim * .6f, false, Color.white);
             return true;
         }
 
@@ -118,8 +124,9 @@ namespace Echoes
         {
             if (run.State != RunState.Playing || Time.time < invulnerableUntil) return;
             Health = Mathf.Max(0, Health - amount);
+            art.Hurt(run.Config.playerInvulnerability);
             invulnerableUntil = Time.time + run.Config.playerInvulnerability;
-            if (Health <= 0) run.SetState(RunState.Lost);
+            if (Health <= 0) { gun.gameObject.SetActive(false); run.SetState(RunState.Lost); }
         }
 
         public void Heal(float amount) => Health = Mathf.Min(MaxHealth, Health + amount);

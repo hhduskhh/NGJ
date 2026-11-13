@@ -54,11 +54,43 @@ namespace Echoes
                     {
                         bool floor = walkable[x, y];
                         var tile = PixelArt.Create(floor ? "Floor" : "Wall", floor ?
-                            ((x * 7 + y * 11) % 5 == 0 ? "floorAlt" : "floor") : "wall",
-                            new Vector2(x, y), floor ? -20 : -10, tiles);
+                            ((x * 7 + y * 11) % 9 == 0 ? "floorDetail" : (x+y)%4==0 ? "floorAlt" : "floor") :
+                            (x+y)%3==0 ? "wallAlt" : "wall",
+                            new Vector2(x, y), floor ? -200 : GameArt.FootOrder(y), tiles);
                         if (!floor) tile.gameObject.AddComponent<BoxCollider2D>();
                     }
-            PixelArt.Create("ChallengeAltar", "altar", AltarPosition, -5, tiles, 1.5f);
+            PixelArt.Create("ChallengeAltar", "altar", AltarPosition, -120, tiles);
+            foreach (var room in Rooms)
+            {
+                var b = room.Bounds;
+                // Bases lie on existing blocked wall cells. Dressing cannot add invisible obstacles.
+                Decorate("lamp", new Vector2(b.x + 3, b.yMax - 1), tiles);
+                Decorate("signature", new Vector2(b.x + 12, b.yMax - 1), tiles);
+                Decorate("pipe", new Vector2(b.x + 9, b.yMax - 1), tiles);
+                Decorate("station", new Vector2(b.x, b.y + 3), tiles);
+                Decorate("crate", new Vector2(b.x, b.y + 9), tiles);
+                if (Rooms.IndexOf(room) % 2 == 0) Decorate("rack", new Vector2(b.x + 6, b.yMax - 1), tiles);
+                if (Rooms.Exists(r => r.Bounds.x == b.xMax && r.Bounds.y == b.y))
+                {
+                    Decorate("doorpost", new Vector2(b.xMax - 1, b.y + 4), tiles);
+                    Decorate("doorpost", new Vector2(b.xMax, b.y + 9), tiles);
+                }
+                if (Rooms.Exists(r => r.Bounds.y == b.yMax && r.Bounds.x == b.x))
+                {
+                    Decorate("doorpost", new Vector2(b.x + 6, b.yMax - 1), tiles);
+                    Decorate("doorpost", new Vector2(b.x + 11, b.yMax - 1), tiles);
+                }
+            }
+        }
+
+        private static void Decorate(string kind, Vector2 position, Transform parent) =>
+            PixelArt.Create("Dressing_" + kind, kind, position, GameArt.FootOrder(position.y) + 1, parent);
+
+        // Art review only: no population, geometry, collision, AI or floor progression changes.
+        public void ApplyArtTheme(int theme)
+        {
+            GameArt.SetTheme(theme);
+            foreach (var binding in FindObjectsOfType<ArtBinding>()) binding.Refresh();
         }
 
         private void Update()

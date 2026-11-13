@@ -35,6 +35,7 @@ namespace Echoes
 
         private void Start()
         {
+            GameArt.SetTheme(0);
             Time.timeScale = 1;
             AudioListener.volume = 1;
             Random = new System.Random(config.randomSeed);

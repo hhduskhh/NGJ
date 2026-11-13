@@ -17,7 +17,11 @@ namespace Echoes
             remaining -= Time.deltaTime; pulse -= Time.deltaTime;
             if (remaining <= 0) { Destroy(gameObject); return; }
             if (pulse <= 0)
-            { pulse = .8f; run.Noise.Emit(transform.position, run.Config.decoyRadius, NoiseKind.Decoy); }
+            {
+                pulse = .8f;
+                run.Noise.Emit(transform.position, run.Config.decoyRadius, NoiseKind.Decoy);
+                ArtEffect.Play((Vector2)transform.position + Vector2.up * .2f, false, PixelArt.Cyan);
+            }
         }
     }
 }

@@ -15,8 +15,7 @@ namespace Echoes
             float speed, float damage, bool hostile)
         {
             var renderer = PixelArt.Create(hostile ? "HostileProjectile" : "PlayerProjectile",
-                "solid", position, 20, null, hostile ? .22f : .18f);
-            renderer.color = hostile ? PixelArt.Red : PixelArt.Gold;
+                hostile ? "hostileBullet" : "bullet", position, 30);
             var projectile = renderer.gameObject.AddComponent<Projectile>();
             projectile.run = run; projectile.direction = direction.normalized;
             projectile.origin = position;
@@ -43,6 +42,8 @@ namespace Echoes
             }
             if (nearest)
             {
+                ArtEffect.Play((Vector2)transform.position + direction * nearestDistance, true,
+                    hostile ? PixelArt.Red : Color.white);
                 if (hostile) nearest.GetComponent<PlayerController>()?.TakeDamage(damage);
                 else nearest.GetComponent<EnemyController>()?.TakeDamage(damage, origin);
                 Destroy(gameObject); return;

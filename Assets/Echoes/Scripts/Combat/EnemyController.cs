@@ -15,19 +15,24 @@ namespace Echoes
         private int pathIndex;
         private float repath, lostSight, contactReady, wanderTimer, attackTimer, warningTimer;
         private LineRenderer warning;
+        private CharacterArt art;
         public EnemyState State { get; private set; } = EnemyState.Sleeping;
         public bool IsBoss { get; private set; }
         public bool Alive => State != EnemyState.Dead;
         public bool Awake => State != EnemyState.Sleeping && Alive;
         public float Health { get; private set; }
         public float MaxHealth { get; private set; }
+        public bool IsWindingUp => warningTimer > 0;
+        public bool IsContactTelegraph => !IsBoss && State == EnemyState.Chasing &&
+            Vector2.Distance(transform.position, run.Player.transform.position) > .8f &&
+            Vector2.Distance(transform.position, run.Player.transform.position) < 1.4f;
         public Vector2 InvestigationTarget => destination;
         public Vector2 LastSeenPosition => lastSeen;
 
         public static EnemyController Create(RunController run, Vector2 position, bool boss)
         {
             var renderer = PixelArt.Create(boss ? "Gatekeeper" : "Sleeper", boss ? "boss" : "enemy",
-                position, 9, null, boss ? 2 : 1);
+                position, 9);
             var enemy = renderer.gameObject.AddComponent<EnemyController>();
             enemy.run = run; enemy.sprite = renderer; enemy.IsBoss = boss;
             enemy.MaxHealth = enemy.Health = boss ? run.Config.bossHealth : run.Config.enemyHealth;
@@ -35,11 +40,15 @@ namespace Echoes
             enemy.body = renderer.gameObject.AddComponent<Rigidbody2D>();
             enemy.body.gravityScale = 0; enemy.body.freezeRotation = true;
             enemy.body.interpolation = RigidbodyInterpolation2D.Interpolate;
-            renderer.gameObject.AddComponent<CircleCollider2D>().radius = .32f;
-            enemy.marker = PixelArt.Create("StateMarker", "solid", position + Vector2.up * (boss ? 1.4f : .75f),
-                15, enemy.transform, .16f);
-            enemy.healthFill = PixelArt.Create("Health", "solid", position + Vector2.down * (boss ? 1.3f : .6f),
-                15, enemy.transform);
+            var hitbox = renderer.gameObject.AddComponent<CircleCollider2D>();
+            hitbox.radius = boss ? .64f : .32f;
+            hitbox.offset = Vector2.zero;
+            enemy.art = renderer.gameObject.AddComponent<CharacterArt>();
+            enemy.art.Initialize(boss ? "boss" : run.Enemies.Count % 2 == 0 ? "walker" : "guard");
+            enemy.marker = PixelArt.Create("StateMarker", "sleepMarker", position + Vector2.up * (boss ? 3.7f : 1.85f),
+                35, enemy.transform);
+            enemy.healthFill = PixelArt.Create("Health", "solid", position + Vector2.down * .4f,
+                35, enemy.transform);
             enemy.healthFill.transform.localScale = new Vector3(.8f, .06f, 1);
             enemy.healthFill.color = PixelArt.Red;
             enemy.repath = (float)run.Random.NextDouble() * .5f;
@@ -97,6 +106,7 @@ namespace Echoes
             if (Vector2.Distance(transform.position, player) < (IsBoss ? 1.15f : .8f) && Time.time >= contactReady)
             {
                 contactReady = Time.time + run.Config.enemyAttackInterval;
+                art.Attack();
                 run.Player.TakeDamage(IsBoss ? run.Config.bossDamage : run.Config.enemyDamage);
             }
             if (IsBoss) UpdateBossAttack(dt);
@@ -127,6 +137,7 @@ namespace Echoes
                             run.Config.bossBulletSpeed, run.Config.bossDamage, true);
                     }
                     attackTimer = run.Config.bossAttackInterval;
+                    art.Attack();
                 }
                 return;
             }
@@ -147,12 +158,11 @@ namespace Echoes
             { State = EnemyState.Chasing; lastSeen = run.Player.transform.position; lostSight = 0; }
             else if (!IsBoss) Hear(attackOrigin ?? (Vector2)run.Player.transform.position);
             Health = Mathf.Max(0, Health - amount);
+            art.Hurt();
             if (Health > 0) { RefreshVisual(); return; }
             State = EnemyState.Dead;
             body.velocity = Vector2.zero;
             GetComponent<Collider2D>().enabled = false;
-            sprite.color = new Color(.3f, .26f, .33f, .4f);
-            transform.localScale *= .65f;
             marker.enabled = healthFill.enabled = false;
             if (warning) Destroy(warning.gameObject);
             run.EnemyKilled(this);
@@ -160,13 +170,13 @@ namespace Echoes
 
         private void RefreshVisual()
         {
-            marker.color = State == EnemyState.Sleeping ? new Color(.4f, .46f, .59f) :
-                State == EnemyState.Chasing ? PixelArt.Red : PixelArt.Gold;
-            marker.transform.localScale = State == EnemyState.Chasing ? new Vector3(.12f, .3f, 1) :
-                State == EnemyState.Sleeping ? new Vector3(.24f, .08f, 1) : new Vector3(.2f, .2f, 1);
+            string kind = State == EnemyState.Sleeping ? "sleepMarker" :
+                State == EnemyState.Chasing || IsWindingUp ? "alertMarker" : "investigateMarker";
+            marker.GetComponent<ArtBinding>().Kind = kind;
+            marker.sprite = GameArt.Get(kind);
+            marker.color = Color.white;
             healthFill.transform.localScale = new Vector3(.8f * Health / MaxHealth, .06f, 1);
             healthFill.enabled = Health < MaxHealth;
-            sprite.color = State == EnemyState.Sleeping ? new Color(.5f, .55f, .66f) : Color.white;
         }
     }
 }
