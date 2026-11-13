@@ -33,6 +33,17 @@ namespace Echoes.Tests
         }
 
         [Test]
+        public void WeaponMuzzleCanSeeTargetOnRoundedCellCorner()
+        {
+            var muzzle = new Vector2(9.05f, 6.85f);
+            var target = new Vector2(10.5f, 6.5f);
+            Assert.IsTrue(map.HasLineOfSight(muzzle, target));
+            Assert.IsTrue(map.HasLineOfSight(target, muzzle));
+            cells[10, 7] = false;
+            Assert.IsFalse(map.HasLineOfSight(muzzle, target));
+        }
+
+        [Test]
         public void FirstWallCanBeLitButCannotBeTargetedOrSeenThrough()
         {
             cells[4, 2] = false;

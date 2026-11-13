@@ -4,11 +4,11 @@ using UnityEngine.EventSystems;
 
 namespace Echoes
 {
-    public sealed class GameHud : MonoBehaviour
+    public sealed partial class GameHud : MonoBehaviour
     {
         private RunController run;
         private RectTransform canvas, modal;
-        private TMP_Text healthText, xpText, roomText, pressureText, statusText, clockText, noticeText, bossText;
+        private TMP_Text healthText, xpText, roomText, pressureText, statusText, clockText, goldText, noticeText, bossText;
         private UnityEngine.UI.Image healthBar, xpBar, bossBar;
         private UnityEngine.UI.Image[] roomIcons;
         private float noticeUntil;
@@ -61,11 +61,13 @@ namespace Echoes
             roomText.alignment = TextAlignmentOptions.Right;
             clockText = Label(canvas, "", new Vector2(-24, -283), new Vector2(300, 30), 17, muted, new Vector2(1, 1));
             clockText.alignment = TextAlignmentOptions.Right;
+            goldText = Label(canvas, "", new Vector2(-24, -319), new Vector2(300, 30), 21, PixelArt.Gold, new Vector2(1, 1));
+            goldText.alignment = TextAlignmentOptions.Right;
 
             var footer = Panel("Footer", canvas, new Vector2(24, 24), new Vector2(-48, 92), panel, Vector2.zero);
             footer.anchorMax = new Vector2(1, 0);
             statusText = Label(footer, "", new Vector2(18, -10), new Vector2(1450, 28), 19, PixelArt.Cyan);
-            Label(footer, "WASD 移动   /   左键射击 · 自动瞄准可见敌人   /   Q 鼠标方向诱饵   /   E 挑战守关者   /   Esc 暂停   /   M 静音",
+            Label(footer, "WASD 移动   /   左键射击 · 自动瞄准可见敌人   /   Q 鼠标方向诱饵   /   E 商店 / 挑战守关者   /   Esc 暂停   /   M 静音",
                 new Vector2(18, -49), new Vector2(1450, 28), 17, muted);
             noticeText = Label(canvas, "", new Vector2(0, -52), new Vector2(690, 45), 23, PixelArt.Gold, new Vector2(.5f, 1));
             noticeText.alignment = TextAlignmentOptions.Center;
@@ -86,9 +88,10 @@ namespace Echoes
             pressureText.text = $"附近 {run.NearbyEnemies}   /   伤害 +{(run.DamageMultiplier - 1) * 100:0}%";
             roomText.text = run.Map.Rooms[run.Map.CurrentRoom].Name;
             clockText.text = $"{(int)run.Elapsed / 60:00}:{(int)run.Elapsed % 60:00}   ·   击杀 {run.Kills}";
+            goldText.text = $"金币 {run.Shop.Gold}   ·   武器 {run.Player.Weapons.Slots.Count}/6";
             float cooldown = run.Player.DecoyCooldownRemaining;
             statusText.text = $"枪声半径 {run.Player.NoiseRadius:0.#}   ·   诱饵 {(cooldown <= 0 ? "就绪 [Q]" : cooldown.ToString("0.0") + " 秒")}   ·   " +
-                $"围攻上限 +{run.Config.bonusEnemyCap * run.Config.bonusPerEnemy * 100:0}%   ·   {(run.Muted ? "声音已关闭 [M]" : "声音开启 [M]")}";
+                $"围攻上限 +{run.Player.PressureCap * run.Player.PressureBonus * 100:0}%   ·   {(run.Muted ? "声音已关闭 [M]" : "声音开启 [M]")}";
             if (Time.unscaledTime >= noticeUntil) noticeText.text = "";
             for (int i = 0; i < roomIcons.Length; i++)
                 roomIcons[i].color = i == run.Map.CurrentRoom ? new Color(.16f, .52f, .53f) :
@@ -101,6 +104,7 @@ namespace Echoes
             }
             else if (Vector2.Distance(run.Player.transform.position, run.Map.AltarPosition) < 3)
                 Notify("[E] 唤醒守关者 · 可随时挑战，无需清空普通怪", .2f);
+            if (run.State == RunState.Playing && run.Shop.InRange) Notify("[E] 打开补给商店 · 武器 / 道具 / 金币刷新", .2f);
             if (run.State == RunState.Upgrade)
             {
                 if (Input.GetKeyDown(KeyCode.Alpha1)) run.ChooseUpgrade(0);
@@ -120,6 +124,7 @@ namespace Echoes
             modal.anchorMin = Vector2.zero; modal.anchorMax = Vector2.one;
             modal.offsetMin = modal.offsetMax = Vector2.zero;
             modal.GetComponent<UnityEngine.UI.Image>().raycastTarget = true;
+            if (run.State == RunState.Shop) { DrawShop(); return; }
             string title = run.State == RunState.Upgrade ? "共 振 升 级" : run.State == RunState.Won ? "遗 迹 重 归 寂 静" :
                 run.State == RunState.Lost ? "探 险 暂 止" : "暂 停 探 索";
             var heading = Label(modal, title, new Vector2(0, -185), new Vector2(1000, 70), 44, PixelArt.Cyan, new Vector2(.5f, 1));

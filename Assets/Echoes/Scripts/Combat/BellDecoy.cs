@@ -9,7 +9,7 @@ namespace Echoes
         public static void Create(RunController run, Vector2 position)
         {
             var bell = PixelArt.Create("BellDecoy", "bell", position, 8).gameObject.AddComponent<BellDecoy>();
-            bell.run = run; bell.remaining = run.Config.decoyDuration;
+            bell.run = run; bell.remaining = run.Config.decoyDuration + run.Player.Passives.DecoyDuration;
         }
         private void Update()
         {
@@ -19,7 +19,7 @@ namespace Echoes
             if (pulse <= 0)
             {
                 pulse = .8f;
-                run.Noise.Emit(transform.position, run.Config.decoyRadius, NoiseKind.Decoy);
+                run.Noise.Emit(transform.position, run.Config.decoyRadius + run.Player.Passives.DecoyRadius, NoiseKind.Decoy);
                 ArtEffect.Play((Vector2)transform.position + Vector2.up * .2f, false, PixelArt.Cyan);
             }
         }

@@ -1,0 +1,106 @@
+using System.Collections.Generic;
+using UnityEngine;
+
+namespace Echoes
+{
+    public sealed class WeaponInventory
+    {
+        public sealed class Slot
+        {
+            public int Kind, Tier;
+            public float Cooldown;
+            public Transform Visual;
+        }
+        private readonly RunController run;
+        private readonly List<Slot> slots = new List<Slot>();
+        public IReadOnlyList<Slot> Slots => slots;
+        public const int Capacity = 6;
+        public WeaponInventory(RunController run) { this.run = run; Add(0, 0); slots[0].Cooldown = 0; }
+        public WeaponDefinition Definition(Slot slot) => run.Config.weapons[slot.Kind];
+        public float Interval(Slot slot) => Mathf.Max(.1f, Definition(slot).interval[slot.Tier] / run.Player.AttackSpeed);
+        public int Match(int kind, int tier, int except = -1) => slots.FindIndex(s => s.Kind == kind && s.Tier == tier && slots.IndexOf(s) != except);
+        public bool Add(int kind, int tier)
+        {
+            if (slots.Count >= Capacity) return false;
+            var visual = PixelArt.Create("Weapon", "gun", run.Player.transform.position, 25, run.Player.transform).transform;
+            slots.Add(new Slot { Kind = kind, Tier = tier, Visual = visual, Cooldown = run.Config.weapons[kind].interval[tier] });
+            UpdateVisuals(run.Player.AimPoint);
+            return true;
+        }
+        public bool Merge(int index, int other = -1)
+        {
+            if (index < 0 || index >= slots.Count || slots[index].Tier >= 3) return false;
+            var slot = slots[index];
+            if (other >= 0 && (other >= slots.Count || other == index || slots[other].Kind != slot.Kind || slots[other].Tier != slot.Tier)) return false;
+            float fraction = slot.Cooldown / Interval(slot);
+            if (other >= 0) fraction = Mathf.Max(fraction, slots[other].Cooldown / Interval(slots[other]));
+            slot.Tier++;
+            slot.Cooldown = Mathf.Max(0, fraction) * Interval(slot);
+            if (other >= 0) Remove(other);
+            return true;
+        }
+        public void Remove(int index)
+        {
+            Object.Destroy(slots[index].Visual.gameObject);
+            slots.RemoveAt(index);
+        }
+        public void Tick(float dt, Vector2 manualPoint)
+        {
+            foreach (var slot in slots) slot.Cooldown = Mathf.Max(0, slot.Cooldown - dt);
+            UpdateVisuals(manualPoint);
+        }
+        private Vector2 Position(int index)
+        {
+            Vector2 center = (Vector2)run.Player.transform.position + Vector2.up * .35f;
+            if (slots.Count == 1) return center + run.Player.AimDirection * .55f;
+            float angle = Mathf.PI * 2 * index / slots.Count;
+            return center + new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * 1.1f;
+        }
+        private Vector2 Direction(Slot slot, Vector2 position, Vector2 manualPoint, bool manual)
+        {
+            EnemyController target = manual ? null : run.Player.FindVisibleTarget(Definition(slot).range, position);
+            Vector2 delta = (target ? (Vector2)target.transform.position : manualPoint) - position;
+            return delta.sqrMagnitude > .001f ? delta.normalized : Vector2.right;
+        }
+        private void UpdateVisuals(Vector2 manualPoint)
+        {
+            for (int i = 0; i < slots.Count; i++)
+            {
+                var slot = slots[i]; var position = Position(i);
+                var direction = Direction(slot, position, manualPoint, false);
+                slot.Visual.position = position;
+                slot.Visual.rotation = Quaternion.Euler(0, 0, Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg);
+                slot.Visual.localScale = new Vector3(slot.Kind == 1 ? 1.3f : 1, slot.Kind == 2 ? .65f : 1, 1);
+                slot.Visual.GetComponent<SpriteRenderer>().color = ShopController.TierColor(slot.Tier);
+            }
+        }
+        public bool Fire(Vector2 manualPoint, bool manual)
+        {
+            bool fired = false;
+            run.RefreshPressure();
+            for (int i = 0; i < slots.Count; i++)
+            {
+                var slot = slots[i];
+                if (slot.Cooldown > 0) continue;
+                var definition = Definition(slot);
+                Vector2 position = Position(i), direction = Direction(slot, position, manualPoint, manual);
+                Vector2 muzzle = position + direction * .35f;
+                if (!run.Map.IsWalkable(Vector2Int.RoundToInt(muzzle)) || !run.Map.HasLineOfSight(run.Player.transform.position, muzzle)) continue;
+                slot.Cooldown = Interval(slot);
+                float damage = definition.damage[slot.Tier] * run.Player.TotalDamageScale * run.DamageMultiplier;
+                if (run.Random.NextDouble() < run.Player.CriticalChance) damage *= run.Player.CriticalMultiplier;
+                for (int pellet = 0; pellet < definition.pellets; pellet++)
+                {
+                    Vector2 shot = Quaternion.Euler(0, 0, (pellet - (definition.pellets - 1) / 2f) * definition.spread) * direction;
+                    Projectile.Create(run, muzzle, shot, definition.speed, damage, false, definition.range,
+                        slot.Kind == 2 ? Mathf.Max(0, slot.Tier - 1) : 0);
+                }
+                run.Noise.Emit(run.Player.transform.position, run.Player.NoiseRadius * definition.noise, NoiseKind.Gunshot);
+                ArtEffect.Play(muzzle, false, ShopController.TierColor(slot.Tier));
+                fired = true;
+            }
+            if (fired) run.Noise.PlayShot();
+            return fired;
+        }
+    }
+}

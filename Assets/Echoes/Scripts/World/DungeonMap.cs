@@ -119,6 +119,14 @@ namespace Echoes
             for (int i = 0; i < Width + Height; i++)
             {
                 if (cell == goal) return true;
+                // At a cell-edge endpoint, banker's rounding can select a cell that
+                // the next diagonal DDA step skips. Stop at the segment end.
+                if (Mathf.Min(nextX, nextY) >= 1 - .000001f)
+                {
+                    if (Mathf.Abs(nextX - nextY) <= .000001f &&
+                        (!IsWalkable(cell + new Vector2Int(stepX, 0)) || !IsWalkable(cell + new Vector2Int(0, stepY)))) return false;
+                    return IsWalkable(goal) || (revealBlockingWall && goal.x >= 0 && goal.y >= 0 && goal.x < Width && goal.y < Height);
+                }
                 if (Mathf.Abs(nextX - nextY) <= .000001f)
                 {
                     if (!IsWalkable(cell + new Vector2Int(stepX, 0)) ||

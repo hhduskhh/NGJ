@@ -51,6 +51,16 @@ namespace Echoes
         [Min(.1f)] public float bossWarningDuration = .9f;
         [Min(1)] public float bossBulletSpeed = 4;
         [Range(4, 24)] public int bossBulletCount = 12;
+        [Header("Shop and loot")]
+        [Min(1)] public int goldPerKill = 6;
+        [Min(.2f)] public float goldPickupRadius = 1.5f;
+        [Min(.5f)] public float shopInteractRadius = 2.5f;
+        [Min(1)] public int shopRefreshCost = 4;
+        [Min(0)] public int shopRefreshIncrease = 2;
+        public float[] shopTierWeights = { 60, 28, 10, 2 };
+        public int[] passivePrices = { 18, 36, 60, 90 };
+        public WeaponDefinition[] weapons = WeaponDefinition.Defaults();
+        public PassiveDefinition[] passives = PassiveDefinition.Defaults();
         public int randomSeed = 713;
     }
 }

@@ -37,13 +37,13 @@ namespace Echoes.Tests
             Assert.Greater(Vector2.Dot(Vector2.right, run.Player.AimDirection), .99f);
             yield return new WaitForSeconds(.15f);
             Assert.Less(target.Health, target.MaxHealth, "An actual automatic shot reaches the target");
-            yield return new WaitForSeconds(run.Config.shotInterval);
+            yield return new WaitForSeconds(run.Player.Weapons.Interval(run.Player.Weapons.Slots[0]));
             Assert.IsTrue(run.Player.TryFire(player + Vector2.down * 5, true));
             Assert.IsNull(run.Player.AimTarget, "A skill can explicitly use its supplied direction");
             Assert.Less(run.Player.AimDirection.y, -.99f);
             target.TakeDamage(99999);
             farther.GetComponent<Rigidbody2D>().position = run.Map.Rooms[4].Center;
-            yield return new WaitForSeconds(run.Config.shotInterval);
+            yield return new WaitForSeconds(run.Player.Weapons.Interval(run.Player.Weapons.Slots[0]));
             Assert.IsTrue(run.Player.TryFire(player + Vector2.left * 5));
             Assert.IsNull(run.Player.AimTarget, "No visible target falls back to the mouse direction");
             Assert.Less(run.Player.AimDirection.x, -.99f);
@@ -67,7 +67,7 @@ namespace Echoes.Tests
             run.Boss.GetComponent<Rigidbody2D>().position = player + Vector2.up;
             run.Enemies[1].GetComponent<Rigidbody2D>().position = new Vector2(-1, player.y);
             run.Visibility.Reveal(player, 20);
-            yield return new WaitForSeconds(run.Config.shotInterval + .02f);
+            yield return new WaitForSeconds(run.Player.Weapons.Interval(run.Player.Weapons.Slots[0]) + .02f);
             Assert.IsTrue(run.Visibility.IsVisible(hidden));
             Assert.IsTrue(run.Player.TryFire(player + Vector2.down * 6));
             Assert.AreEqual(target, run.Player.AimTarget, "A sonar-revealed enemy can be auto-targeted");

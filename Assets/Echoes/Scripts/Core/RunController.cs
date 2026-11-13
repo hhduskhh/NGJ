@@ -4,7 +4,7 @@ using UnityEngine.SceneManagement;
 
 namespace Echoes
 {
-    public enum RunState { Playing, Upgrade, Paused, Won, Lost }
+    public enum RunState { Playing, Upgrade, Paused, Shop, Won, Lost }
 
     public sealed class RunController : MonoBehaviour
     {
@@ -13,6 +13,7 @@ namespace Echoes
         public DungeonMap Map { get; private set; }
         public PlayerController Player { get; private set; }
         public NoiseSystem Noise { get; private set; }
+        public ShopController Shop { get; private set; }
         public GameHud Hud { get; private set; }
         public DungeonVisibility Visibility { get; private set; }
         public EnemyController Boss { get; private set; }
@@ -24,7 +25,7 @@ namespace Echoes
         public int Level { get; private set; } = 1;
         public int NearbyEnemies { get; private set; }
         public float DamageMultiplier => CombatRules.DamageMultiplier(NearbyEnemies,
-            config.bonusEnemyCap, config.bonusPerEnemy);
+            Player.PressureCap, Player.PressureBonus);
         public int RequiredExperience => CombatRules.ExperienceRequired(Level,
             config.firstLevelExperience, config.experienceStep);
         public bool BossActivated { get; private set; }
@@ -44,7 +45,10 @@ namespace Echoes
             Noise = gameObject.AddComponent<NoiseSystem>();
             Noise.Initialize(this);
             Player = PlayerController.Create(this, Map.Rooms[0].Center);
+            Player.InitializeWeapons();
             Camera.main.gameObject.AddComponent<CameraFollow>().Target = Player.transform;
+            Shop = new GameObject("FloorShop").AddComponent<ShopController>();
+            Shop.Initialize(this);
             SpawnFloor();
             Visibility = gameObject.AddComponent<DungeonVisibility>();
             Visibility.Initialize(this);
@@ -72,10 +76,12 @@ namespace Echoes
                 Muted = !Muted;
                 AudioListener.volume = Muted ? 0 : 1;
             }
+            if (State == RunState.Shop && Input.GetKeyDown(KeyCode.Escape)) { Shop.Close(); return; }
             if (Input.GetKeyDown(KeyCode.Escape) &&
                 (State == RunState.Playing || State == RunState.Paused))
                 SetState(State == RunState.Playing ? RunState.Paused : RunState.Playing);
             if (State != RunState.Playing) return;
+            if (Input.GetKeyDown(KeyCode.E) && Shop.Open()) return;
             Elapsed += Time.deltaTime;
             RefreshPressure();
             if (!BossActivated && Vector2.Distance(Player.transform.position, Map.AltarPosition) < 3 &&
@@ -103,6 +109,8 @@ namespace Echoes
         {
             Kills++;
             if (enemy.IsBoss) { SetState(RunState.Won); return; }
+            GoldPickup.Drop(this, enemy.transform.position, config.goldPerKill);
+            Player.Passives.OnKill();
             Experience += config.experiencePerKill;
             TryLevelUp();
         }
