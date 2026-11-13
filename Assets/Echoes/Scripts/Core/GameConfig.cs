@@ -11,6 +11,9 @@ namespace Echoes
         [Min(1)] public float bulletDamage = 10;
         [Min(.05f)] public float shotInterval = .28f;
         [Min(1)] public float bulletSpeed = 22;
+        [Header("Visibility")]
+        [Min(1)] public float playerVisionRadius = 3;
+        [Min(.1f)] public float echoRevealDuration = 1.5f;
         [Header("Sound — ignores walls in this prototype")]
         [Min(1)] public float gunNoiseRadius = 6;
         [Min(1)] public float waveSpeed = 22;

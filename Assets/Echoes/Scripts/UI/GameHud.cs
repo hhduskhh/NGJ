@@ -65,7 +65,7 @@ namespace Echoes
             var footer = Panel("Footer", canvas, new Vector2(24, 24), new Vector2(-48, 92), panel, Vector2.zero);
             footer.anchorMax = new Vector2(1, 0);
             statusText = Label(footer, "", new Vector2(18, -10), new Vector2(1450, 28), 19, PixelArt.Cyan);
-            Label(footer, "WASD 移动   /   鼠标瞄准 · 左键射击   /   Q 响铃诱饵   /   E 挑战守关者   /   Esc 暂停   /   M 静音",
+            Label(footer, "WASD 移动   /   左键射击 · 自动瞄准可见敌人   /   Q 鼠标方向诱饵   /   E 挑战守关者   /   Esc 暂停   /   M 静音",
                 new Vector2(18, -49), new Vector2(1450, 28), 17, muted);
             noticeText = Label(canvas, "", new Vector2(0, -52), new Vector2(690, 45), 23, PixelArt.Gold, new Vector2(.5f, 1));
             noticeText.alignment = TextAlignmentOptions.Center;
@@ -73,7 +73,7 @@ namespace Echoes
             bossText.alignment = TextAlignmentOptions.Center;
             bossBar = Bar(canvas, new Vector2(0, -145), new Vector2(450, 8), PixelArt.Red, new Vector2(.5f, 1));
             bossBar.transform.parent.gameObject.SetActive(false);
-            Notify("安静探索，或用枪声唤醒遗迹 · 右上角标出守关者方位", 8);
+            Notify("近身视野以外一片黑暗 · 射击或投掷诱饵，以声波短暂探路", 8);
         }
 
         private void Update()
@@ -81,8 +81,8 @@ namespace Echoes
             if (!run.Player) return;
             healthText.text = $"{Mathf.CeilToInt(run.Player.Health)} / {run.Player.MaxHealth:0}";
             healthBar.fillAmount = run.Player.Health / run.Player.MaxHealth;
-            xpText.text = $"Lv.{run.Level}  {run.Experience}/{run.RequiredExperience}";
-            xpBar.fillAmount = (float)run.Experience / run.RequiredExperience;
+            xpText.text = run.State == RunState.Upgrade ? $"Lv.{run.Level}  待升级" : $"Lv.{run.Level}  {run.Experience}/{run.RequiredExperience}";
+            xpBar.fillAmount = Mathf.Clamp01((float)run.Experience / run.RequiredExperience);
             pressureText.text = $"附近 {run.NearbyEnemies}   /   伤害 +{(run.DamageMultiplier - 1) * 100:0}%";
             roomText.text = run.Map.Rooms[run.Map.CurrentRoom].Name;
             clockText.text = $"{(int)run.Elapsed / 60:00}:{(int)run.Elapsed % 60:00}   ·   击杀 {run.Kills}";
@@ -124,7 +124,7 @@ namespace Echoes
                 run.State == RunState.Lost ? "探 险 暂 止" : "暂 停 探 索";
             var heading = Label(modal, title, new Vector2(0, -185), new Vector2(1000, 70), 44, PixelArt.Cyan, new Vector2(.5f, 1));
             heading.alignment = TextAlignmentOptions.Center;
-            var sub = Label(modal, run.State == RunState.Upgrade ? $"等级 {run.Level} · 三选一 · 点击卡片或按 1 / 2 / 3" :
+            var sub = Label(modal, run.State == RunState.Upgrade ? $"已暂停 · 升至等级 {run.Level + 1} · 点击卡片或按 1 / 2 / 3" :
                 $"探索 {(int)run.Elapsed / 60:00}:{(int)run.Elapsed % 60:00}   ·   击杀 {run.Kills}   ·   等级 {run.Level}",
                 new Vector2(0, -274), new Vector2(1000, 35), 22, muted, new Vector2(.5f, 1));
             sub.alignment = TextAlignmentOptions.Center;

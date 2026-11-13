@@ -30,6 +30,7 @@ namespace Echoes
         public void PlayShot() => audioSource.PlayOneShot(shot);
         public void Emit(Vector2 origin, float radius, NoiseKind kind)
         {
+            run.Visibility.Reveal(origin, radius);
             var go = new GameObject(kind + "SoundWave");
             go.transform.position = origin;
             go.AddComponent<NoiseWave>().Initialize(run, radius, kind);
@@ -51,6 +52,7 @@ namespace Echoes
             color = kind == NoiseKind.Gunshot ? PixelArt.Gold : PixelArt.Cyan;
             wave = PixelArt.Circle("ExpandingFront", transform, color);
             boundary = PixelArt.Circle("ActualMaximumRange", transform, color * new Color(1, 1, 1, .18f), .025f);
+            wave.sortingOrder = boundary.sortingOrder = 50;
             PixelArt.SetRadius(boundary, range);
             PixelArt.SetRadius(wave, 0);
         }

@@ -21,6 +21,8 @@ namespace Echoes
         public float NoiseRadius => run.Config.gunNoiseRadius + NoiseRadiusBonus;
         public float DecoyCooldownRemaining => Mathf.Max(0, decoyReadyAt - Time.time);
         public Vector2 AimPoint { get; private set; }
+        public Vector2 AimDirection => aim;
+        public EnemyController AimTarget { get; private set; }
 
         public static PlayerController Create(RunController run, Vector2 position)
         {
@@ -45,14 +47,10 @@ namespace Echoes
             if (run.State != RunState.Playing) { movement = Vector2.zero; return; }
             movement = new Vector2(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical")).normalized;
             AimPoint = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-            var direction = AimPoint - (Vector2)transform.position;
-            if (direction.sqrMagnitude > .01f) aim = direction.normalized;
-            gun.position = (Vector2)transform.position + aim * .55f;
-            gun.rotation = Quaternion.Euler(0, 0, Mathf.Atan2(aim.y, aim.x) * Mathf.Rad2Deg);
-            sprite.flipX = aim.x < 0;
+            UpdateAim(AimPoint, false);
             sprite.color = Time.time < invulnerableUntil && Mathf.Sin(Time.time * 35) > 0 ? PixelArt.Red : Color.white;
             shotTimer -= Time.deltaTime;
-            if (Input.GetMouseButton(0) && shotTimer <= 0) Shoot();
+            if (Input.GetMouseButton(0)) TryFire(AimPoint);
             if (Input.GetKeyDown(KeyCode.Q) && DecoyCooldownRemaining <= 0) ThrowDecoy();
         }
 
@@ -61,14 +59,47 @@ namespace Echoes
             body.velocity = run.State == RunState.Playing ? movement * run.Config.moveSpeed * MoveScale : Vector2.zero;
         }
 
-        private void Shoot()
+        private void UpdateAim(Vector2 manualPoint, bool forceManualAim)
         {
+            AimTarget = forceManualAim ? null : FindVisibleTarget();
+            var target = AimTarget ? (Vector2)AimTarget.transform.position : manualPoint;
+            var direction = target - (Vector2)transform.position;
+            if (direction.sqrMagnitude > .01f) aim = direction.normalized;
+            gun.position = (Vector2)transform.position + aim * .55f;
+            gun.rotation = Quaternion.Euler(0, 0, Mathf.Atan2(aim.y, aim.x) * Mathf.Rad2Deg);
+            sprite.flipX = aim.x < 0;
+        }
+
+        private EnemyController FindVisibleTarget()
+        {
+            EnemyController nearest = null;
+            float closest = float.MaxValue;
+            foreach (var enemy in run.Enemies)
+            {
+                if (!enemy || !enemy.Alive || (enemy.IsBoss && !run.BossActivated)) continue;
+                Vector2 position = enemy.transform.position;
+                float distance = (position - (Vector2)transform.position).sqrMagnitude;
+                if (distance >= closest || !run.Visibility.IsVisible(position)) continue;
+                var viewport = Camera.main.WorldToViewportPoint(position);
+                if (viewport.z <= 0 || viewport.x < 0 || viewport.x > 1 || viewport.y < 0 || viewport.y > 1) continue;
+                if (!run.Map.HasLineOfSight(transform.position, position)) continue;
+                nearest = enemy; closest = distance;
+            }
+            return nearest;
+        }
+
+        // Skills may explicitly opt out; normal bullets fix their direction when fired, without homing.
+        public bool TryFire(Vector2 manualPoint, bool forceManualAim = false)
+        {
+            if (run.State != RunState.Playing || shotTimer > 0) return false;
+            UpdateAim(manualPoint, forceManualAim);
             shotTimer = Mathf.Max(.1f, run.Config.shotInterval * ShotIntervalScale);
             run.RefreshPressure();
             Projectile.Create(run, (Vector2)transform.position + aim * .65f, aim,
                 run.Config.bulletSpeed, run.Config.bulletDamage * DamageScale * run.DamageMultiplier, false);
             run.Noise.Emit(transform.position, NoiseRadius, NoiseKind.Gunshot);
             run.Noise.PlayShot();
+            return true;
         }
 
         private void ThrowDecoy()

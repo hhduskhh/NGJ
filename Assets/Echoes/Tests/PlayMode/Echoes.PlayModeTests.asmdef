@@ -1,5 +1,5 @@
 {
   "name": "Echoes.PlayModeTests",
-  "references": ["Echoes.Runtime"],
+  "references": ["Echoes.Runtime", "Unity.ugui"],
   "optionalUnityReferences": ["TestAssemblies"]
 }

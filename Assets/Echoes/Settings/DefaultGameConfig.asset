@@ -17,6 +17,8 @@ MonoBehaviour:
   bulletDamage: 10
   shotInterval: 0.28
   bulletSpeed: 22
+  playerVisionRadius: 3
+  echoRevealDuration: 1.5
   gunNoiseRadius: 6
   waveSpeed: 22
   pressureRadius: 5

@@ -14,6 +14,7 @@ namespace Echoes
         public PlayerController Player { get; private set; }
         public NoiseSystem Noise { get; private set; }
         public GameHud Hud { get; private set; }
+        public DungeonVisibility Visibility { get; private set; }
         public EnemyController Boss { get; private set; }
         public readonly List<EnemyController> Enemies = new List<EnemyController>();
         public RunState State { get; private set; }
@@ -30,6 +31,7 @@ namespace Echoes
         public bool Muted { get; private set; }
         public List<UpgradeDefinition> Choices { get; private set; }
         public System.Random Random { get; private set; }
+        private int pendingUpgradeCost;
 
         private void Start()
         {
@@ -43,6 +45,8 @@ namespace Echoes
             Player = PlayerController.Create(this, Map.Rooms[0].Center);
             Camera.main.gameObject.AddComponent<CameraFollow>().Target = Player.transform;
             SpawnFloor();
+            Visibility = gameObject.AddComponent<DungeonVisibility>();
+            Visibility.Initialize(this);
             Hud = gameObject.AddComponent<GameHud>();
             Hud.Initialize(this);
         }
@@ -105,8 +109,7 @@ namespace Echoes
         private void TryLevelUp()
         {
             if (State != RunState.Playing || Experience < RequiredExperience) return;
-            Experience -= RequiredExperience;
-            Level++;
+            pendingUpgradeCost = RequiredExperience;
             Choices = UpgradeDefinition.Roll(Random);
             SetState(RunState.Upgrade);
         }
@@ -115,12 +118,16 @@ namespace Echoes
         {
             if (State != RunState.Upgrade || index < 0 || index >= Choices.Count) return;
             Choices[index].Apply(Player);
+            Experience -= pendingUpgradeCost;
+            Level++;
+            pendingUpgradeCost = 0;
             SetState(RunState.Playing);
             TryLevelUp(); // Preserve overflow and queue additional levels without discarding XP.
         }
 
         public void SetState(RunState state)
         {
+            if (State == RunState.Upgrade && state == RunState.Paused) return;
             State = state;
             Time.timeScale = state == RunState.Playing ? 1 : 0;
             Hud?.RefreshModal();

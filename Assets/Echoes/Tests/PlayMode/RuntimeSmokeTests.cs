@@ -128,7 +128,7 @@ namespace Echoes.Tests
             yield return null;
         }
 
-        private static void Capture(string path)
+        internal static void Capture(string path)
         {
             // Batch mode has no Game View backbuffer. Render the same camera and HUD to an explicit target.
             var camera = Camera.main;
