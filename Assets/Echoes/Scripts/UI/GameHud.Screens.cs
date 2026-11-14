@@ -8,7 +8,7 @@ namespace Echoes
         {
             RestoreCombatHud();
             ResetScreenFeedback();
-            if (run.State != RunState.Paused) settingsOpen = false;
+            if (run.State != RunState.Paused && run.State != RunState.Backpack) settingsOpen = false;
             if (modalBackdrop)
             {
                 modalBackdrop.gameObject.SetActive(false);
@@ -21,6 +21,11 @@ namespace Echoes
             modalBackdrop.anchorMax = Vector2.one;
             modalBackdrop.offsetMin = modalBackdrop.offsetMax = Vector2.zero;
             modalBackdrop.GetComponent<UnityEngine.UI.Image>().raycastTarget = true;
+            if (run.State == RunState.Backpack)
+            {
+                DrawBackpack();
+                return;
+            }
             if (run.State == RunState.Shop)
             {
                 modal = modalBackdrop;
@@ -71,6 +76,7 @@ namespace Echoes
                 settingsOpen = true;
                 RefreshModal();
             }).name = "OpenSettings";
+            Button(modal, "背包 [Tab]", new Vector2(98, -385), new Vector2(194, 58), run.OpenBackpack).name = "PauseBackpack";
         }
 
         private void DrawSettings()

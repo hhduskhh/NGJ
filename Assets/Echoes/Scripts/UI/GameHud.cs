@@ -72,6 +72,11 @@ namespace Echoes
             ArtPanel("HudGoldIcon", purse, new Vector2(6, -4), new Vector2(32, 32),
                 PresentationArt.Current.shopGoldCoin, icon: true);
             goldText = Label(purse, "", new Vector2(42, -6), new Vector2(70, 29), 20, Brass);
+            var pack = Button(canvas, "背包 [Tab]", Vector2.zero, new Vector2(166, 44), run.OpenBackpack);
+            pack.name = "HudBackpack";
+            pack.anchorMin = pack.anchorMax = pack.pivot = Vector2.right;
+            pack.anchoredPosition = new Vector2(-150, 22);
+            SkinButton(pack);
             noticeText = Label(canvas, "", new Vector2(0, 33), new Vector2(690, 42), 21, Paper, new Vector2(.5f, 0));
             noticeText.alignment = TextAlignmentOptions.Center;
             bossText = Label(canvas, "", new Vector2(0, -22), new Vector2(520, 28), 18, PixelArt.Red, new Vector2(.5f, 1));

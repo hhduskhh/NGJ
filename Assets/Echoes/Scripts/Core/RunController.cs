@@ -4,7 +4,7 @@ using UnityEngine.SceneManagement;
 
 namespace Echoes
 {
-    public enum RunState { Playing, Upgrade, Paused, Shop, FloorCleared, Won, Lost }
+    public enum RunState { Playing, Upgrade, Paused, Shop, FloorCleared, Won, Lost, Backpack }
 
     public sealed class RunController : MonoBehaviour
     {
@@ -41,6 +41,7 @@ namespace Echoes
         public List<UpgradeDefinition> Choices { get; private set; }
         public System.Random Random { get; private set; }
         private int pendingUpgradeCost;
+        private RunState backpackReturnState;
 
         private void Start()
         {
@@ -106,6 +107,13 @@ namespace Echoes
                 Hud.ReadResultInput();
                 return;
             }
+            if (Input.GetKeyDown(KeyCode.Tab))
+            {
+                if (State == RunState.Backpack) CloseBackpack();
+                else OpenBackpack();
+                return;
+            }
+            if (State == RunState.Backpack && Input.GetKeyDown(KeyCode.Escape)) { CloseBackpack(); return; }
             if (State == RunState.Shop && Input.GetKeyDown(KeyCode.Escape)) { Shop.Close(); return; }
             if (Input.GetKeyDown(KeyCode.Escape) &&
                 (State == RunState.Playing || State == RunState.Paused))
@@ -202,6 +210,18 @@ namespace Echoes
             pendingUpgradeCost = 0;
             SetState(RunState.Playing);
             TryLevelUp(); // Preserve overflow and queue additional levels without discarding XP.
+        }
+
+        public void OpenBackpack()
+        {
+            if (State != RunState.Playing && State != RunState.Shop && State != RunState.Paused && State != RunState.Upgrade) return;
+            backpackReturnState = State;
+            SetState(RunState.Backpack);
+        }
+
+        public void CloseBackpack()
+        {
+            if (State == RunState.Backpack) SetState(backpackReturnState);
         }
 
         public void SetState(RunState state)

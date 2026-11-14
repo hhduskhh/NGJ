@@ -68,6 +68,8 @@ namespace Echoes
             UpdateAim(AimPoint, false);
             Weapons.Tick(Time.deltaTime, AimPoint);
             if (!Input.GetMouseButton(0)) waitForFireRelease = false;
+            else if (Input.GetMouseButtonDown(0) && UnityEngine.EventSystems.EventSystem.current && UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject())
+                waitForFireRelease = true;
             if (!waitForFireRelease && Input.GetMouseButton(0)) TryFire(AimPoint);
             if (Input.GetKeyDown(KeyCode.Q) && DecoyCooldownRemaining <= 0) ThrowDecoy();
         }
