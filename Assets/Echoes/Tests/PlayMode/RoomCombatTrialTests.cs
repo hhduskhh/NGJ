@@ -25,14 +25,15 @@ namespace Echoes.Tests
                 var run = Object.FindObjectOfType<RunController>();
                 var player = run.Player;
                 Assert.AreEqual(713, run.Config.randomSeed);
-                var room = run.Map.Rooms[1];
-                Assert.AreEqual(RoomRole.Middle, room.Role);
-                Assert.AreEqual(RoomShape.Line2, room.Shape);
-                Vector2 lane = new Vector2(15, 58);
-                var residents = run.Enemies.Where(e => run.Map.RoomAtPosition(e.transform.position) == room).ToArray();
-                Assert.AreEqual(4, residents.Length);
-                var walkers = residents.Where(e => !e.IsGuard).ToArray();
-                var guards = residents.Where(e => e.IsGuard).ToArray();
+                // Use the open start room as the trial arena; the generated floor is
+                // larger and denser than the old fixed rooms.
+                var room = run.Map.Rooms[0];
+                Assert.AreEqual(RoomRole.Start, room.Role);
+                Vector2 lane = room.Center - Vector2.right * 6f;
+                var walkers = run.Enemies.Where(e => !e.IsBoss && !e.IsGuard).ToArray();
+                var guards = run.Enemies.Where(e => !e.IsBoss && e.IsGuard).ToArray();
+                Assert.GreaterOrEqual(walkers.Length, 2);
+                Assert.GreaterOrEqual(guards.Length, 2);
                 var group = new[] { walkers[0], guards[0], walkers[1], guards[1] };
                 var offsets = new[] { new Vector2(5, 0), new Vector2(6, 1), new Vector2(11, 0), new Vector2(12, 1) };
                 for (int i = 0; i < group.Length; i++)

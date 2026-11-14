@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Tilemaps;
 
 namespace Echoes
 {
@@ -30,15 +31,10 @@ namespace Echoes
                 Opening.x + Opening.width * .5f, Opening.y + Opening.height * .5f); } }
         }
 
-        private sealed class ObstacleSpec
-        {
-            public string Kind;
-            public int X, Y, Width, Height;
-        }
-
         public const int GridSize = DungeonPlan.GridSize;
-        public const int CellWidth = 18;
-        public const int CellHeight = 14;
+        public const int CellWidth = 36;
+        public const int CellHeight = 36;
+        public const int DoorWidth = 6;
         public const int Width = GridSize * CellWidth;
         public const int Height = GridSize * CellHeight;
 
@@ -49,24 +45,15 @@ namespace Echoes
             new Vector2Int(0, 1), new Vector2Int(1, 0),
             new Vector2Int(0, -1), new Vector2Int(-1, 0)
         };
-        private static readonly string[][] SolidProps =
-        {
-            new[] { "crate", "pillar", "station", "rack", "bench" },
-            new[] { "crate", "station", "pipe", "pipeBend", "panel", "conduit" },
-            new[] { "pillar", "crystal", "fork", "panel", "station", "conduit" }
-        };
-        private static readonly string[][] DressingKinds =
-        {
-            new[] { "lamp", "signature" },
-            new[] { "lamp", "panel" },
-            new[] { "lamp", "signature" }
-        };
-
         private readonly bool[,] walkable = new bool[Width, Height];
         private readonly bool[,] floor = new bool[Width, Height];
         private readonly Room[,] cellRooms = new Room[GridSize, GridSize];
-        private readonly List<ObstacleSpec> obstacleSpecs = new List<ObstacleSpec>();
+        private readonly List<RoomPropSpec> obstacleSpecs = new List<RoomPropSpec>();
+        private readonly List<RoomPropSpec> decorSpecs = new List<RoomPropSpec>();
+        private readonly Dictionary<string, TileBase> floorTiles = new Dictionary<string, TileBase>();
         private Transform generatedRoot;
+        private Tilemap floorMap;
+        private TilemapRenderer floorRenderer;
         private RunController run;
 
         public List<Room> Rooms { get; } = new List<Room>();
@@ -82,7 +69,7 @@ namespace Echoes
             {
                 if (Rooms.Count == 0) return Vector2.zero;
                 var boss = Rooms[Rooms.Count - 1];
-                return FindWalkableInRoom(boss.Center + Vector2.up * 2f, boss);
+                return FindWalkableInRoom(boss.Center + Vector2.up * 4f, boss);
             }
         }
 
@@ -92,7 +79,7 @@ namespace Echoes
             {
                 if (Rooms.Count == 0) return Vector2.zero;
                 var boss = Rooms[Rooms.Count - 1];
-                return FindWalkableInRoom(boss.Center + Vector2.down * 3f, boss);
+                return FindWalkableInRoom(boss.Center + Vector2.down * 6f, boss);
             }
         }
 
@@ -105,6 +92,7 @@ namespace Echoes
             Rooms.Clear();
             Doors.Clear();
             obstacleSpecs.Clear();
+            decorSpecs.Clear();
             CurrentRoom = 0;
             for (int x = 0; x < Width; x++)
                 for (int y = 0; y < Height; y++)
@@ -161,7 +149,8 @@ namespace Echoes
             return new RectInt(minX, minY, maxX - minX, maxY - minY);
         }
 
-        private static int WorldCellY(int row) => (GridSize - 1 - row) * CellHeight;
+        public static int CellOriginY(int row) => (GridSize - 1 - row) * CellHeight;
+        private static int WorldCellY(int row) => CellOriginY(row);
 
         private void CarveRooms(DungeonPlan plan)
         {
@@ -202,15 +191,15 @@ namespace Echoes
                     int left = Mathf.Min(cellA.x, cellB.x);
                     int row = cellA.y;
                     opening = new RectInt(left * CellWidth + CellWidth - 1,
-                        WorldCellY(row) + 5, 2, 4);
+                        WorldCellY(row) + (CellHeight - DoorWidth) / 2, 2, DoorWidth);
                 }
                 else
                 {
                     int above = Mathf.Min(cellA.y, cellB.y);
                     int below = Mathf.Max(cellA.y, cellB.y);
                     int col = cellA.x;
-                    opening = new RectInt(col * CellWidth + 7,
-                        WorldCellY(below) + CellHeight - 1, 4, 2);
+                    opening = new RectInt(col * CellWidth + (CellWidth - DoorWidth) / 2,
+                        WorldCellY(below) + CellHeight - 1, DoorWidth, 2);
                 }
                 SetFloorRect(opening.x, opening.y, opening.width, opening.height);
                 var roomA = Rooms[planned.A.Index];
@@ -236,8 +225,7 @@ namespace Echoes
         {
             int theme = Mathf.Clamp(Floor - 1, 0, 2);
             var random = new System.Random(run.Config.randomSeed + Floor * 2003 + 17);
-            foreach (var room in Rooms)
-                if (room.Role == RoomRole.Middle) BuildRoomObstacles(room, theme, random);
+            foreach (var room in Rooms) BuildRoomObstacles(room, theme, random);
             if (AllWalkableConnected()) return;
             RestoreObstacles();
             if (!AllWalkableConnected())
@@ -246,110 +234,29 @@ namespace Echoes
 
         private void BuildRoomObstacles(Room room, int theme, System.Random random)
         {
-            var candidates = BuildObstacleCandidates(room, theme, random);
-            var blocked = new List<Vector2Int>();
-            var accepted = new List<ObstacleSpec>();
-            foreach (var spec in candidates)
-                if (TryBlockObstacle(spec, room, blocked)) accepted.Add(spec);
-            if (!RoomConnected(room))
+            for (int attempt = 0; attempt < 3; attempt++)
             {
-                foreach (var tile in blocked) walkable[tile.x, tile.y] = true;
-                blocked.Clear();
-                accepted.Clear();
-            }
-            foreach (var spec in accepted) obstacleSpecs.Add(spec);
-        }
-
-        private List<ObstacleSpec> BuildObstacleCandidates(Room room, int theme, System.Random random)
-        {
-            var anchors = new List<Vector2Int>();
-            var b = room.Bounds;
-            switch (room.Shape)
-            {
-                case RoomShape.Single:
-                    anchors.Add(new Vector2Int(b.x + 4, b.y + 4));
-                    anchors.Add(new Vector2Int(b.xMax - 5, b.yMax - 5));
-                    break;
-                case RoomShape.Line2:
-                    if (b.width > b.height)
-                    {
-                        anchors.Add(new Vector2Int(b.x + b.width / 3, b.y + 4));
-                        anchors.Add(new Vector2Int(b.x + b.width * 2 / 3, b.yMax - 6));
-                    }
-                    else
-                    {
-                        anchors.Add(new Vector2Int(b.x + 4, b.y + b.height / 3));
-                        anchors.Add(new Vector2Int(b.xMax - 6, b.y + b.height * 2 / 3));
-                    }
-                    break;
-                case RoomShape.Line3:
-                    if (b.width > b.height)
-                    {
-                        for (int i = 1; i <= 4; i++)
-                            anchors.Add(new Vector2Int(b.x + b.width * i / 5,
-                                i % 2 == 0 ? b.yMax - 6 : b.y + 4));
-                    }
-                    else
-                    {
-                        for (int i = 1; i <= 4; i++)
-                            anchors.Add(new Vector2Int(i % 2 == 0 ? b.xMax - 6 : b.x + 4,
-                                b.y + b.height * i / 5));
-                    }
-                    break;
-                case RoomShape.Square2:
-                    int cx = b.x + b.width / 2;
-                    int cy = b.y + b.height / 2;
-                    anchors.Add(new Vector2Int(cx - 5, cy - 5));
-                    anchors.Add(new Vector2Int(cx + 3, cy - 5));
-                    anchors.Add(new Vector2Int(cx - 5, cy + 3));
-                    anchors.Add(new Vector2Int(cx + 3, cy + 3));
-                    break;
-                case RoomShape.L:
-                    anchors.Add(new Vector2Int(b.x + 4, b.y + 4));
-                    anchors.Add(new Vector2Int(b.xMax - 6, b.y + 4));
-                    anchors.Add(new Vector2Int(b.x + 4, b.yMax - 6));
-                    anchors.Add(new Vector2Int(b.xMax - 6, b.yMax - 6));
-                    break;
-            }
-
-            var result = new List<ObstacleSpec>();
-            var pool = SolidProps[Mathf.Clamp(theme, 0, SolidProps.Length - 1)];
-            foreach (var anchor in anchors)
-            {
-                var kinds = new List<string>(pool);
-                Shuffle(kinds, random);
-                foreach (var kind in kinds)
+                var specs = RoomLayouts.Build(room, theme, random);
+                var blocked = new List<Vector2Int>();
+                var accepted = new List<RoomPropSpec>();
+                foreach (var spec in specs)
+                    if (spec.Solid && TryBlockObstacle(spec, room, blocked)) accepted.Add(spec);
+                bool connected = RoomConnected(room);
+                if (connected)
                 {
-                    var size = Footprint(kind);
-                    result.Add(new ObstacleSpec
-                    {
-                        Kind = kind,
-                        X = anchor.x + random.Next(-1, 2),
-                        Y = anchor.y + random.Next(-1, 2),
-                        Width = size.x,
-                        Height = size.y
-                    });
+                    obstacleSpecs.AddRange(accepted);
+                    foreach (var spec in specs)
+                        if (!spec.Solid) decorSpecs.Add(spec);
+                    return;
                 }
+                foreach (var tile in blocked) walkable[tile.x, tile.y] = true;
             }
-            return result;
+            // Keep the room playable even if every solid layout attempt is too dense.
+            foreach (var spec in RoomLayouts.Build(room, theme, random))
+                if (!spec.Solid) decorSpecs.Add(spec);
         }
 
-        private static Vector2Int Footprint(string kind)
-        {
-            switch (kind)
-            {
-                case "station":
-                case "rack":
-                case "bench":
-                case "pipe":
-                case "conduit":
-                    return new Vector2Int(2, 1);
-                default:
-                    return Vector2Int.one;
-            }
-        }
-
-        private bool TryBlockObstacle(ObstacleSpec spec, Room room, List<Vector2Int> blocked)
+        private bool TryBlockObstacle(RoomPropSpec spec, Room room, List<Vector2Int> blocked)
         {
             // Keep one floor tile of clearance around every solid prop.
             for (int x = spec.X - 1; x <= spec.X + spec.Width; x++)
@@ -361,8 +268,8 @@ namespace Echoes
                     if (!walkable[x, y] || !IsTileInRoom(x, y, room)) return false;
                     foreach (var door in room.DoorOpenings)
                     {
-                        var clearance = new RectInt(door.x - 2, door.y - 2,
-                            door.width + 4, door.height + 4);
+                        var clearance = new RectInt(door.x - 3, door.y - 3,
+                            door.width + 6, door.height + 6);
                         if (clearance.Contains(new Vector2Int(x, y))) return false;
                     }
                 }
@@ -490,6 +397,7 @@ namespace Echoes
             var root = new GameObject("DungeonTiles");
             generatedRoot = root.transform;
             generatedRoot.SetParent(transform);
+            RenderFloorTiles();
             foreach (var room in Rooms)
                 foreach (var cell in room.Cells)
                 {
@@ -498,18 +406,54 @@ namespace Echoes
                     for (int x = x0; x < x0 + CellWidth; x++)
                         for (int y = y0; y < y0 + CellHeight; y++)
                         {
-                            bool isFloor = floor[x, y];
-                            var renderer = PixelArt.Create(isFloor ? "Floor" : "Wall",
-                                isFloor ? FloorKind(x, y) : WallKind(x, y),
-                                new Vector2(x, y),
-                                isFloor ? -200 : GameArt.FootOrder(y), generatedRoot);
-                            if (!isFloor) renderer.gameObject.AddComponent<BoxCollider2D>();
+                            if (floor[x, y]) continue;
+                            var renderer = PixelArt.Create("Wall", WallKind(x, y),
+                                new Vector2(x, y), GameArt.FootOrder(y), generatedRoot);
+                            renderer.gameObject.AddComponent<BoxCollider2D>();
                         }
                 }
             RenderDoorposts();
             RenderObstacles();
-            RenderWallDressing();
+            RenderDecorations();
             PixelArt.Create("ChallengeAltar", "altar", AltarPosition, -120, generatedRoot);
+        }
+
+        private void RenderFloorTiles()
+        {
+            if (!floorMap)
+            {
+                var gridObject = new GameObject("DungeonGrid", typeof(Grid));
+                gridObject.transform.SetParent(generatedRoot, false);
+                // Tilemap cell centres sit at +0.5; shift the grid so cell (x,y)
+                // matches our integer tile-centre convention.
+                gridObject.transform.localPosition = new Vector3(-.5f, -.5f, 0);
+                var tileObject = new GameObject("Floor", typeof(Tilemap), typeof(TilemapRenderer));
+                tileObject.transform.SetParent(gridObject.transform, false);
+                floorMap = tileObject.GetComponent<Tilemap>();
+                floorRenderer = tileObject.GetComponent<TilemapRenderer>();
+                floorRenderer.sortingLayerName = "Default";
+                // Y-sorted walls/props reach much lower than -200 on the 180x180 map.
+                floorRenderer.sortingOrder = -1000;
+                if (PixelArt.LineMaterial) floorRenderer.sharedMaterial = PixelArt.LineMaterial;
+            }
+            floorMap.ClearAllTiles();
+            var tiles = new TileBase[Width * Height];
+            for (int y = 0; y < Height; y++)
+                for (int x = 0; x < Width; x++)
+                    if (floor[x, y]) tiles[y * Width + x] = GetFloorTile(FloorKind(x, y));
+            floorMap.SetTilesBlock(new BoundsInt(0, 0, 0, Width, Height, 1), tiles);
+        }
+
+        private TileBase GetFloorTile(string kind)
+        {
+            string key = GameArt.Floor + kind;
+            if (floorTiles.TryGetValue(key, out var tile)) return tile;
+            var created = ScriptableObject.CreateInstance<Tile>();
+            created.name = key;
+            created.sprite = GameArt.Get(kind);
+            created.colliderType = Tile.ColliderType.None;
+            floorTiles[key] = created;
+            return created;
         }
 
         private static string FloorKind(int x, int y) =>
@@ -545,34 +489,38 @@ namespace Echoes
         {
             foreach (var spec in obstacleSpecs)
             {
+                float scale = spec.Scale > .01f ? spec.Scale : 1f;
                 var position = new Vector2(spec.X + (spec.Width - 1) * .5f, spec.Y);
                 var renderer = PixelArt.Create("Obstacle_" + spec.Kind, spec.Kind, position,
-                    GameArt.FootOrder(position.y) + 1, generatedRoot);
+                    GameArt.FootOrder(position.y) + 1, generatedRoot, scale);
                 var collider = renderer.gameObject.AddComponent<BoxCollider2D>();
-                collider.size = new Vector2(spec.Width, .7f);
-                collider.offset = new Vector2(0, .25f);
+                collider.size = new Vector2(spec.Width, spec.Height);
+                collider.offset = new Vector2(0, (spec.Height - 1) * .5f);
             }
         }
 
-        private void RenderWallDressing()
+        private void RenderDecorations()
         {
-            int theme = Mathf.Clamp(Floor - 1, 0, 2);
-            var kinds = DressingKinds[theme];
-            foreach (var room in Rooms)
-                foreach (var cell in room.Cells)
+            foreach (var spec in decorSpecs)
+            {
+                if (!InBounds(spec.X, spec.Y)) continue;
+                if (spec.Owner == null || !IsTileInRoom(spec.X, spec.Y, spec.Owner)) continue;
+                bool isFloor = floor[spec.X, spec.Y];
+                if (spec.Layer == RoomPropLayer.WallObject ? isFloor : !isFloor) continue;
+                float scale = spec.Scale > .01f ? spec.Scale : 1f;
+                var position = new Vector2(spec.X, spec.Y);
+                if (spec.Layer == RoomPropLayer.FloorDecal)
                 {
-                    int x0 = cell.x * CellWidth;
-                    int y0 = WorldCellY(cell.y);
-                    int y = y0 + CellHeight - 1;
-                    foreach (int x in new[] { x0 + 3, x0 + 12 })
-                    {
-                        if (!InBounds(x, y) || floor[x, y]) continue;
-                        string kind = kinds[(x * 7 + y * 11 + room.Index) % kinds.Length];
-                        PixelArt.Create("Dressing_" + kind, kind,
-                            new Vector2(x, y),
-                            GameArt.FootOrder(y) + 1, generatedRoot);
-                    }
+                    var decal = PixelArt.Create("Decal_" + spec.Kind, spec.Kind, position,
+                        -900, generatedRoot, scale);
+                    decal.color = spec.Color;
                 }
+                else
+                {
+                    PixelArt.Create((spec.Layer == RoomPropLayer.WallObject ? "WallDecor_" : "Decor_") + spec.Kind,
+                        spec.Kind, position, GameArt.FootOrder(position.y) + 1, generatedRoot, scale);
+                }
+            }
         }
 
         private void ClearGenerated()
@@ -582,6 +530,8 @@ namespace Echoes
             if (Application.isPlaying) Destroy(generatedRoot.gameObject);
             else DestroyImmediate(generatedRoot.gameObject);
             generatedRoot = null;
+            floorMap = null;
+            floorRenderer = null;
         }
 
         private static void Shuffle<T>(List<T> list, System.Random random)
@@ -627,6 +577,7 @@ namespace Echoes
         public void ApplyArtTheme(int theme)
         {
             GameArt.SetTheme(theme);
+            if (generatedRoot) RenderFloorTiles();
             foreach (var binding in FindObjectsOfType<ArtBinding>()) binding.Refresh();
         }
 
@@ -644,6 +595,27 @@ namespace Echoes
 
         public bool IsFloorTile(Vector2Int p) =>
             p.x >= 0 && p.y >= 0 && p.x < Width && p.y < Height && floor[p.x, p.y];
+
+        public int SolidCount(Room room)
+        {
+            int count = 0;
+            foreach (var spec in obstacleSpecs) if (spec.Owner == room) count++;
+            return count;
+        }
+
+        public int SolidTileCount(Room room)
+        {
+            int count = 0;
+            foreach (var spec in obstacleSpecs)
+                if (spec.Owner == room) count += spec.Width * spec.Height;
+            return count;
+        }
+
+        public float SolidCoverage(Room room)
+        {
+            int area = room.CellCount * (CellWidth - 2) * (CellHeight - 2);
+            return area == 0 ? 0f : (float)SolidTileCount(room) / area;
+        }
 
         // Traverse every crossed cell, including both sides of an exact corner.
         // Keep this traversal in sync with DungeonDarkness.shader.
@@ -705,8 +677,8 @@ namespace Echoes
             {
                 int x0 = cell.x * CellWidth;
                 int y0 = WorldCellY(cell.y);
-                for (int x = x0 + 2; x < x0 + CellWidth - 1; x += 2)
-                    for (int y = y0 + 2; y < y0 + CellHeight - 1; y += 2)
+                for (int x = x0 + 3; x < x0 + CellWidth - 1; x += 3)
+                    for (int y = y0 + 3; y < y0 + CellHeight - 1; y += 3)
                         if (IsSpawnTile(room, x, y))
                             result.Add(new Vector2(x, y));
             }
@@ -726,8 +698,8 @@ namespace Echoes
                 if (!InBounds(x + step.x, y + step.y) || !walkable[x + step.x, y + step.y]) return false;
             foreach (var door in room.DoorOpenings)
             {
-                var clearance = new RectInt(door.x - 2, door.y - 2,
-                    door.width + 4, door.height + 4);
+                var clearance = new RectInt(door.x - 3, door.y - 3,
+                    door.width + 6, door.height + 6);
                 if (clearance.Contains(new Vector2Int(x, y))) return false;
             }
             return true;

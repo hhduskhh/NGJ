@@ -126,7 +126,7 @@ namespace Echoes.Tests
             var room = run.Map.Rooms[0];
             Vector2 source = room.Center;
             PlacePlayer(source);
-            run.Visibility.Reveal(source, 20);
+            run.Visibility.Reveal(source, 30);
             yield return new WaitForSeconds(run.Config.visionExpandDuration + .02f);
             run.Visibility.RefreshMask();
 
@@ -136,11 +136,11 @@ namespace Echoes.Tests
             backing.sharedMaterial = PixelArt.LineMaterial;
             backing.sortingOrder = 39;
             backing.transform.position = source;
-            backing.transform.localScale = new Vector3(room.Bounds.width + 8, room.Bounds.height + 8, 1);
+            backing.transform.localScale = new Vector3(room.Bounds.width + 20, room.Bounds.height + 20, 1);
             var camera = new GameObject("WallSurfaceTestCamera").AddComponent<Camera>();
             camera.transform.position = new Vector3(source.x, source.y, -10);
             camera.orthographic = true;
-            camera.orthographicSize = 10;
+            camera.orthographicSize = 28;
             var target = new RenderTexture(800, 600, 24);
             var image = new Texture2D(800, 600, TextureFormat.RGB24, false);
             var previousActive = RenderTexture.active;
@@ -188,7 +188,7 @@ namespace Echoes.Tests
                         }
                 }
                 Assert.Greater(wallSamples, 0);
-                Vector2 outside = DungeonTestGeometry.World(new Vector2Int(b.x + 3, b.y - 2));
+                Vector2 outside = DungeonTestGeometry.World(new Vector2Int(b.x + 3, b.y - 5));
                 Assert.Less(Brightness(outside), .01f, "Space beyond the wall stays dark");
             }
             finally

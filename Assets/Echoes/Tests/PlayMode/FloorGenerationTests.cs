@@ -21,6 +21,10 @@ namespace Echoes.Tests
             var run = Object.FindObjectOfType<RunController>();
             Assert.AreEqual(1, run.Floor);
             Assert.AreEqual(1, run.Map.Floor);
+            Assert.AreEqual(36, DungeonMap.CellWidth);
+            Assert.AreEqual(36, DungeonMap.CellHeight);
+            Assert.AreEqual(180, DungeonMap.Width);
+            Assert.AreEqual(180, DungeonMap.Height);
             Assert.AreEqual("Floor1/", GameArt.Floor);
             Assert.GreaterOrEqual(run.Map.Rooms.Count, 10);
             Assert.LessOrEqual(run.Map.Rooms.Count, 25);
@@ -41,6 +45,12 @@ namespace Echoes.Tests
             {
                 Assert.GreaterOrEqual(room.DoorOpenings.Count, 1);
                 if (room.Role == RoomRole.Middle && room.Shape != RoomShape.Single) multiCell.Add(room.Shape);
+                if (room.Role == RoomRole.Middle)
+                {
+                    Assert.GreaterOrEqual(run.Map.SolidCount(room), 6, "Middle room needs cover");
+                    Assert.GreaterOrEqual(run.Map.SolidCoverage(room), .05f, "Middle room cover coverage");
+                    Assert.LessOrEqual(run.Map.SolidCoverage(room), .22f, "Middle room is not overfilled");
+                }
                 Assert.GreaterOrEqual(run.Map.SpawnCells(room.Index).Count, 1);
                 foreach (var door in room.DoorOpenings)
                     Assert.IsTrue(door.width == 2 || door.height == 2);
@@ -85,6 +95,13 @@ namespace Echoes.Tests
                             "Room centre must be on its own floor: " + room.Name);
                         Assert.Greater(map.SpawnCells(room.Index).Count, 0,
                             "Every room has at least one valid spawn cell: " + room.Name);
+                        if (room.Role == RoomRole.Middle)
+                        {
+                            Assert.GreaterOrEqual(map.SolidCount(room), 5,
+                                "Middle room needs cover: " + room.Name);
+                            Assert.GreaterOrEqual(map.SolidCoverage(room), .04f,
+                                "Middle room cover coverage: " + room.Name);
+                        }
                         if (room != map.Rooms[0])
                             Assert.Greater(map.FindPath(map.StartPosition, room.Center).Count, 0,
                                 "Every room is reachable: " + room.Name);

@@ -70,7 +70,7 @@ namespace Echoes.Editor
             EditorUtility.SetDirty(pipeline);
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             var camera = new GameObject("Main Camera", typeof(Camera), typeof(AudioListener)).GetComponent<Camera>();
-            camera.tag = "MainCamera"; camera.orthographic = true; camera.orthographicSize = 8.4375f;
+            camera.tag = "MainCamera"; camera.orthographic = true; camera.orthographicSize = 11.25f;
             camera.backgroundColor = new Color32(12, 18, 29, 255);
             camera.clearFlags = CameraClearFlags.SolidColor;
             camera.allowHDR = false; camera.allowMSAA = false;
@@ -79,7 +79,7 @@ namespace Echoes.Editor
             data.renderPostProcessing = false;
             data.antialiasing = AntialiasingMode.None;
             var pixelCamera = camera.gameObject.AddComponent<UnityEngine.Experimental.Rendering.Universal.PixelPerfectCamera>();
-            pixelCamera.assetsPPU = 16; pixelCamera.refResolutionX = 480; pixelCamera.refResolutionY = 270;
+            pixelCamera.assetsPPU = 16; pixelCamera.refResolutionX = 640; pixelCamera.refResolutionY = 360;
             pixelCamera.gridSnapping = UnityEngine.Experimental.Rendering.Universal.PixelPerfectCamera.GridSnapping.PixelSnapping;
             pixelCamera.cropFrame = UnityEngine.Experimental.Rendering.Universal.PixelPerfectCamera.CropFrame.None;
             var light = new GameObject("Global Light").AddComponent<Light2D>();

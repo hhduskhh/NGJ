@@ -1,0 +1,443 @@
+using System.Collections.Generic;
+using UnityEngine;
+
+namespace Echoes
+{
+    public enum RoomPropLayer { FloorDecal, FloorObject, WallObject, Overhead }
+
+    public sealed class RoomPropSpec
+    {
+        public string Kind;
+        public int X, Y;
+        public int Width = 1, Height = 1;
+        public float Scale = 1f;
+        public bool Solid;
+        public RoomPropLayer Layer;
+        public Color Color = Color.white;
+        public DungeonMap.Room Owner;
+    }
+
+    // P0 layout library: uses the existing 16 prop slices in denser clusters and
+    // several room archetypes. P1 art can replace kinds/scales without changing rules.
+    public static class RoomLayouts
+    {
+        private static readonly string[][] SolidPools =
+        {
+            new[] { "crate", "pillar", "station", "rack", "bench" },
+            new[] { "crate", "station", "pipe", "pipeBend", "panel", "conduit" },
+            new[] { "pillar", "crystal", "fork", "panel", "station", "conduit" }
+        };
+        private static readonly string[][] ClutterPools =
+        {
+            new[] { "spares", "pipeBend" },
+            new[] { "spares", "pipeBend", "conduit" },
+            new[] { "crystal", "fork", "spares" }
+        };
+        private static readonly string[][] WallPools =
+        {
+            new[] { "lamp", "signature" },
+            new[] { "lamp", "panel" },
+            new[] { "lamp", "signature" }
+        };
+
+        public static List<RoomPropSpec> Build(DungeonMap.Room room, int theme, System.Random random)
+        {
+            theme = Mathf.Clamp(theme, 0, 2);
+            var result = new List<RoomPropSpec>();
+            if (room.Role == RoomRole.Boss) BuildBoss(result, room, theme, random);
+            else if (room.Role == RoomRole.Middle) BuildMiddle(result, room, theme, random);
+            AddWallDecor(result, room, theme, random);
+            int decalCount = room.Role == RoomRole.Boss ? 0 : room.CellCount *
+                (room.Role == RoomRole.Middle ? 6 : 3);
+            int clutterCount = room.Role == RoomRole.Boss ? 0 : room.CellCount *
+                (room.Role == RoomRole.Middle ? 12 : 6);
+            AddFloorDecals(result, room, theme, random, decalCount);
+            AddClutter(result, room, theme, random, clutterCount);
+            foreach (var spec in result) spec.Owner = room;
+            return result;
+        }
+
+        private static void BuildBoss(List<RoomPropSpec> result, DungeonMap.Room room, int theme,
+            System.Random random)
+        {
+            var kind = SolidPools[theme][random.Next(SolidPools[theme].Length)];
+            // Four corner cover blocks only; the central arena stays open.
+            Place(result, kind, room.Bounds, .16f, .16f, 3, 3, 1.5f);
+            Place(result, kind, room.Bounds, .84f, .16f, 3, 3, 1.5f);
+            Place(result, kind, room.Bounds, .16f, .84f, 3, 3, 1.5f);
+            Place(result, kind, room.Bounds, .84f, .84f, 3, 3, 1.5f);
+        }
+
+        private static void BuildMiddle(List<RoomPropSpec> result, DungeonMap.Room room, int theme,
+            System.Random random)
+        {
+            bool horizontal = room.Bounds.width >= room.Bounds.height;
+            switch (room.Shape)
+            {
+                case RoomShape.Single:
+                    BuildSingle(result, room, theme, random);
+                    break;
+                case RoomShape.Line2:
+                    BuildLine2(result, room, theme, random, horizontal);
+                    break;
+                case RoomShape.Line3:
+                    BuildLine3(result, room, theme, random, horizontal);
+                    break;
+                case RoomShape.Square2:
+                    BuildSquare2(result, room, theme, random);
+                    break;
+                case RoomShape.L:
+                    BuildL(result, room, theme, random);
+                    break;
+            }
+        }
+
+        private static void BuildSingle(List<RoomPropSpec> result, DungeonMap.Room room, int theme,
+            System.Random random)
+        {
+            var b = room.Bounds;
+            var pool = SolidPools[theme];
+            var hero = Pick(pool, random);
+            var crate = theme == 1 ? "crate" : Pick(pool, random);
+            switch (random.Next(3))
+            {
+                case 0: // donut
+                    Place(result, hero, b, .50f, .50f, 8, 8, 4f);
+                    Place(result, crate, b, .18f, .18f, 3, 3, 1.5f);
+                    Place(result, crate, b, .82f, .18f, 3, 3, 1.5f);
+                    Place(result, crate, b, .18f, .82f, 3, 3, 1.5f);
+                    Place(result, crate, b, .82f, .82f, 3, 3, 1.5f);
+                    Place(result, "bench", b, .50f, .14f, 5, 1, 1f);
+                    Place(result, "bench", b, .50f, .86f, 5, 1, 1f);
+                    Place(result, "pillar", b, .15f, .50f, 2, 2, 1f);
+                    Place(result, "pillar", b, .85f, .50f, 2, 2, 1f);
+                    break;
+                case 1: // cargo S
+                    Place(result, crate, b, .20f, .18f, 4, 4, 2f);
+                    Place(result, crate, b, .80f, .18f, 4, 4, 2f);
+                    Place(result, crate, b, .38f, .50f, 4, 4, 2f);
+                    Place(result, crate, b, .62f, .50f, 4, 4, 2f);
+                    Place(result, crate, b, .20f, .82f, 4, 4, 2f);
+                    Place(result, crate, b, .80f, .82f, 4, 4, 2f);
+                    Place(result, "bench", b, .50f, .15f, 5, 1, 1f);
+                    Place(result, "bench", b, .50f, .85f, 5, 1, 1f);
+                    Place(result, "pillar", b, .50f, .36f, 2, 2, 1f);
+                    Place(result, "pillar", b, .50f, .64f, 2, 2, 1f);
+                    break;
+                default: // broken corners
+                    Place(result, "pillar", b, .16f, .16f, 3, 3, 1.5f);
+                    Place(result, "pillar", b, .84f, .16f, 3, 3, 1.5f);
+                    Place(result, crate, b, .16f, .84f, 4, 4, 2f);
+                    Place(result, crate, b, .84f, .84f, 3, 3, 1.5f);
+                    Place(result, "pillar", b, .50f, .50f, 3, 3, 1.5f);
+                    Place(result, crate, b, .50f, .18f, 4, 2, 2f);
+                    Place(result, "bench", b, .22f, .50f, 4, 1, 1f);
+                    Place(result, "bench", b, .78f, .50f, 4, 1, 1f);
+                    Place(result, crate, b, .40f, .78f, 3, 3, 1.5f);
+                    break;
+            }
+        }
+
+        private static void BuildLine2(List<RoomPropSpec> result, DungeonMap.Room room, int theme,
+            System.Random random, bool horizontal)
+        {
+            var b = room.Bounds;
+            var pool = SolidPools[theme];
+            var hero = Pick(pool, random);
+            var crate = theme == 1 ? "crate" : Pick(pool, random);
+            switch (random.Next(3))
+            {
+                case 0: // double hall
+                    Place(result, hero, b, .50f, .50f, 8, 8, 4f);
+                    Place(result, "pillar", b, .20f, .50f, 3, 3, 1.5f);
+                    Place(result, "pillar", b, .80f, .50f, 3, 3, 1.5f);
+                    Place(result, crate, b, .16f, .20f, 3, 3, 1.5f);
+                    Place(result, crate, b, .84f, .20f, 3, 3, 1.5f);
+                    Place(result, crate, b, .16f, .80f, 3, 3, 1.5f);
+                    Place(result, crate, b, .84f, .80f, 3, 3, 1.5f);
+                    Place(result, "bench", b, .50f, .16f, 6, 1, 1f);
+                    Place(result, "bench", b, .50f, .84f, 6, 1, 1f);
+                    break;
+                case 1: // pillar hall
+                    for (int i = 0; i < 4; i++)
+                    {
+                        float f = .16f + i * .226f;
+                        Place(result, "pillar", b, f, .22f, 3, 3, 1.5f);
+                        Place(result, "pillar", b, f, .78f, 3, 3, 1.5f);
+                        Place(result, crate, b, f, .50f, 3, 3, 1.5f);
+                    }
+                    Place(result, hero, b, .50f, .50f, 6, 6, 3f);
+                    break;
+                default: // cargo lanes
+                    for (int i = 0; i < 4; i++)
+                    {
+                        float f = .18f + i * .213f;
+                        Place(result, crate, b, f, i % 2 == 0 ? .28f : .72f, 4, 4, 2f);
+                        Place(result, "bench", b, f, i % 2 == 0 ? .50f : .50f, 4, 1, 1f);
+                    }
+                    Place(result, "pillar", b, .50f, .50f, 3, 3, 1.5f);
+                    Place(result, hero, b, .80f, .50f, 5, 5, 2.5f);
+                    break;
+            }
+            Place(result, crate, b, .30f, .35f, 4, 4, 2f);
+            Place(result, crate, b, .70f, .65f, 4, 4, 2f);
+            Place(result, "bench", b, .30f, .65f, 5, 1, 1.2f);
+            Place(result, "bench", b, .70f, .35f, 5, 1, 1.2f);
+            Place(result, crate, b, .18f, .50f, 5, 5, 2.5f);
+            Place(result, crate, b, .82f, .50f, 5, 5, 2.5f);
+            Place(result, crate, b, .50f, .22f, 5, 5, 2.5f);
+            Place(result, crate, b, .50f, .78f, 5, 5, 2.5f);
+        }
+
+        private static void BuildLine3(List<RoomPropSpec> result, DungeonMap.Room room, int theme,
+            System.Random random, bool horizontal)
+        {
+            var b = room.Bounds;
+            var pool = SolidPools[theme];
+            var hero = Pick(pool, random);
+            var crate = theme == 1 ? "crate" : Pick(pool, random);
+            switch (random.Next(3))
+            {
+                case 0: // long hall
+                    for (int i = 0; i < 5; i++)
+                    {
+                        float f = .12f + i * .19f;
+                        Place(result, "pillar", b, horizontal ? f : .24f, horizontal ? .24f : f, 3, 3, 1.5f);
+                        Place(result, "pillar", b, horizontal ? f : .76f, horizontal ? .76f : f, 3, 3, 1.5f);
+                    }
+                    Place(result, hero, b, horizontal ? .50f : .50f, horizontal ? .50f : .50f, 8, 8, 4f);
+                    Place(result, "bench", b, horizontal ? .30f : .50f, horizontal ? .50f : .30f, 5, 1, 1f);
+                    Place(result, "bench", b, horizontal ? .70f : .50f, horizontal ? .50f : .70f, 5, 1, 1f);
+                    break;
+                case 1: // side alcoves
+                    for (int i = 0; i < 4; i++)
+                    {
+                        float f = .18f + i * .21f;
+                        Place(result, "pillar", b, horizontal ? f : .16f, horizontal ? .16f : f, 3, 3, 1.5f);
+                        Place(result, "pillar", b, horizontal ? f : .84f, horizontal ? .84f : f, 3, 3, 1.5f);
+                    }
+                    Place(result, hero, b, .50f, .50f, 9, 9, 4.5f);
+                    Place(result, "bench", b, .50f, .50f, 6, 1, 1f);
+                    Place(result, "crate", b, .28f, .50f, 4, 4, 2f);
+                    Place(result, "crate", b, .72f, .50f, 4, 4, 2f);
+                    break;
+                default: // broken hall
+                    Place(result, hero, b, .50f, .50f, 10, 10, 5f);
+                    Place(result, "crate", b, .22f, .30f, 5, 5, 2.5f);
+                    Place(result, "crate", b, .78f, .70f, 5, 5, 2.5f);
+                    for (int i = 0; i < 4; i++)
+                    {
+                        float f = .16f + i * .226f;
+                        Place(result, "pillar", b, f, .16f, 3, 3, 1.5f);
+                        Place(result, "pillar", b, f, .84f, 3, 3, 1.5f);
+                    }
+                    break;
+            }
+            for (int i = 0; i < 4; i++)
+            {
+                float f = .18f + i * .21f;
+                Place(result, crate, b, horizontal ? .30f : f, horizontal ? f : .30f, 4, 4, 2f);
+                Place(result, crate, b, horizontal ? .70f : f, horizontal ? f : .70f, 4, 4, 2f);
+            }
+            for (int i = 0; i < 4; i++)
+            {
+                float f = .18f + i * .21f;
+                Place(result, crate, b, horizontal ? .18f : f, horizontal ? f : .18f, 5, 5, 2.5f);
+                Place(result, crate, b, horizontal ? .82f : f, horizontal ? f : .82f, 5, 5, 2.5f);
+            }
+        }
+
+        private static void BuildSquare2(List<RoomPropSpec> result, DungeonMap.Room room, int theme,
+            System.Random random)
+        {
+            var b = room.Bounds;
+            var pool = SolidPools[theme];
+            var hero = Pick(pool, random);
+            var crate = theme == 1 ? "crate" : Pick(pool, random);
+            switch (random.Next(3))
+            {
+                case 0: // courtyard
+                    Place(result, hero, b, .50f, .50f, 9, 9, 4.5f);
+                    Place(result, crate, b, .18f, .18f, 5, 5, 2.5f);
+                    Place(result, crate, b, .82f, .18f, 5, 5, 2.5f);
+                    Place(result, crate, b, .18f, .82f, 5, 5, 2.5f);
+                    Place(result, crate, b, .82f, .82f, 5, 5, 2.5f);
+                    Place(result, "pillar", b, .50f, .15f, 3, 3, 1.5f);
+                    Place(result, "pillar", b, .50f, .85f, 3, 3, 1.5f);
+                    Place(result, "pillar", b, .15f, .50f, 3, 3, 1.5f);
+                    Place(result, "pillar", b, .85f, .50f, 3, 3, 1.5f);
+                    break;
+                case 1: // crossroads
+                    Place(result, hero, b, .50f, .50f, 6, 6, 3f);
+                    Place(result, crate, b, .28f, .28f, 5, 4, 2.5f);
+                    Place(result, crate, b, .72f, .28f, 5, 4, 2.5f);
+                    Place(result, crate, b, .28f, .72f, 5, 4, 2.5f);
+                    Place(result, crate, b, .72f, .72f, 5, 4, 2.5f);
+                    Place(result, "bench", b, .50f, .16f, 6, 1, 1f);
+                    Place(result, "bench", b, .50f, .84f, 6, 1, 1f);
+                    Place(result, "bench", b, .16f, .50f, 6, 1, 1f);
+                    Place(result, "bench", b, .84f, .50f, 6, 1, 1f);
+                    break;
+                default: // ring
+                    Place(result, hero, b, .50f, .50f, 10, 10, 5f);
+                    Place(result, "pillar", b, .20f, .20f, 4, 4, 2f);
+                    Place(result, "pillar", b, .80f, .20f, 4, 4, 2f);
+                    Place(result, "pillar", b, .20f, .80f, 4, 4, 2f);
+                    Place(result, "pillar", b, .80f, .80f, 4, 4, 2f);
+                    Place(result, crate, b, .50f, .16f, 4, 3, 2f);
+                    Place(result, crate, b, .50f, .84f, 4, 3, 2f);
+                    break;
+            }
+            Place(result, crate, b, .32f, .32f, 4, 4, 2f);
+            Place(result, crate, b, .68f, .32f, 4, 4, 2f);
+            Place(result, crate, b, .32f, .68f, 4, 4, 2f);
+            Place(result, crate, b, .68f, .68f, 4, 4, 2f);
+            Place(result, "pillar", b, .50f, .28f, 3, 3, 1.5f);
+            Place(result, "pillar", b, .50f, .72f, 3, 3, 1.5f);
+            Place(result, crate, b, .20f, .20f, 6, 6, 3f);
+            Place(result, crate, b, .80f, .20f, 6, 6, 3f);
+            Place(result, crate, b, .20f, .80f, 6, 6, 3f);
+            Place(result, crate, b, .80f, .80f, 6, 6, 3f);
+        }
+
+        private static void BuildL(List<RoomPropSpec> result, DungeonMap.Room room, int theme,
+            System.Random random)
+        {
+            var pool = SolidPools[theme];
+            var hero = Pick(pool, random);
+            var crate = theme == 1 ? "crate" : Pick(pool, random);
+            var cells = room.Cells;
+            if (cells.Count == 0) return;
+            var shrine = cells[random.Next(cells.Count)];
+            foreach (var cell in cells)
+            {
+                var center = CellCenter(cell);
+                if (cell == shrine) PlaceAtTile(result, hero, center.x, center.y, 8, 8, 4f);
+                else PlaceAtTile(result, crate, center.x, center.y, 5, 5, 2.5f);
+                for (int sx = -1; sx <= 1; sx += 2)
+                    for (int sy = -1; sy <= 1; sy += 2)
+                        PlaceAtTile(result, "pillar", center.x + sx * 10, center.y + sy * 10,
+                            3, 3, 1.5f);
+                PlaceAtTile(result, "bench", center.x, center.y - 12, 6, 1, 1.2f);
+                PlaceAtTile(result, "bench", center.x, center.y + 12, 6, 1, 1.2f);
+            }
+            // One asymmetric collapsed cluster on a valid cell.
+            var extra = cells[random.Next(cells.Count)];
+            var extraCenter = CellCenter(extra);
+            PlaceAtTile(result, crate, extraCenter.x + 6, extraCenter.y - 6, 5, 5, 2.5f);
+            var extra2 = cells[random.Next(cells.Count)];
+            var extra2Center = CellCenter(extra2);
+            PlaceAtTile(result, crate, extra2Center.x - 7, extra2Center.y + 7, 5, 5, 2.5f);
+        }
+
+        private static Vector2Int CellCenter(Vector2Int cell) => new Vector2Int(
+            cell.x * DungeonMap.CellWidth + DungeonMap.CellWidth / 2,
+            DungeonMap.CellOriginY(cell.y) + DungeonMap.CellHeight / 2);
+
+        private static void PlaceAtTile(List<RoomPropSpec> result, string kind,
+            int cx, int cy, int w, int h, float scale)
+        {
+            result.Add(new RoomPropSpec
+            {
+                Kind = kind, X = cx - w / 2, Y = cy - h / 2,
+                Width = w, Height = h, Scale = scale,
+                Solid = true, Layer = RoomPropLayer.FloorObject
+            });
+        }
+
+        private static void AddWallDecor(List<RoomPropSpec> result, DungeonMap.Room room,
+            int theme, System.Random random)
+        {
+            var pool = WallPools[theme];
+            foreach (var cell in room.Cells)
+            {
+                int x0 = cell.x * DungeonMap.CellWidth;
+                int y0 = DungeonMap.CellOriginY(cell.y);
+                int top = y0 + DungeonMap.CellHeight - 1;
+                int right = x0 + DungeonMap.CellWidth - 1;
+                AddWall(result, pool, x0 + 5, top, random);
+                AddWall(result, pool, x0 + 18, top, random);
+                AddWall(result, pool, x0 + 31, top, random);
+                AddWall(result, pool, x0, y0 + 8, random);
+                AddWall(result, pool, x0, y0 + 27, random);
+                AddWall(result, pool, right, y0 + 8, random);
+                AddWall(result, pool, right, y0 + 27, random);
+                AddWall(result, pool, x0 + 9, y0, random);
+            }
+        }
+
+        private static void AddWall(List<RoomPropSpec> result, string[] pool,
+            int x, int y, System.Random random)
+        {
+            result.Add(new RoomPropSpec
+            {
+                Kind = pool[random.Next(pool.Length)],
+                X = x, Y = y, Layer = RoomPropLayer.WallObject
+            });
+        }
+
+        private static void AddFloorDecals(List<RoomPropSpec> result, DungeonMap.Room room,
+            int theme, System.Random random, int count)
+        {
+            var color = theme == 0 ? new Color(.30f, .24f, .38f, .30f) :
+                theme == 1 ? new Color(.20f, .14f, .10f, .38f) :
+                new Color(.28f, .40f, .55f, .28f);
+            for (int i = 0; i < count; i++)
+            {
+                var cell = room.Cells[random.Next(room.Cells.Count)];
+                int x0 = cell.x * DungeonMap.CellWidth;
+                int y0 = DungeonMap.CellOriginY(cell.y);
+                result.Add(new RoomPropSpec
+                {
+                    Kind = random.Next(3) == 0 ? "floorDetail" : "floorAlt",
+                    X = x0 + 3 + random.Next(DungeonMap.CellWidth - 6),
+                    Y = y0 + 3 + random.Next(DungeonMap.CellHeight - 6),
+                    Layer = RoomPropLayer.FloorDecal,
+                    Scale = 1f,
+                    Color = color
+                });
+            }
+        }
+
+        private static void AddClutter(List<RoomPropSpec> result, DungeonMap.Room room,
+            int theme, System.Random random, int count)
+        {
+            var pool = ClutterPools[theme];
+            for (int i = 0; i < count; i++)
+            {
+                var cell = room.Cells[random.Next(room.Cells.Count)];
+                int x0 = cell.x * DungeonMap.CellWidth;
+                int y0 = DungeonMap.CellOriginY(cell.y);
+                result.Add(new RoomPropSpec
+                {
+                    Kind = pool[random.Next(pool.Length)],
+                    X = x0 + 3 + random.Next(DungeonMap.CellWidth - 6),
+                    Y = y0 + 3 + random.Next(DungeonMap.CellHeight - 6),
+                    Layer = RoomPropLayer.FloorObject,
+                    Scale = .7f + (float)random.NextDouble() * .5f
+                });
+            }
+        }
+
+        private static string Pick(string[] pool, System.Random random) =>
+            pool[random.Next(pool.Length)];
+
+        private static void Place(List<RoomPropSpec> result, string kind, RectInt bounds,
+            float fx, float fy, int w, int h, float scale)
+        {
+            int cx = bounds.x + Mathf.RoundToInt(bounds.width * fx);
+            int cy = bounds.y + Mathf.RoundToInt(bounds.height * fy);
+            result.Add(new RoomPropSpec
+            {
+                Kind = kind,
+                X = cx - w / 2,
+                Y = cy - h / 2,
+                Width = w,
+                Height = h,
+                Scale = scale,
+                Solid = true,
+                Layer = RoomPropLayer.FloorObject
+            });
+        }
+    }
+}
