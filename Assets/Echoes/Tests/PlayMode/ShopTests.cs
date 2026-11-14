@@ -43,6 +43,25 @@ namespace Echoes.Tests
             Assert.AreEqual(1, Object.FindObjectsOfType<GoldPickup>().Length);
         }
 
+        [UnityTest] public IEnumerator OnlyThirdFloorDiscardsDistantGold()
+        {
+            for (int floor = 1; floor <= 3; floor++)
+            {
+                var position = run.Map.BossPosition;
+                Assert.Greater(Vector2.Distance(position, run.Player.transform.position), run.Config.goldDespawnDistance);
+                GoldPickup.Drop(run, position, 7);
+                var coin = Object.FindObjectOfType<GoldPickup>();
+                yield return null;
+                yield return null;
+                Assert.AreEqual(floor < 3, coin != null);
+                Assert.AreEqual(0, run.Shop.Gold);
+                if (floor == 3) break;
+                run.SetState(RunState.FloorCleared);
+                run.AdvanceFloor();
+                yield return null;
+            }
+        }
+
         [UnityTest] public IEnumerator GoldFliesOnlyInRangeAndCreditsOnceOnArrival()
         {
             Vector2 origin = run.Map.StartPosition;

@@ -22,15 +22,17 @@ namespace Echoes.Tests
 
         // Use a clear lane instead of assuming the room centre is free of the
         // shared shop counter or native furniture.
-        public static Vector2 FindClearLane(RunController run, int length)
+        public static Vector2 FindClearLane(RunController run, int length, int roomIndex = 0)
         {
-            var bounds = run.Map.Rooms[0].Bounds;
+            var room = run.Map.Rooms[roomIndex];
+            var bounds = room.Bounds;
             for (int y = bounds.yMin + 3; y < bounds.yMax - 3; y++)
                 for (int x = bounds.xMin + 3; x + length < bounds.xMax - 2; x++)
                 {
                     var start = new Vector2(x, y);
                     var end = start + Vector2.right * length;
-                    if (run.Map.HasClearInteractionPath(start, end) &&
+                    if (run.Map.RoomAtPosition(start) == room && run.Map.RoomAtPosition(end) == room &&
+                        run.Map.HasClearInteractionPath(start, end) &&
                         run.Map.HasClearInteractionPath(start + Vector2.up, end + Vector2.up) &&
                         run.Map.HasClearInteractionPath(start - Vector2.up, end - Vector2.up)) return start;
                 }

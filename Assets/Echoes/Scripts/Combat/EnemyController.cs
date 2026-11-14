@@ -44,10 +44,54 @@ namespace Echoes
         public Vector2 InvestigationTarget => destination;
         public Vector2 LastSeenPosition => lastSeen;
 
-        public static EnemyController Create(RunController run, Vector2 position, bool boss, bool elite = false)
+        internal bool IsRoomEnemy { get; private set; }
+        internal void ReleaseCorpse() => run.ReleaseRoomCorpse(this);
+
+        internal struct RoomRecord
+        {
+            public Vector2 Position;
+            public bool Elite, Guard;
+            internal float Health, AttackTimer, WarningTimer, ContactDelay, WanderTimer, LostSight;
+            internal int BurstRemaining;
+            internal EnemyState State;
+            internal Vector2 Destination, LastSeen;
+            internal bool TrackingHit, PreviouslyLoaded;
+        }
+
+        internal RoomRecord SaveRoomRecord() => new RoomRecord
+        {
+            Position = body.position, Elite = IsElite, Guard = IsGuard, Health = Health,
+            State = State, Destination = destination, LastSeen = lastSeen, TrackingHit = trackingHit,
+            AttackTimer = attackTimer, WarningTimer = warningTimer, BurstRemaining = burstRemaining,
+            ContactDelay = Mathf.Max(0, contactReady - Time.time), WanderTimer = wanderTimer,
+            LostSight = lostSight, PreviouslyLoaded = true
+        };
+
+        internal static EnemyController LoadRoomRecord(RunController run, RoomRecord record)
+        {
+            var enemy = Create(run, record.Position, false, record.Elite, record.Guard);
+            enemy.IsRoomEnemy = true;
+            if (!record.PreviouslyLoaded) return enemy;
+            enemy.Health = record.Health;
+            enemy.State = record.State;
+            enemy.destination = record.Destination;
+            enemy.lastSeen = record.LastSeen;
+            enemy.trackingHit = record.TrackingHit;
+            enemy.attackTimer = record.AttackTimer;
+            enemy.warningTimer = record.WarningTimer;
+            enemy.burstRemaining = record.BurstRemaining;
+            enemy.contactReady = Time.time + record.ContactDelay;
+            enemy.wanderTimer = record.WanderTimer;
+            enemy.lostSight = record.LostSight;
+            enemy.repath = 0;
+            enemy.RefreshVisual();
+            return enemy;
+        }
+
+        public static EnemyController Create(RunController run, Vector2 position, bool boss, bool elite = false, bool? guard = null)
         {
             elite = elite && !boss;
-            bool isGuard = !elite && !boss && run.Enemies.Count % 2 == 1;
+            bool isGuard = !elite && !boss && (guard ?? (run.Enemies.Count % 2 == 1));
             string species = boss ? "boss" : elite ? "elite" : isGuard ? "guard" : "walker";
             var renderer = PixelArt.Create(boss ? "Gatekeeper" : elite ? "Elite" : "Sleeper", species,
                 position, 9);

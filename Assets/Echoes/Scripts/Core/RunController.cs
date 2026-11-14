@@ -20,6 +20,10 @@ namespace Echoes
         public EnemyController Boss { get; private set; }
         public readonly List<EnemyController> Enemies = new List<EnemyController>();
         private readonly List<EnemyController> bossMinions = new List<EnemyController>();
+        private List<EnemyController.RoomRecord>[] roomRosters;
+        private readonly List<EnemyController> loadedRoomEnemies = new List<EnemyController>();
+        private DungeonMap.Room loadedRoom;
+        internal bool UsesRoomSpawning => Floor == 3;
         public RunState State { get; private set; }
         public int Floor { get; private set; } = 1;
         public string FloorTitle { get { return FloorTheme.Title(Floor); } }
@@ -80,8 +84,12 @@ namespace Echoes
         {
             // Initial room population. The activated boss summons reinforcements separately.
             var spawnAreas = new List<DungeonMap.SpawnArea>();
+            if (UsesRoomSpawning) roomRosters = new List<EnemyController.RoomRecord>[Map.Rooms.Count];
             for (int room = 1; room < Map.Rooms.Count - 1; room++)
+            {
+                if (UsesRoomSpawning) roomRosters[room] = new List<EnemyController.RoomRecord>();
                 spawnAreas.AddRange(Map.SpawnAreas(room));
+            }
             SpawnSelectedCells(spawnAreas);
             Boss = EnemyController.Create(this, Map.BossPosition, true);
             Enemies.Add(Boss);
@@ -93,6 +101,7 @@ namespace Echoes
             int min = Mathf.Max(1, FloorValue(config.spawnAmountMin, 1));
             int max = Mathf.Max(min, FloorValue(config.spawnAmountMax, 3));
             int weight = Mathf.Max(1, FloorValue(config.spawnCellWeights, 1));
+            int planned = 0;
             int roomLimit = Mathf.Max(1, config.maxInitialEnemiesPerRoom);
             var roomCounts = new int[Map.Rooms.Count];
             // Spawn rolls use their own per-floor seed so combat randomness cannot
@@ -117,7 +126,8 @@ namespace Echoes
                 if (chosen == null) continue;
 
                 int count = Mathf.Min(spawnRandom.Next(min, max + 1), chosen.Points.Count);
-                count = Mathf.Min(count, roomLimit - roomCounts[chosen.RoomIndex]);
+                if (!UsesRoomSpawning)
+                    count = Mathf.Min(count, roomLimit - roomCounts[chosen.RoomIndex]);
                 for (int i = 0; i < count; i++)
                 {
                     int index = spawnRandom.Next(chosen.Points.Count);
@@ -125,12 +135,59 @@ namespace Echoes
                     chosen.Points[index] = chosen.Points[chosen.Points.Count - 1];
                     chosen.Points.RemoveAt(chosen.Points.Count - 1);
                     bool elite = roleRandom.NextDouble() < config.eliteSpawnChance;
-                    Enemies.Add(EnemyController.Create(this, point, false, elite));
+                    if (!UsesRoomSpawning)
+                    {
+                        Enemies.Add(EnemyController.Create(this, point, false, elite));
+                        continue;
+                    }
+                    roomRosters[chosen.RoomIndex].Add(new EnemyController.RoomRecord
+                    {
+                        Position = point, Elite = elite, Guard = planned % 2 == 1
+                    });
+                    planned++;
                 }
                 roomCounts[chosen.RoomIndex] += count;
-                if (roomCounts[chosen.RoomIndex] == roomLimit)
+                if (!UsesRoomSpawning && roomCounts[chosen.RoomIndex] == roomLimit)
                     areas.RemoveAll(area => area.RoomIndex == chosen.RoomIndex);
             }
+        }
+
+        private void UpdateEnemyRoom()
+        {
+            var current = Map.RoomAtPosition(Player.transform.position);
+            if (current == null || current == loadedRoom) return;
+            foreach (var enemy in loadedRoomEnemies)
+            {
+                if (enemy.Alive)
+                {
+                    var record = enemy.SaveRoomRecord();
+                    var location = Map.RoomAtPosition(record.Position) ?? loadedRoom;
+                    if (roomRosters[location.Index] == null)
+                        roomRosters[location.Index] = new List<EnemyController.RoomRecord>();
+                    roomRosters[location.Index].Add(record);
+                }
+                enemy.gameObject.SetActive(false);
+                Destroy(enemy.gameObject);
+            }
+            Enemies.RemoveAll(e => e.IsRoomEnemy);
+            loadedRoomEnemies.Clear();
+            loadedRoom = current;
+            var roster = roomRosters[current.Index];
+            if (roster == null) return;
+            foreach (var record in roster)
+            {
+                var enemy = EnemyController.LoadRoomRecord(this, record);
+                loadedRoomEnemies.Add(enemy);
+                Enemies.Add(enemy);
+            }
+            roster.Clear();
+        }
+
+        internal void ReleaseRoomCorpse(EnemyController enemy)
+        {
+            loadedRoomEnemies.Remove(enemy);
+            Enemies.Remove(enemy);
+            Destroy(enemy.gameObject);
         }
 
         private int FloorValue(int[] values, int fallback)
@@ -204,6 +261,7 @@ namespace Echoes
             if (State != RunState.Playing) return;
             if (Input.GetKeyDown(KeyCode.E) && Shop.Open()) return;
             Elapsed += Time.deltaTime;
+            if (UsesRoomSpawning) UpdateEnemyRoom();
             RefreshPressure();
             if (!BossActivated && Vector2.Distance(Player.transform.position, Map.AltarPosition) < 3 &&
                 Input.GetKeyDown(KeyCode.E)) ActivateBoss();
@@ -265,6 +323,8 @@ namespace Echoes
         {
             foreach (var enemy in Enemies) if (enemy) Destroy(enemy.gameObject);
             Enemies.Clear();
+            loadedRoomEnemies.Clear();
+            loadedRoom = null;
             bossMinions.Clear();
             Boss = null;
             foreach (var projectile in FindObjectsOfType<Projectile>())

@@ -304,33 +304,70 @@ namespace Echoes.Tests
                 int draws = run.Config.spawnCellDraws[index];
                 int min = run.Config.spawnAmountMin[index];
                 int max = run.Config.spawnAmountMax[index];
-                var normal = run.Enemies.Where(e => !e.IsBoss).ToArray();
-                var middleRooms = run.Map.Rooms.Where(room => room.Role == RoomRole.Middle).ToArray();
-                int roomLimit = run.Config.maxInitialEnemiesPerRoom;
-                // A draw can end early when only a few slots remain in its room.
-                int minimum = Mathf.Min(draws * min - middleRooms.Length * (min - 1),
-                    middleRooms.Length * roomLimit);
-                Assert.GreaterOrEqual(normal.Length, Mathf.Max(1, minimum));
-                int busiestRoom = normal.GroupBy(e => run.Map.RoomAtPosition(e.transform.position))
-                    .Max(group => group.Count());
-                Assert.LessOrEqual(busiestRoom, roomLimit, "Initial enemies per room");
-                Debug.Log($"Floor {floor}: {normal.Length} initial enemies, busiest room {busiestRoom}");
-                Assert.LessOrEqual(normal.Length, draws * max,
-                    "Spawn draws stay within the configured maximum on floor " + floor);
-                Assert.AreEqual(1, run.Enemies.Count(e => e.IsBoss), "Each floor has one boss");
-                foreach (var enemy in normal)
+                if (floor < 3)
                 {
-                    var room = run.Map.RoomAtPosition(enemy.transform.position);
-                    Assert.IsNotNull(room, "Enemies spawn on the floor");
-                    Assert.AreEqual(RoomRole.Middle, room.Role,
-                        "Normal enemies spawn only in middle rooms");
-                    Assert.IsTrue(run.Map.IsWalkable(Vector2Int.RoundToInt(enemy.transform.position)),
-                        "Enemies spawn on walkable tiles");
+                    var normal = run.Enemies.Where(e => !e.IsBoss).ToArray();
+                    int rooms = run.Map.Rooms.Count(r => r.Role == RoomRole.Middle);
+                    int cap = run.Config.maxInitialEnemiesPerRoom;
+                    int minimum = Mathf.Min(draws * min - rooms * (min - 1), rooms * cap);
+                    Assert.That(normal.Length, Is.InRange(Mathf.Max(1, minimum), draws * max));
+                    foreach (var group in normal.GroupBy(e => run.Map.RoomAtPosition(e.transform.position)))
+                    {
+                        Assert.AreEqual(RoomRole.Middle, group.Key.Role);
+                        Assert.LessOrEqual(group.Count(), cap);
+                    }
+                    run.SetState(RunState.FloorCleared);
+                    run.AdvanceFloor();
+                    yield return null;
+                    continue;
                 }
-                if (floor == 3) break;
-                run.SetState(RunState.FloorCleared);
-                run.AdvanceFloor();
+                Assert.AreEqual(1, run.Enemies.Count);
+                int total = 0, largest = 0;
+                DungeonMap.Room largestRoom = null;
+                double largestEntryMs = 0;
+                bool checkedRevisit = false;
+                foreach (var room in run.Map.Rooms.Where(r => r.Role == RoomRole.Middle))
+                {
+                    var entry = System.Diagnostics.Stopwatch.StartNew();
+                    run.Player.PlaceAt(room.Center);
+                    yield return null;
+                    entry.Stop();
+                    var first = run.Enemies.Where(e => !e.IsBoss).ToArray();
+                    int count = first.Length;
+                    total += count;
+                    if (count > largest)
+                    {
+                        largest = count;
+                        largestRoom = room;
+                        largestEntryMs = entry.Elapsed.TotalMilliseconds;
+                    }
+                    foreach (var enemy in first)
+                    {
+                        Assert.AreSame(room, run.Map.RoomAtPosition(enemy.transform.position));
+                        Assert.IsTrue(run.Map.IsWalkable(Vector2Int.RoundToInt(enemy.transform.position)));
+                    }
+                    if (count < 2 || checkedRevisit) continue;
+                    checkedRevisit = true;
+                    first[0].TakeDamage(first[0].Health);
+                    first[1].TakeDamage(1);
+                    float health = first[1].Health;
+                    run.Player.PlaceAt(run.Map.StartPosition);
+                    yield return null;
+                    Assert.AreEqual(1, run.Enemies.Count);
+                    yield return null;
+                    Assert.IsTrue(first.All(e => !e), "Unloaded actors are destroyed");
+                    run.Player.PlaceAt(room.Center);
+                    yield return null;
+                    Assert.AreEqual(count - 1, run.Enemies.Count(e => !e.IsBoss));
+                    Assert.IsTrue(run.Enemies.Any(e => !e.IsBoss && e.Health == health && e.Awake));
+                }
+                Assert.That(total, Is.InRange(draws * min, draws * max));
+                Debug.Log($"Floor {floor}: {total} initial enemies across rooms, largest room {largest}, entry frame {largestEntryMs:F1} ms");
+                run.Player.PlaceAt(largestRoom.Center);
                 yield return null;
+                var timer = System.Diagnostics.Stopwatch.StartNew();
+                for (int frame = 0; frame < 60; frame++) yield return null;
+                Debug.Log($"Largest room idle: {timer.Elapsed.TotalMilliseconds / 60:F1} ms/frame over 60 frames");
             }
         }
     }

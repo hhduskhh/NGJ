@@ -115,6 +115,11 @@ namespace Echoes.Tests
         {
             for (int floor = 1; floor <= 3; floor++)
             {
+                if (floor == 3)
+                {
+                    run.Player.PlaceAt(DungeonTestGeometry.FindClearLane(run, 6, 1));
+                    yield return null;
+                }
                 var elite = run.Enemies.First(e => e.IsElite);
                 Vector2 origin = (Vector2)run.Player.transform.position + Vector2.right * 4;
                 PlaceEnemy(elite, origin);
@@ -269,6 +274,11 @@ namespace Echoes.Tests
         {
             for (int floor = 1; floor <= 3; floor++)
             {
+                if (floor == 3)
+                {
+                    run.Player.PlaceAt(run.Map.Rooms[1].Center);
+                    yield return null;
+                }
                 var roles = new[] { "walker", "guard", "elite", "boss" };
                 var sleepingSprites = roles.ToDictionary(role => role, role =>
                     Resources.LoadAll<Sprite>($"Art/Floor{floor}/{role}").Single(s => s.name == role + "_00"));

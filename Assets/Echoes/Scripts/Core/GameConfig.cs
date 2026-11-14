@@ -58,14 +58,14 @@ namespace Echoes
         [Tooltip("每层地图房间格的边长；索引 0/1/2 对应第 1/2/3 层。")]
         public int[] floorGridSizes = { 3, 4, 5 };
         [Tooltip("每层随机选择中间房格子的次数；索引 0/1/2 对应第 1/2/3 层。")]
-        public int[] spawnCellDraws = { 24, 28, 32 };
+        public int[] spawnCellDraws = { 24, 28, 120 };
         [Tooltip("每层每个格子的刷新权重；同一层内所有格子目前使用相同权重。")]
         public int[] spawnCellWeights = { 1, 1, 1 };
         [Tooltip("每层每次选中格子时生成的小怪数量下限。")]
-        public int[] spawnAmountMin = { 1, 2, 2 };
+        public int[] spawnAmountMin = { 1, 2, 9 };
         [Tooltip("每层每次选中格子时生成的小怪数量上限。")]
-        public int[] spawnAmountMax = { 3, 3, 4 };
-        [Tooltip("每间中间房初始生成的小怪总数上限（含精英）。")]
+        public int[] spawnAmountMax = { 3, 3, 15 };
+        [Tooltip("前两层每间中间房初始生成的小怪总数上限（含精英）。")]
         [Min(1)] public int maxInitialEnemiesPerRoom = 18;
         [Tooltip("Tile stride used to collect enemy spawn points; lower values add more points.")]
         [Min(1)] public int spawnCellStride = 2;
@@ -144,6 +144,7 @@ namespace Echoes
         [Header("Shop and loot")]
         [Min(1)] public int goldPerKill = 6;
         [Min(.2f)] public float goldPickupRadius = 4f;
+        [Min(1)] public float goldDespawnDistance = 32f;
         [Min(.1f)] public float goldPullSpeed = 3f;
         [Min(.1f)] public float goldPullAcceleration = 36f;
         [Min(.5f)] public float shopInteractRadius = 2.5f;

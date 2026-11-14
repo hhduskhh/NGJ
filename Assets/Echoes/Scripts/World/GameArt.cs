@@ -159,7 +159,11 @@ namespace Echoes
                 tint.a = 1f - Mathf.Clamp01((deathClock - corpseConfig.corpseHoldSeconds)
                     / Mathf.Max(.05f, corpseConfig.corpseFadeSeconds));
                 footShadow.color = new Color(1, 1, 1, tint.a);
-                if (tint.a <= 0) gameObject.SetActive(false);
+                if (tint.a <= 0)
+                {
+                    gameObject.SetActive(false);
+                    if (enemy.IsRoomEnemy) enemy.ReleaseCorpse();
+                }
             }
             renderer2D.color = tint;
         }

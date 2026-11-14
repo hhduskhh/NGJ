@@ -24,7 +24,15 @@ namespace Echoes
             Vector2 position = transform.position;
             Vector2 target = run.Player.transform.position;
             var config = run.Config;
-            if (pullSpeed == 0 && (target - position).sqrMagnitude > config.goldPickupRadius * config.goldPickupRadius)
+            float distanceSquared = (target - position).sqrMagnitude;
+            float despawnDistance = Mathf.Max(config.goldPickupRadius, config.goldDespawnDistance);
+            if (run.UsesRoomSpawning && distanceSquared > despawnDistance * despawnDistance)
+            {
+                amount = 0;
+                Destroy(gameObject);
+                return;
+            }
+            if (pullSpeed == 0 && distanceSquared > config.goldPickupRadius * config.goldPickupRadius)
                 return;
             if (!run.Map.HasClearInteractionPath(position, target))
             {
