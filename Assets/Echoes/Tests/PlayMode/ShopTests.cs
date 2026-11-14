@@ -28,6 +28,47 @@ namespace Echoes.Tests
             Physics2D.SyncTransforms();
             yield return null;
         }
+        [UnityTest] public IEnumerator CorpseAndShadowFadeWhileDroppedGoldRemains()
+        {
+            var enemy = run.Enemies[0];
+            enemy.TakeDamage(enemy.MaxHealth);
+            var body = enemy.GetComponent<SpriteRenderer>();
+            var shadow = enemy.transform.Find("FootShadow").GetComponent<SpriteRenderer>();
+            yield return new WaitForSecondsRealtime(run.Config.corpseHoldSeconds + run.Config.corpseFadeSeconds * .5f);
+            Assert.That(body.color.a, Is.InRange(.1f, .9f));
+            Assert.AreEqual(body.color.a, shadow.color.a, .001f);
+            yield return new WaitForSecondsRealtime(run.Config.corpseFadeSeconds);
+            Assert.IsFalse(enemy.gameObject.activeSelf);
+            Assert.AreEqual(1, run.Kills);
+            Assert.AreEqual(1, Object.FindObjectsOfType<GoldPickup>().Length);
+        }
+
+        [UnityTest] public IEnumerator GoldFliesOnlyInRangeAndCreditsOnceOnArrival()
+        {
+            Vector2 origin = run.Map.StartPosition;
+            float radius = run.Config.goldPickupRadius;
+            var direction = new[] { Vector2.left, Vector2.right, Vector2.down, Vector2.up }
+                .First(d => run.Map.HasClearInteractionPath(origin, origin + d * (radius + 2)));
+            run.Player.PlaceAt(origin + direction * (radius + 2));
+            GoldPickup.Drop(run, origin, 7);
+            var coin = Object.FindObjectOfType<GoldPickup>();
+            yield return new WaitForSeconds(.1f);
+            Assert.AreEqual(origin, (Vector2)coin.transform.position);
+            run.Player.PlaceAt(origin + direction * (radius - .25f));
+            yield return new WaitForSeconds(.08f);
+            Vector2 midway = coin.transform.position;
+            Assert.Greater(Vector2.Distance(midway, origin), 0);
+            Assert.AreEqual(0, run.Shop.Gold);
+            run.SetState(RunState.Paused);
+            yield return new WaitForSecondsRealtime(.12f);
+            Assert.AreEqual(midway, (Vector2)coin.transform.position);
+            run.SetState(RunState.Playing);
+            run.Player.PlaceAt(origin + direction * (radius + 1));
+            yield return new WaitForSeconds(1f);
+            Assert.IsFalse(coin);
+            Assert.AreEqual(7, run.Shop.Gold);
+        }
+
         [UnityTest] public IEnumerator LootPausePurchaseRefreshAndReopen()
         {
             Assert.AreEqual(0, run.Shop.Gold);
@@ -85,6 +126,42 @@ namespace Echoes.Tests
             yield return null;
             RuntimeSmokeTests.Capture("TestResults/23-shop-quality.png");
         }
+        [Test] public void OnlyTwoMatchingWeaponsCanCombine()
+        {
+            var inventory = run.Player.Weapons;
+            Assert.IsTrue(run.Shop.Open());
+            Assert.IsFalse(run.Shop.MergeOwned(0));
+            Assert.IsTrue(inventory.Add(1, 0));
+            Assert.IsTrue(inventory.Add(0, 1));
+            Assert.IsFalse(run.Shop.MergeOwned(0), "Kind and quality must both match");
+            Assert.IsTrue(inventory.Add(0, 0));
+            Assert.IsTrue(run.Shop.MergeOwned(0));
+            Assert.AreEqual(3, inventory.Slots.Count);
+            Assert.AreEqual(1, inventory.Slots[0].Tier);
+            Assert.IsTrue(inventory.Add(0, 3));
+            Assert.IsTrue(inventory.Add(0, 3));
+            Assert.IsFalse(run.Shop.MergeOwned(4), "Maximum quality cannot merge");
+        }
+
+        [Test] public void PurchaseSuppliesTheSecondCopyEvenAtCapacity()
+        {
+            Assert.IsTrue(run.Shop.Open());
+            var offer = run.Shop.Offers[0];
+            offer.Weapon = 0;
+            offer.Tier = 0;
+            var inventory = run.Player.Weapons;
+            while (inventory.Slots.Count < WeaponInventory.Capacity)
+                Assert.IsTrue(inventory.Add(1, 0));
+            run.Shop.Credit(run.Shop.Price(offer));
+            Assert.IsFalse(run.Shop.Buy(0));
+            Assert.IsTrue(run.Shop.Buy(0, true));
+            Assert.AreEqual(WeaponInventory.Capacity, inventory.Slots.Count);
+            Assert.AreEqual(1, inventory.Slots[0].Tier);
+            Assert.AreEqual(0, run.Shop.Gold);
+            Assert.IsTrue(offer.Sold);
+            Assert.IsFalse(run.Shop.Buy(0, true));
+        }
+
         [UnityTest] public IEnumerator FullSlotsMergeSaleAndFloorReset()
         {
             var inventory = run.Player.Weapons;

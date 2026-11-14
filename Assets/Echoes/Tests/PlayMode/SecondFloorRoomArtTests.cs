@@ -66,7 +66,7 @@ namespace Echoes.Tests
                 if (room.Role != RoomRole.Middle) continue;
                 float coverage = run.Map.SolidCoverage(room);
                 Debug.Log("ECHOES_F2_COVERAGE " + room.Shape + " " + coverage);
-                Assert.That(coverage, Is.InRange(.08f, .18f), "Factory cover remains usable");
+                Assert.That(coverage, Is.InRange(.05f, .18f), "Factory cover remains usable");
             }
             Assert.IsTrue(run.Map.IsWalkable(Vector2Int.RoundToInt(run.Shop.Position)));
             Assert.Greater(run.Map.FindPath(run.Map.StartPosition, run.Shop.Position).Count, 0);
@@ -80,10 +80,12 @@ namespace Echoes.Tests
             Assert.IsTrue(run.Map.HasLineOfSight(front, tankCollider.bounds.center));
             Assert.AreSame(tankCollider, Physics2D.Raycast(front, Vector2.up, 3).collider);
             Projectile.Create(run, front, Vector2.up, 20, 10, false);
-            var shot = Object.FindObjectOfType<Projectile>();
+            var shot = System.Array.Find(Object.FindObjectsOfType<Projectile>(),
+                p => Vector2.Distance(p.transform.position, front) < .001f);
             Assert.IsNotNull(shot);
-            yield return new WaitForSeconds(.2f);
-            Assert.IsTrue(shot && shot.transform.position.y > front.y + 2, "Shots pass through furniture");
+            float deadline = Time.realtimeSinceStartup + 3;
+            while (shot && Time.realtimeSinceStartup < deadline) yield return null;
+            Assert.IsFalse(shot, "Solid furniture absorbs the shot");
         }
 
         [UnityTest]

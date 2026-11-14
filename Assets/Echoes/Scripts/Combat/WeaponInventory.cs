@@ -17,7 +17,7 @@ namespace Echoes
         public const int Capacity = 6;
         public WeaponInventory(RunController run) { this.run = run; Add(0, 0); slots[0].Cooldown = 0; }
         public WeaponDefinition Definition(Slot slot) => run.Config.weapons[slot.Kind];
-        public float Interval(Slot slot) => Mathf.Max(.1f, Definition(slot).interval[slot.Tier] / run.Player.AttackSpeed);
+        public float Interval(Slot slot) => Mathf.Max(.05f, Definition(slot).interval[slot.Tier] / run.Player.AttackSpeed);
         public int Match(int kind, int tier, int except = -1) => slots.FindIndex(s => s.Kind == kind && s.Tier == tier && slots.IndexOf(s) != except);
         public bool Add(int kind, int tier)
         {
@@ -28,20 +28,33 @@ namespace Echoes
             UpdateVisuals(run.Player.AimPoint);
             return true;
         }
-        public bool Merge(int index, int other = -1)
+        public bool MergeOwned(int index)
         {
-            if (index < 0 || index >= slots.Count || slots[index].Tier >= 3) return false;
+            if (index < 0 || index >= slots.Count) return false;
             var slot = slots[index];
-            if (other >= 0 && (other >= slots.Count || other == index || slots[other].Kind != slot.Kind || slots[other].Tier != slot.Tier)) return false;
-            float fraction = slot.Cooldown / Interval(slot);
-            if (other >= 0) fraction = Mathf.Max(fraction, slots[other].Cooldown / Interval(slots[other]));
+            int other = Match(slot.Kind, slot.Tier, index);
+            if (slot.Tier >= 3 || other < 0) return false;
+            float cooldown = Mathf.Max(slot.Cooldown, slots[other].Cooldown);
+            Upgrade(slot, cooldown);
+            Remove(other);
+            return true;
+        }
+        public bool MergePurchase(int kind, int tier)
+        {
+            int index = Match(kind, tier);
+            if (tier >= 3 || index < 0) return false;
+            var slot = slots[index];
+            Upgrade(slot, slot.Cooldown);
+            return true;
+        }
+        private void Upgrade(Slot slot, float cooldown)
+        {
+            float fraction = cooldown / Interval(slot);
             slot.Tier++;
             string art = "weapon_" + (slot.Kind * 4 + slot.Tier);
             slot.Visual.GetComponent<ArtBinding>().Kind = art;
             slot.Visual.GetComponent<SpriteRenderer>().sprite = PixelArt.Get(art);
             slot.Cooldown = Mathf.Max(0, fraction) * Interval(slot);
-            if (other >= 0) Remove(other);
-            return true;
         }
         public void Remove(int index)
         {
@@ -86,7 +99,7 @@ namespace Echoes
         }
         public bool Fire(Vector2 manualPoint, bool manual)
         {
-            bool fired = false;
+            int weaponMask = 0;
             run.RefreshPressure();
             for (int i = 0; i < slots.Count; i++)
             {
@@ -95,22 +108,23 @@ namespace Echoes
                 var definition = Definition(slot);
                 Vector2 position = Position(i), direction = Direction(slot, position, manualPoint, manual);
                 Vector2 muzzle = position + direction * .35f;
-                if (!run.Map.HasLineOfSight(run.Player.transform.position, muzzle)) continue;
+                if (!run.Map.HasClearInteractionPath(run.Player.transform.position, muzzle)) continue;
                 slot.Cooldown = Interval(slot);
                 float damage = definition.damage[slot.Tier] * run.Player.TotalDamageScale * run.DamageMultiplier;
                 if (run.Random.NextDouble() < run.Player.CriticalChance) damage *= run.Player.CriticalMultiplier;
+                var impactTargets = definition.pellets > 1 ? new HashSet<EnemyController>() : null;
                 for (int pellet = 0; pellet < definition.pellets; pellet++)
                 {
                     Vector2 shot = Quaternion.Euler(0, 0, (pellet - (definition.pellets - 1) / 2f) * definition.spread) * direction;
                     Projectile.Create(run, muzzle, shot, definition.speed, damage, false,
-                        slot.Kind == 2 ? Mathf.Max(0, slot.Tier - 1) : 0);
+                        slot.Kind == 2 ? Mathf.Max(0, slot.Tier - 1) : 0, impactTargets);
                 }
                 run.Noise.Emit(run.Player.transform.position, run.Player.NoiseRadius * definition.noise, NoiseKind.Gunshot);
                 ArtEffect.Play(muzzle, false, PixelArt.Gold);
-                fired = true;
+                weaponMask |= 1 << slot.Kind;
             }
-            if (fired) run.Noise.PlayShot();
-            return fired;
+            if (weaponMask != 0) run.Noise.PlayShot(weaponMask);
+            return weaponMask != 0;
         }
     }
 }

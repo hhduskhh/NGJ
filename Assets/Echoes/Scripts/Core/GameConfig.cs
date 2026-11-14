@@ -12,7 +12,7 @@ namespace Echoes
         [Min(.01f)] public float victoryRevealSeconds = 1.2f;
         [Header("Player")]
         [Min(1)] public float playerHealth = 100;
-        [Min(.1f)] public float moveSpeed = 4.5f;
+        [Min(.1f)] public float moveSpeed = 6f;
         [Min(1)] public float bulletDamage = 10;
         [Min(.05f)] public float shotInterval = .28f;
         [Min(1)] public float bulletSpeed = 22;
@@ -30,6 +30,11 @@ namespace Echoes
         [Range(0, .2f)] public float visionRingAlpha = .06f;
         public float VisionPulseDuration => visionExpandDuration + visionHoldDuration + visionShrinkDuration;
         public float WalkingDetectionRadius => playerVisionRadius + gradientVisionRange;
+        [Header("Combat audio")]
+        [Range(0, 1)] public float weaponVolume = .15f;
+        [Range(0, 1)] public float pickupVolume = .1f;
+        [Range(0, 1)] public float hitVolume = .09f;
+        [Range(0, 1)] public float warningVolume = .16f;
         [Header("Sound — ignores walls in this prototype")]
         [Min(1)] public float gunNoiseRadius = 6;
         [Min(1)] public float pressureRadius = 5;
@@ -55,8 +60,8 @@ namespace Echoes
         [Min(.1f)] public float bombFuse = 1.1f;
         [Header("Finite floor population")]
         [Min(1)] public float enemyHealth = 32;
-        [Min(.1f)] public float walkerSpeed = 3.8f;
-        [Min(.1f)] public float guardSpeed = 1.55f;
+        [Min(.1f)] public float walkerSpeed = 5.0666667f;
+        [Min(.1f)] public float guardSpeed = 2.0666667f;
         [Min(.1f)] public float guardRange = 9;
         [Min(.1f)] public float guardWindup = .75f;
         [Min(.1f)] public float guardShotInterval = 2.2f;
@@ -64,6 +69,8 @@ namespace Echoes
         [Min(1)] public float enemyDamage = 9;
         [Min(.1f)] public float enemyAttackInterval = 1;
         [Min(.1f)] public float playerInvulnerability = .65f;
+        [Min(0)] public float corpseHoldSeconds = .3f;
+        [Min(.05f)] public float corpseFadeSeconds = 1.1f;
         [Header("Progression")]
         [Min(1)] public int experiencePerKill = 1;
         [Min(1)] public int firstLevelExperience = 4;
@@ -74,7 +81,7 @@ namespace Echoes
         [Min(1)] public float decoyDuration = 4;
         [Min(1)] public float decoyCooldown = 12;
         [Header("Gatekeeper")]
-        [Min(.1f)] public float bossSpeed = 1.275f;
+        [Min(.1f)] public float bossSpeed = 1.7f;
         [Min(1)] public float bossHealth = 1100;
         [Min(1)] public float bossDamage = 14;
         [Min(.1f)] public float bossAttackInterval = 2.8f;
@@ -88,7 +95,9 @@ namespace Echoes
         [Range(0, 1)] public float floorEntryHealFraction = .3f;
         [Header("Shop and loot")]
         [Min(1)] public int goldPerKill = 6;
-        [Min(.2f)] public float goldPickupRadius = 1.5f;
+        [Min(.2f)] public float goldPickupRadius = 4f;
+        [Min(.1f)] public float goldPullSpeed = 3f;
+        [Min(.1f)] public float goldPullAcceleration = 36f;
         [Min(.5f)] public float shopInteractRadius = 2.5f;
         [Min(1)] public int shopRefreshCost = 4;
         [Min(0)] public int shopRefreshIncrease = 2;

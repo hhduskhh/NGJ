@@ -12,6 +12,7 @@ namespace Echoes
         public Sprite[] weapons = new Sprite[12]; // Kind * 4 + tier.
         [SerializeField] private Sprite[] passiveIcons;
         public Sprite quickBolt, lightStep, emergencyRepair, resonanceAmplifier, decoyTuning;
+        public Sprite criticalDamage, luckyClover;
         private static PresentationArt current;
         public static PresentationArt Current
         {
@@ -34,6 +35,8 @@ namespace Echoes
                 case "应急修复": return emergencyRepair;
                 case "共振扩音器": return resonanceAmplifier;
                 case "诱饵调校": return decoyTuning;
+                case "致命打击": return criticalDamage;
+                case "幸运四叶草": return luckyClover;
                 default: return null;
             }
         }

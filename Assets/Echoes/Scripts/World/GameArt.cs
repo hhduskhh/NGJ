@@ -89,6 +89,8 @@ namespace Echoes
         private EnemyController enemy;
         private float clock, pulse, hurt, deathClock;
         private bool wasDead;
+        private SpriteRenderer footShadow;
+        private GameConfig corpseConfig;
         public void Initialize(string species)
         {
             Species = species;
@@ -96,12 +98,13 @@ namespace Echoes
             body = GetComponent<Rigidbody2D>();
             player = GetComponent<PlayerController>();
             enemy = GetComponent<EnemyController>();
-            var shadow = PixelArt.Create("FootShadow", "shadow", transform.position,
-                -100, transform).transform;
-            shadow.localPosition = new Vector3(0, -.06f, 0);
-            shadow.localScale = new Vector3(species == "boss" ? 2 : 1, .7f, 1);
+            footShadow = PixelArt.Create("FootShadow", "shadow", transform.position,
+                -100, transform);
+            footShadow.transform.localPosition = new Vector3(0, -.06f, 0);
+            footShadow.transform.localScale = new Vector3(species == "boss" ? 2 : 1, .7f, 1);
             LateUpdate();
         }
+        public void BeginCorpseFade(GameConfig config) => corpseConfig = config;
         public void Attack() => pulse = .2f;
         public void Hurt(float duration = .22f) => hurt = duration;
         private void LateUpdate()
@@ -129,8 +132,17 @@ namespace Echoes
                     enemy.IsWindingUp || enemy.IsContactTelegraph || pulse > 0 ? 4 : moving ? 2 + (int)(clock * 8) % 2 : 1;
             }
             renderer2D.sprite = GameArt.Frame(player ? "Common/hero" : GameArt.Floor + Species, CurrentFrame);
+            if (enemy) enemy.UpdateDamageShape(renderer2D.sprite, renderer2D.flipX);
             renderer2D.sortingOrder = GameArt.FootOrder(transform.position.y);
-            renderer2D.color = hurt > 0 && (int)(hurt * 40) % 2 == 0 ? new Color(1, .6f, .6f) : Color.white;
+            var tint = hurt > 0 && (int)(hurt * 40) % 2 == 0 ? new Color(1, .6f, .6f) : Color.white;
+            if (corpseConfig)
+            {
+                tint.a = 1f - Mathf.Clamp01((deathClock - corpseConfig.corpseHoldSeconds)
+                    / Mathf.Max(.05f, corpseConfig.corpseFadeSeconds));
+                footShadow.color = new Color(1, 1, 1, tint.a);
+                if (tint.a <= 0) gameObject.SetActive(false);
+            }
+            renderer2D.color = tint;
         }
     }
 

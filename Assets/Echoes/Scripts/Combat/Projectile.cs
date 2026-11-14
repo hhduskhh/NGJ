@@ -7,25 +7,25 @@ namespace Echoes
     {
         private RunController run;
         private Vector2 direction;
-        private Vector2 origin;
         private float speed, damage;
         private bool hostile;
         private SpriteRenderer hostileSprite;
         private int pierces;
+        private HashSet<EnemyController> impactTargets;
         private DungeonVisibility.ShotTrail trail;
         private readonly HashSet<EnemyController> struck = new HashSet<EnemyController>();
         private readonly List<RaycastHit2D> hits = new List<RaycastHit2D>(16);
 
         public static void Create(RunController run, Vector2 position, Vector2 direction,
-            float speed, float damage, bool hostile, int pierces = 0)
+            float speed, float damage, bool hostile, int pierces = 0, HashSet<EnemyController> impactTargets = null)
         {
             var renderer = PixelArt.Create(hostile ? "HostileProjectile" : "PlayerProjectile",
                 hostile ? "hostileBullet" : "bullet", position, 30);
             var projectile = renderer.gameObject.AddComponent<Projectile>();
             projectile.run = run; projectile.direction = direction.normalized;
-            projectile.origin = position;
             projectile.speed = speed; projectile.damage = damage; projectile.hostile = hostile;
             projectile.pierces = pierces;
+            projectile.impactTargets = impactTargets;
             projectile.trail = run.Visibility.BeginTrail(position, projectile.direction, speed);
             if (hostile)
             {
@@ -55,8 +55,10 @@ namespace Echoes
                 var enemy = hit.collider.GetComponent<EnemyController>();
                 var player = hit.collider.GetComponent<PlayerController>();
                 if (enemy && (!enemy.Alive || struck.Contains(enemy))) continue;
-                if (!(hostile ? (bool)player : (bool)enemy) && !run.Map.IsWall(hit.collider)) continue;
-                if (hit.distance >= nearestDistance) continue;
+                bool blocksShot = run.Map.BlocksProjectile(hit.collider);
+                bool isTarget = hostile ? player != null : enemy != null;
+                if (!isTarget && !blocksShot) continue;
+                if (hit.distance > nearestDistance || (hit.distance == nearestDistance && !blocksShot)) continue;
                 nearestDistance = hit.distance; nearest = hit.collider;
             }
             transform.position += (Vector3)(direction * (nearest ? nearestDistance : distance));
@@ -71,7 +73,8 @@ namespace Echoes
                     var enemy = nearest.GetComponent<EnemyController>();
                     if (enemy)
                     {
-                        struck.Add(enemy); enemy.TakeDamage(damage, origin);
+                        struck.Add(enemy);
+                        enemy.TakeDamage(damage, impactTargets == null || impactTargets.Add(enemy));
                         if (pierces-- > 0)
                         {
                             damage *= .75f;

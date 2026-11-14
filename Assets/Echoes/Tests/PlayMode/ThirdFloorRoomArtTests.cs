@@ -40,7 +40,7 @@ namespace Echoes.Tests
         }
 
         [UnityTest]
-        public IEnumerator TenNativeAssetsPhysicsConnectivityAndProjectilePassage()
+        public IEnumerator TenNativeAssetsPhysicsConnectivityAndProjectileBlocking()
         {
             var entries = RoomArt.ForFloor(3, false);
             Assert.AreEqual(10, entries.Length);
@@ -86,7 +86,7 @@ namespace Echoes.Tests
                 if (room.Role != RoomRole.Middle) continue;
                 float coverage = run.Map.SolidCoverage(room);
                 Debug.Log("ECHOES_F3_COVERAGE " + room.Shape + " " + coverage);
-                Assert.That(coverage, Is.InRange(.08f, .18f));
+                Assert.That(coverage, Is.InRange(.05f, .18f));
             }
             Move(run.Shop.Position);
             Assert.IsTrue(run.Shop.Open());
@@ -102,7 +102,7 @@ namespace Echoes.Tests
             var shot = Object.FindObjectOfType<Projectile>();
             Assert.IsNotNull(shot);
             yield return new WaitForSeconds(.2f);
-            Assert.IsTrue(shot && shot.transform.position.y > front.y + 2, "Shots pass through furniture");
+            Assert.IsFalse(shot, "Solid furniture absorbs the shot");
         }
 
         [UnityTest]

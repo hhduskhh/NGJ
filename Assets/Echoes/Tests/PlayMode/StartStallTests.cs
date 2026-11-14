@@ -115,10 +115,10 @@ namespace Echoes.Tests
                 Assert.IsNull(GameObject.Find("ShopAwning"));
                 Assert.IsNull(GameObject.Find("ShopSign"));
                 var spec = StartStall.Layout(run.Map.Rooms[0]);
-                Assert.AreEqual(new Vector2(5, 3), stall.GetComponent<BoxCollider2D>().size);
-                for (int x = spec.X; x < spec.X + spec.Width; x++)
-                    for (int y = spec.Y; y < spec.Y + spec.Height; y++)
-                        Assert.IsFalse(run.Map.IsWalkable(new Vector2Int(x, y)), "The entire 5x3 footprint blocks movement");
+                spec.MeasureBase();
+                Assert.AreEqual(spec.CollisionBounds.size, stall.GetComponent<BoxCollider2D>().size);
+                foreach (var tile in spec.NavigationBounds.allPositionsWithin)
+                    Assert.IsFalse(run.Map.IsWalkable(tile), "The kiosk base blocks movement");
                 Assert.IsTrue(run.Map.IsWalkable(Vector2Int.RoundToInt(run.Map.StartPosition)), "Spawn remains clear");
                 Assert.IsTrue(run.Map.IsWalkable(Vector2Int.RoundToInt(run.Shop.Position)), "Counter anchor is reachable floor");
                 Assert.Greater(run.Map.FindPath(run.Map.StartPosition, run.Shop.Position).Count, 0);

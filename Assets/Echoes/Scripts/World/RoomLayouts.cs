@@ -15,6 +15,25 @@ namespace Echoes
         public RoomPropLayer Layer;
         public Color Color = Color.white;
         public DungeonMap.Room Owner;
+
+        public Vector2 ArtPosition => new Vector2(X + (Width - 1) * .5f, Y - (Kind == StartStall.Kind ? .5f : 0));
+        public Rect CollisionBounds { get; private set; }
+        public RectInt NavigationBounds { get; private set; }
+
+        public void MeasureBase()
+        {
+            var entry = RoomArt.Definition(Kind == StartStall.Kind ? "room_stall" : Kind);
+            var sprite = RoomArt.Sprite(entry.Kind);
+            var pixels = entry.BasePixels;
+            float units = Scale / sprite.pixelsPerUnit;
+            CollisionBounds = new Rect(ArtPosition + ((Vector2)pixels.position - sprite.pivot) * units,
+                (Vector2)pixels.size * units);
+            // Keep enough clearance at grid centres for the moving actors.
+            const float clearance = .33f;
+            var min = Vector2Int.CeilToInt(CollisionBounds.min - Vector2.one * clearance);
+            var max = Vector2Int.FloorToInt(CollisionBounds.max + Vector2.one * clearance);
+            NavigationBounds = new RectInt(min, max - min + Vector2Int.one);
+        }
     }
 
     // P0 layout library: uses the existing 16 prop slices in denser clusters and

@@ -18,15 +18,16 @@ namespace Echoes
 
         public static readonly UpgradeDefinition[] Catalog =
         {
-            new UpgradeDefinition("精密弹头", "基础伤害 +20%\n枪声范围不变", p => p.DamageScale += .2f),
-            new UpgradeDefinition("快装枪机", "射击间隔 -12%\n下限 0.10 秒 · 单次声音范围不变",
-                p => p.ShotIntervalScale = UnityEngine.Mathf.Max(.36f, p.ShotIntervalScale * .88f)),
-            new UpgradeDefinition("轻装行进", "移动速度 +12%\n便于拉开距离和转移房间", p => p.MoveScale += .12f),
+            new UpgradeDefinition("精密弹头", "基础伤害 +20%", p => p.DamageScale += .2f),
+            new UpgradeDefinition("快装枪机", "射击间隔缩短 12%\n下限 0.05 秒", p => p.ShotIntervalScale *= .88f),
+            new UpgradeDefinition("轻装行进", "移动速度 +12%", p => p.MoveScale += .12f),
             new UpgradeDefinition("应急修复", "生命上限 +20\n恢复 35 点生命", p => { p.MaxHealth += 20; p.Heal(35); }),
-            new UpgradeDefinition("共振扩音器", "主动风险升级\n枪声半径 +3 · 可惊醒相邻房间",
-                p => p.NoiseRadiusBonus += 3, true),
-            new UpgradeDefinition("诱饵调校", "响铃诱饵冷却 -18%\n下限 5 秒 · 声音范围不变",
-                p => p.DecoyCooldownScale = UnityEngine.Mathf.Max(.42f, p.DecoyCooldownScale * .82f))
+            new UpgradeDefinition("共振扩音器", "枪声半径 +5（上限 12）\n每只围攻怪物增伤 +1 个百分点",
+                p => { p.NoiseRadiusBonus += 5; p.PressureBonusPerEnemy += .01f; }, true),
+            new UpgradeDefinition("诱饵调校", "响铃诱饵冷却缩短 2 秒\n下限 4 秒", p => p.DecoyCooldownReduction += 2),
+            new UpgradeDefinition("致命打击", "暴击伤害 +8 个百分点", p => p.CriticalDamageBonus += .08f),
+            new UpgradeDefinition("幸运四叶草", "幸运 +8%\n金币掉落翻倍概率增加 8 个百分点",
+                p => p.DoubleLootChance = UnityEngine.Mathf.Clamp01(p.DoubleLootChance + .08f))
         };
 
         public static List<UpgradeDefinition> Roll(Random random)

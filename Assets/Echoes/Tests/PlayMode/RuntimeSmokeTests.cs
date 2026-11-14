@@ -10,6 +10,47 @@ namespace Echoes.Tests
     public sealed class RuntimeSmokeTests
     {
         [UnityTest]
+        public IEnumerator DistantTorsoHitDealsDamageAndTracksMovingPlayer()
+        {
+            yield return SceneManager.LoadSceneAsync("Prototype");
+            yield return null;
+            var run = Object.FindObjectOfType<RunController>();
+            var bounds = run.Map.Rooms[0].Bounds;
+            var target = run.Enemies[0];
+            // Find a clear horizontal firing lane in the starting room.
+            Vector2 start = Vector2.zero, feet = Vector2.zero;
+            for (int y = bounds.yMin + 3; y < bounds.yMax - 3 && start == Vector2.zero; y++)
+                for (int x = bounds.xMin + 3; x + 20 < bounds.xMax - 2; x++)
+                {
+                    var source = new Vector2(x, y);
+                    var end = source + Vector2.right * 20;
+                    if (!run.Map.HasClearInteractionPath(source, end) ||
+                        !run.Map.HasClearInteractionPath(source + Vector2.up, end + Vector2.up)) continue;
+                    start = source;
+                    feet = end;
+                    break;
+                }
+            Assert.AreNotEqual(Vector2.zero, start);
+            run.Player.PlaceAt(start);
+            target.transform.position = feet;
+            target.GetComponent<Rigidbody2D>().position = feet;
+            Physics2D.SyncTransforms();
+            float health = target.Health;
+            Assert.AreEqual(EnemyState.Sleeping, target.State);
+            Assert.IsTrue(run.Player.TryFire(feet + Vector2.up * .8f, true));
+            float deadline = Time.time + 2;
+            while (target.Health == health && Time.time < deadline) yield return null;
+            Assert.Less(target.Health, health, "A long shot through the torso must register");
+            Assert.AreEqual(EnemyState.Chasing, target.State);
+            run.Player.PlaceAt(start + Vector2.right);
+            target.Hear(feet);
+            yield return new WaitForSeconds(.5f);
+            Assert.AreEqual(EnemyState.Chasing, target.State);
+            Assert.Less(Vector2.Distance(target.LastSeenPosition, run.Player.transform.position), .1f);
+            Assert.Less(Vector2.Distance(target.transform.position, run.Player.transform.position), 18.5f);
+        }
+
+        [UnityTest]
         public IEnumerator SlowShotLightsItsPathUntilWallImpactAndDarknessReturns()
         {
             yield return SceneManager.LoadSceneAsync("Prototype");
@@ -61,7 +102,11 @@ namespace Echoes.Tests
                     "Awakened enemy crosses the open room doorway");
 
             enemy.enabled = false;
-            enemy.GetComponent<Rigidbody2D>().position = DungeonTestGeometry.World(geometry.Through);
+            var body = enemy.GetComponent<Rigidbody2D>();
+            body.velocity = Vector2.zero;
+            body.interpolation = RigidbodyInterpolation2D.None;
+            body.position = DungeonTestGeometry.World(geometry.Through);
+            enemy.transform.position = body.position;
             Physics2D.SyncTransforms();
             float health = enemy.Health;
             Vector2 direction = (DungeonTestGeometry.World(geometry.Through) -
@@ -108,7 +153,7 @@ namespace Echoes.Tests
             Assert.Less(Vector2.Distance(enemy.InvestigationTarget, run.Map.NearestFloor(source)), .01f);
             Assert.Greater(run.Map.FindPath(enemy.transform.position, source).Count, 10);
             enemy.TakeDamage(1);
-            Assert.AreEqual(EnemyState.Investigating, enemy.State, "A distant hit reveals a source, not a live player target");
+            Assert.AreEqual(EnemyState.Chasing, enemy.State, "A distant hit starts pursuit");
             Assert.AreEqual(run.Config.enemyHealth - 1, enemy.Health);
             var before = run.Boss.Health;
             run.Boss.TakeDamage(99999);

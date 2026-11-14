@@ -54,7 +54,7 @@ namespace Echoes
         private readonly List<RoomPropSpec> decorSpecs = new List<RoomPropSpec>();
         private readonly Dictionary<string, TileBase> floorTiles = new Dictionary<string, TileBase>();
         private Transform generatedRoot, wallRoot;
-        public bool IsWall(Collider2D collider) => collider.transform.parent == wallRoot;
+        public bool BlocksProjectile(Collider2D collider) => !collider.isTrigger && collider.transform.IsChildOf(generatedRoot);
         private Tilemap floorMap;
         private TilemapRenderer floorRenderer;
         private RunController run;
@@ -445,12 +445,13 @@ namespace Echoes
 
         private bool TryBlockObstacle(RoomPropSpec spec, Room room, List<Vector2Int> blocked)
         {
-            // Keep one floor tile of clearance around every solid prop.
+            spec.MeasureBase();
+            // Keep one floor tile of clearance around the placement envelope.
             for (int x = spec.X - 1; x <= spec.X + spec.Width; x++)
                 for (int y = spec.Y - 1; y <= spec.Y + spec.Height; y++)
                     if (!InBounds(x, y) || !floor[x, y]) return false;
-            for (int x = spec.X; x < spec.X + spec.Width; x++)
-                for (int y = spec.Y; y < spec.Y + spec.Height; y++)
+            for (int x = spec.NavigationBounds.xMin; x < spec.NavigationBounds.xMax; x++)
+                for (int y = spec.NavigationBounds.yMin; y < spec.NavigationBounds.yMax; y++)
                 {
                     if (!walkable[x, y] || !IsTileInRoom(x, y, room)) return false;
                     foreach (var door in room.DoorOpenings)
@@ -460,8 +461,8 @@ namespace Echoes
                         if (clearance.Contains(new Vector2Int(x, y))) return false;
                     }
                 }
-            for (int x = spec.X; x < spec.X + spec.Width; x++)
-                for (int y = spec.Y; y < spec.Y + spec.Height; y++)
+            for (int x = spec.NavigationBounds.xMin; x < spec.NavigationBounds.xMax; x++)
+                for (int y = spec.NavigationBounds.yMin; y < spec.NavigationBounds.yMax; y++)
                 {
                     walkable[x, y] = false;
                     blocked.Add(new Vector2Int(x, y));
@@ -472,8 +473,8 @@ namespace Echoes
         private void RestoreObstacles()
         {
             foreach (var spec in obstacleSpecs)
-                for (int x = spec.X; x < spec.X + spec.Width; x++)
-                    for (int y = spec.Y; y < spec.Y + spec.Height; y++)
+                for (int x = spec.NavigationBounds.xMin; x < spec.NavigationBounds.xMax; x++)
+                    for (int y = spec.NavigationBounds.yMin; y < spec.NavigationBounds.yMax; y++)
                         if (InBounds(x, y)) walkable[x, y] = true;
             obstacleSpecs.Clear();
         }
@@ -698,18 +699,12 @@ namespace Echoes
             foreach (var spec in obstacleSpecs)
             {
                 float scale = spec.Scale > .01f ? spec.Scale : 1f;
-                var position = new Vector2(spec.X + (spec.Width - 1) * .5f, spec.Y);
-                // The kiosk uses a true bottom-centre pivot, at the footprint's front edge.
-                float frontOffset = spec.Kind == StartStall.Kind ? .5f : 0;
-                position.y -= frontOffset;
+                Vector2 position = spec.ArtPosition;
                 var renderer = PixelArt.Create("Obstacle_" + spec.Kind, spec.Kind, position,
                     GameArt.FootOrder(position.y) + 1, generatedRoot, scale);
                 var collider = renderer.gameObject.AddComponent<BoxCollider2D>();
-                // Footprints are world-grid units; the sprite's P0 scale must
-                // not scale physics a second time (including its foot offset).
-                collider.size = new Vector2(spec.Width, spec.Height) / scale;
-                collider.offset = new Vector2(0, (spec.Height - 1) * .5f) / scale;
-                collider.offset += Vector2.up * frontOffset / scale;
+                collider.size = spec.CollisionBounds.size / scale;
+                collider.offset = (spec.CollisionBounds.center - position) / scale;
             }
         }
 
@@ -834,7 +829,7 @@ namespace Echoes
         {
             int count = 0;
             foreach (var spec in obstacleSpecs)
-                if (spec.Owner == room) count += spec.Width * spec.Height;
+                if (spec.Owner == room) count += spec.NavigationBounds.width * spec.NavigationBounds.height;
             return count;
         }
 

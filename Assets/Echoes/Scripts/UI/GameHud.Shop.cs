@@ -76,7 +76,7 @@ namespace Echoes
                 {
                     string mergeBlocked = run.Shop.Blocked(offer, true);
                     bool shortOnGold = mergeBlocked != null && mergeBlocked.StartsWith("还差");
-                    ShopButton(shortOnGold ? mergeBlocked : $"购买并升至 {ShopController.TierName(offer.Tier + 1)} · {run.Shop.Price(offer)}", x, 312, 298,
+                    ShopButton(mergeBlocked ?? $"买入合成 {ShopController.TierName(offer.Tier + 1)} · {run.Shop.Price(offer)}", x, 312, 298,
                         mergeBlocked == null, () => BuyOffer(index, true), "MergeOffer" + i, shortOnGold);
                 }
             }
@@ -122,11 +122,11 @@ namespace Echoes
                     () => run.Shop.Sell(index), "SellWeapon" + i);
                 bool canMerge = slot.Tier < 3 && run.Player.Weapons.Match(slot.Kind, slot.Tier, index) >= 0;
                 if (canMerge)
-                    ShopButton("两把合成 → 升一级", x, 630, 215, true, () => run.Shop.MergeOwned(index), "MergeWeapon" + i);
+                    ShopButton($"两把合成 → {ShopController.TierName(slot.Tier + 1)}", x, 630, 215, true, () => run.Shop.MergeOwned(index), "MergeWeapon" + i);
             }
             var player = run.Player;
             ShopLabel($"公共伤害 +{(player.TotalDamageScale - 1) * 100:0}%   攻速 +{(player.AttackSpeed - 1) * 100:0}%   移速 {Mathf.Clamp(player.MoveScale + player.Passives.MoveSpeed,.6f,1.6f)*100:0}%   生命 {player.Health:0}/{player.MaxHealth:0}\n" +
-                $"暴击 {player.CriticalChance*100:0}% × {player.CriticalMultiplier:0.0}   闪避 {Mathf.Clamp(player.Passives.Dodge,0,.5f)*100:0}%   枪声 {player.NoiseRadius:0.#}   每敌 +{player.PressureBonus*100:0}% / 上限 {player.PressureCap}",
+                $"暴击 {player.CriticalChance*100:0}% × {player.CriticalMultiplier:0.00}   闪避 {Mathf.Clamp(player.Passives.Dodge,0,.5f)*100:0}%   幸运 {player.DoubleLootChance*100:0}%   枪声 {player.NoiseRadius:0.#}   每敌 +{player.PressureBonus*100:0}% / 上限 {player.PressureCap}",
                 0, 689, 1380, 62, 17, Paper);
             var owned = new System.Collections.Generic.List<System.Collections.Generic.KeyValuePair<PassiveDefinition, int>>(player.Passives.Owned);
             int pages = Mathf.Max(1, Mathf.CeilToInt(owned.Count / 4f)); itemPage = Mathf.Clamp(itemPage, 0, pages - 1);

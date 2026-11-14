@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: DefaultGameConfig
   m_EditorClassIdentifier: 
   playerHealth: 100
-  moveSpeed: 4.5
+  moveSpeed: 6
   bulletDamage: 10
   shotInterval: 0.28
   bulletSpeed: 22
@@ -36,8 +36,8 @@ MonoBehaviour:
   maxEnemiesPerRoom: 32
   spawnCellStride: 2
   enemyHealth: 32
-  walkerSpeed: 3.8
-  guardSpeed: 1.55
+  walkerSpeed: 5.0666667
+  guardSpeed: 2.0666667
   guardRange: 9
   guardWindup: 0.75
   guardShotInterval: 2.2
@@ -52,7 +52,7 @@ MonoBehaviour:
   decoyThrowRange: 6
   decoyDuration: 4
   decoyCooldown: 12
-  bossSpeed: 1.275
+  bossSpeed: 1.7
   bossHealth: 1100
   bossDamage: 14
   bossAttackInterval: 2.8
