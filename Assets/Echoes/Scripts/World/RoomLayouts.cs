@@ -486,6 +486,7 @@ namespace Echoes
         private static void PlaceAtTile(List<RoomPropSpec> result, string kind,
             int cx, int cy, int w, int h, float scale)
         {
+            if (kind == "bench") w = Mathf.Min(w, Mathf.CeilToInt(2 * scale));
             result.Add(new RoomPropSpec
             {
                 Kind = kind, X = cx - w / 2, Y = cy - h / 2,
@@ -574,6 +575,9 @@ namespace Echoes
         private static void Place(List<RoomPropSpec> result, string kind, RectInt bounds,
             float fx, float fy, int w, int h, float scale)
         {
+            // P0 benches are a 2-unit-wide sprite, not a 4-6-unit furniture asset.
+            // Use the same corrected footprint for placement, movement and vision.
+            if (kind == "bench") w = Mathf.Min(w, Mathf.CeilToInt(2 * scale));
             int cx = bounds.x + Mathf.RoundToInt(bounds.width * fx);
             int cy = bounds.y + Mathf.RoundToInt(bounds.height * fy);
             result.Add(new RoomPropSpec
