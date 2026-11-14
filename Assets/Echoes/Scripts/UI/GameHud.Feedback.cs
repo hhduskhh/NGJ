@@ -133,7 +133,7 @@ namespace Echoes
             }
             float page = Mathf.SmoothStep(0, 1, Mathf.InverseLerp(.38f, 1, t));
             resultPage.alpha = page;
-            modalBackdrop.GetComponent<UnityEngine.UI.Image>().color = Color.Lerp(Color.clear, new Color32(7, 10, 12, 225), page);
+            modalBackdrop.GetComponent<UnityEngine.UI.Image>().color = Color.Lerp(Color.clear, ResultShade, page);
             if (t < 1) return;
             revealing = false;
             if (lastEcho) Destroy(lastEcho.gameObject);

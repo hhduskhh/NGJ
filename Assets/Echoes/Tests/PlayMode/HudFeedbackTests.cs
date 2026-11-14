@@ -82,7 +82,7 @@ namespace Echoes.Tests
         public IEnumerator RevealConsumesFirstPressAndReleaseBeforeDescent()
         {
             run.SetState(RunState.FloorCleared);
-            var page = GameObject.Find("FieldBook").GetComponent<CanvasGroup>();
+            var page = GameObject.Find("RunResult").GetComponent<CanvasGroup>();
             Assert.AreEqual(0, page.alpha);
             Assert.IsFalse(page.interactable);
             yield return null;
@@ -94,7 +94,7 @@ namespace Echoes.Tests
             run.Hud.HandleResultInput(true, false, false, false);
             Assert.AreEqual(2, run.Floor);
             run.SetState(RunState.Won);
-            page = GameObject.Find("FieldBook").GetComponent<CanvasGroup>();
+            page = GameObject.Find("RunResult").GetComponent<CanvasGroup>();
             Assert.IsFalse(page.interactable);
             yield return new WaitForSecondsRealtime(run.Config.victoryRevealSeconds + .15f);
             Assert.IsTrue(page.interactable);
