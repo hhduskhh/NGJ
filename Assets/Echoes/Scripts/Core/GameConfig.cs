@@ -31,9 +31,9 @@ namespace Echoes
         [Header("Dungeon generation")]
         [Min(1)] public int generationAttempts = 100;
         [Range(0, 1)] public float extraDoorChance = .15f;
-        [Min(1)] public int enemiesPerCell = 2;
-        [Min(1)] public int minEnemiesPerRoom = 3;
-        [Min(1)] public int maxEnemiesPerRoom = 12;
+        [Min(1)] public int enemiesPerCell = 6;
+        [Min(1)] public int minEnemiesPerRoom = 6;
+        [Min(1)] public int maxEnemiesPerRoom = 28;
         [Header("Finite floor population")]
         [Min(1)] public float enemyHealth = 32;
         [Min(.1f)] public float enemySpeed = 1.7f;
