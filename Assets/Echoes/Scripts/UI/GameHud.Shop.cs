@@ -38,7 +38,7 @@ namespace Echoes
             title.alignment = TMPro.TextAlignmentOptions.Center;
             ShopButton("退出 [Esc]", -570, 42, 220, true, () => run.Shop.Close(), "ShopExit");
             ArtPanel("ShopGoldIcon", modal, new Vector2(515, -50), new Vector2(32, 32), art.shopGoldCoin, new Vector2(.5f, 1), true);
-            ShopLabel(run.Shop.Gold.ToString(), 600, 50, 120, 36, 25, PixelArt.Gold);
+            ShopLabel(run.Shop.GoldText, 600, 50, 120, 36, 25, PixelArt.Gold);
             var weights = run.Shop.QualityWeights;
             float total = weights[0] + weights[1] + weights[2] + weights[3];
             ShopLabel($"Lv.{run.Level} · 刷新品质：白 {weights[0] / total:P0} / 蓝 {weights[1] / total:P0} / 紫 {weights[2] / total:P0} / 红 {weights[3] / total:P0}",
@@ -70,7 +70,7 @@ namespace Echoes
                     ShopButton($"购买并升至 {ShopController.TierName(offer.Tier + 1)} · {run.Shop.Price(offer)}", x, 330, 308,
                         run.Shop.Blocked(offer, true) == null, () => run.Shop.Buy(index, true), "MergeOffer" + i);
             }
-            ShopButton($"刷新 {run.Shop.RefreshPrice} 金币", 525, 410, 308, run.Shop.Gold >= run.Shop.RefreshPrice,
+            ShopButton($"刷新 {run.Shop.RefreshPrice} 金币", 525, 410, 308, run.Shop.CanAfford(run.Shop.RefreshPrice),
                 () => run.Shop.RefreshStock(), "ShopRefresh");
             ShopLabel($"已装备 {run.Player.Weapons.Slots.Count}/6", 0, 458, 1380, 32, 20, PixelArt.Cyan);
             for (int i = 0; i < run.Player.Weapons.Slots.Count; i++)

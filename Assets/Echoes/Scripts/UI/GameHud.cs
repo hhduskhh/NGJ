@@ -15,6 +15,7 @@ namespace Echoes
         private UnityEngine.UI.Image[] roomIcons;
         private TMP_Text[] roomCellLabels;
         private float noticeUntil;
+        private bool settingsOpen;
         private static TMP_FontAsset font;
         private readonly Color panel = new Color32(15, 23, 35, 246);
         private readonly Color muted = new Color32(147, 163, 183, 255);
@@ -85,7 +86,7 @@ namespace Echoes
             pressureText.text = $"附近 {run.NearbyEnemies}   /   伤害 +{(run.DamageMultiplier - 1) * 100:0}%";
             roomText.text = run.Map.Rooms[run.Map.CurrentRoom].Name;
             clockText.text = $"{(int)run.Elapsed / 60:00}:{(int)run.Elapsed % 60:00}   ·   击杀 {run.Kills}";
-            goldText.text = $"金币 {run.Shop.Gold}   ·   武器 {run.Player.Weapons.Slots.Count}/6";
+            goldText.text = $"金币 {run.Shop.GoldText}   ·   武器 {run.Player.Weapons.Slots.Count}/6";
             float cooldown = run.Player.DecoyCooldownRemaining;
             statusText.text = $"枪声半径 {run.Player.NoiseRadius:0.#}   ·   诱饵 {(cooldown <= 0 ? "就绪 [Q]" : cooldown.ToString("0.0") + " 秒")}   ·   " +
                 $"围攻上限 +{run.Player.PressureCap * run.Player.PressureBonus * 100:0}%   ·   {(run.Muted ? "声音已关闭 [M]" : "声音开启 [M]")}";
@@ -154,6 +155,7 @@ namespace Echoes
 
         public void RefreshModal()
         {
+            if (run.State != RunState.Paused) settingsOpen = false;
             if (modal) { modal.gameObject.SetActive(false); Destroy(modal.gameObject); }
             if (run.State == RunState.Playing) return;
             modal = Panel("Modal", canvas, Vector2.zero, Vector2.zero, new Color(.025f, .04f, .065f, .96f));
@@ -161,6 +163,7 @@ namespace Echoes
             modal.offsetMin = modal.offsetMax = Vector2.zero;
             modal.GetComponent<UnityEngine.UI.Image>().raycastTarget = true;
             if (run.State == RunState.Shop) { DrawShop(); return; }
+            if (settingsOpen) { DrawSettings(); return; }
             string title = run.State == RunState.Upgrade ? "共 振 升 级" :
                 run.State == RunState.FloorCleared ? "本 层 已 净 化" :
                 run.State == RunState.Won ? "遗 迹 重 归 寂 静" :
@@ -204,7 +207,34 @@ namespace Echoes
                         else if (run.State == RunState.FloorCleared) run.AdvanceFloor();
                         else run.Restart();
                     });
+                if (run.State == RunState.Paused)
+                {
+                    var settings = Button(modal, "设置", new Vector2(0, -670), new Vector2(320, 65),
+                        () => { settingsOpen = true; RefreshModal(); });
+                    settings.name = "OpenSettings";
+                }
             }
+        }
+
+        private void DrawSettings()
+        {
+            var heading = Label(modal, "设 置", new Vector2(0, -185), new Vector2(1000, 70),
+                44, PixelArt.Cyan, new Vector2(.5f, 1));
+            heading.alignment = TextAlignmentOptions.Center;
+            var toggle = Button(modal, "手感调试模式：" + (run.FeelDebugMode ? "开启" : "关闭"),
+                new Vector2(0, -340), new Vector2(560, 70), () =>
+                {
+                    run.SetFeelDebugMode(!run.FeelDebugMode);
+                    RefreshModal();
+                });
+            toggle.name = "FeelDebugModeToggle";
+            var description = Label(modal,
+                "开启后拥有无限金币，购买与刷新不消耗余额。\n关闭后恢复正常消费，已有金币和拾取收益保留。\n仅本次探险有效，重新开始时默认关闭。",
+                new Vector2(0, -440), new Vector2(1000, 135), 23, muted, new Vector2(.5f, 1));
+            description.alignment = TextAlignmentOptions.Center;
+            var back = Button(modal, "返回暂停菜单", new Vector2(0, -630), new Vector2(320, 65),
+                () => { settingsOpen = false; RefreshModal(); });
+            back.name = "CloseSettings";
         }
 
         private RectTransform Panel(string name, Transform parent, Vector2 position, Vector2 size, Color color, Vector2? anchor = null)

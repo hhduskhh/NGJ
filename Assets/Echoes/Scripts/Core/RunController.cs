@@ -35,6 +35,8 @@ namespace Echoes
             config.firstLevelExperience, config.experienceStep);
         public bool BossActivated { get; private set; }
         public bool Muted { get; private set; }
+        public bool FeelDebugMode { get; private set; }
+        public void SetFeelDebugMode(bool enabled) => FeelDebugMode = enabled;
         public List<UpgradeDefinition> Choices { get; private set; }
         public System.Random Random { get; private set; }
         private int pendingUpgradeCost;
