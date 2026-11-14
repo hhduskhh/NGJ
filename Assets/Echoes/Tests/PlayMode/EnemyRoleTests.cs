@@ -115,10 +115,18 @@ namespace Echoes.Tests
         {
             for (int floor = 1; floor <= 3; floor++)
             {
+                var roles = new[] { "walker", "guard", "boss" };
+                var sleepingSprites = roles.ToDictionary(role => role, role =>
+                    Resources.LoadAll<Sprite>($"Art/Floor{floor}/{role}").Single(s => s.name == role + "_00"));
                 foreach (var e in run.Enemies)
                 {
                     Assert.AreEqual(EnemyState.Sleeping, e.State);
-                    Assert.AreEqual(e.IsBoss ? "boss" : e.IsGuard ? "guard" : "walker", e.GetComponent<CharacterArt>().Species);
+                    string role = e.IsBoss ? "boss" : e.IsGuard ? "guard" : "walker";
+                    Assert.AreEqual(role, e.GetComponent<CharacterArt>().Species);
+                    var renderer = e.GetComponent<SpriteRenderer>();
+                    Assert.AreSame(sleepingSprites[role], renderer.sprite);
+                    e.GetComponent<ArtBinding>().Refresh();
+                    Assert.AreSame(sleepingSprites[role], renderer.sprite);
                 }
                 if (floor < 3)
                 {

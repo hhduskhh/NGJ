@@ -39,7 +39,9 @@ namespace Echoes
 
         public static EnemyController Create(RunController run, Vector2 position, bool boss)
         {
-            var renderer = PixelArt.Create(boss ? "Gatekeeper" : "Sleeper", boss ? "boss" : "enemy",
+            bool isGuard = !boss && run.Enemies.Count % 2 == 1;
+            string species = boss ? "boss" : isGuard ? "guard" : "walker";
+            var renderer = PixelArt.Create(boss ? "Gatekeeper" : "Sleeper", species,
                 position, 9);
             var enemy = renderer.gameObject.AddComponent<EnemyController>();
             enemy.run = run; enemy.sprite = renderer; enemy.IsBoss = boss;
@@ -57,8 +59,8 @@ namespace Echoes
             enemy.damageShape = renderer.gameObject.AddComponent<PolygonCollider2D>();
             enemy.damageShape.isTrigger = true;
             enemy.art = renderer.gameObject.AddComponent<CharacterArt>();
-            enemy.IsGuard = !boss && run.Enemies.Count % 2 == 1;
-            enemy.art.Initialize(boss ? "boss" : enemy.IsGuard ? "guard" : "walker");
+            enemy.IsGuard = isGuard;
+            enemy.art.Initialize(species);
             if (enemy.IsGuard)
             {
                 enemy.muzzleWarning = PixelArt.Create("GuardMuzzleWarning", "guardMuzzle",
