@@ -182,12 +182,19 @@ namespace Echoes
                         }
                 }
             }
+            var routeRoom = map.Rooms[drawnRoom];
+            while (routeRoom.NextRoomTowardBoss != null && routeRoom.NextRoomTowardBoss.Visited)
+                routeRoom = routeRoom.NextRoomTowardBoss;
+
             foreach (var door in map.Doors)
             {
                 if (!door.A.Visited && !door.B.Visited) continue;
                 var opening = door.Opening;
                 bool frontier = door.A.Visited != door.B.Visited;
                 Color32 ink = frontier ? run.Config.minimapFrontierDoor : run.Config.minimapExploredDoor;
+                if ((door.A == routeRoom && door.B == routeRoom.NextRoomTowardBoss) ||
+                    (door.B == routeRoom && door.A == routeRoom.NextRoomTowardBoss))
+                    ink = run.Config.minimapBossRouteDoor;
                 foreach (var tile in opening.allPositionsWithin)
                     pixels[tile.y * map.Width + tile.x] = ink;
                 if (!frontier) continue;

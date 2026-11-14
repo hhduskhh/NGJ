@@ -109,7 +109,7 @@ namespace Echoes.Tests
             var direction = door.Opening.width == 2 ? Vector2Int.right : Vector2Int.up;
             if (run.Map.RoomAtPosition(center + direction * 2) == start) direction = -direction;
             var tip = center + direction * 6;
-            Assert.AreEqual((Color32)run.Config.minimapFrontierDoor, (Color32)texture.GetPixel(tip.x, tip.y));
+            Assert.AreEqual((Color32)run.Config.minimapBossRouteDoor, (Color32)texture.GetPixel(tip.x, tip.y));
 
             Vector2 near = center - direction * 3;
             run.Player.PlaceAt(near);
@@ -127,7 +127,7 @@ namespace Echoes.Tests
             yield return null;
             yield return null;
             Assert.AreEqual((Color32)run.Config.minimapExploredDoor, (Color32)texture.GetPixel(center.x, center.y));
-            Assert.AreNotEqual((Color32)run.Config.minimapFrontierDoor, (Color32)texture.GetPixel(tip.x, tip.y));
+            Assert.AreNotEqual((Color32)run.Config.minimapBossRouteDoor, (Color32)texture.GetPixel(tip.x, tip.y));
             run.Player.PlaceAt(near);
             yield return null;
             yield return null;

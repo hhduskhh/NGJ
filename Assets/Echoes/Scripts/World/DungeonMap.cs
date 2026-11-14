@@ -17,6 +17,7 @@ namespace Echoes
             public readonly List<RectInt> DoorOpenings = new List<RectInt>();
             public int Index;
             public RoomRole Role;
+            public Room NextRoomTowardBoss { get; internal set; }
             public RoomShape Shape;
             public int Rotation;
             public int LayoutVariant;
@@ -129,6 +130,7 @@ namespace Echoes
             cellRooms = new Room[GridSize, GridSize];
 
             BuildWorldRooms(plan);
+            LinkRoomsTowardBoss(plan);
             CarveRooms(plan);
             CarveDoors(plan);
             ApplyRoomWalls();
@@ -176,6 +178,23 @@ namespace Echoes
                 room.Cells.AddRange(planned.Cells);
                 Rooms.Add(room);
                 foreach (var cell in planned.Cells) cellRooms[cell.x, cell.y] = room;
+            }
+        }
+
+        private void LinkRoomsTowardBoss(DungeonPlan plan)
+        {
+            var pending = new Queue<PlannedRoom>();
+            pending.Enqueue(plan.Boss);
+            while (pending.Count > 0)
+            {
+                var room = pending.Dequeue();
+                foreach (var door in room.Doors)
+                {
+                    var neighbor = door.A == room ? door.B : door.A;
+                    if (neighbor == plan.Boss || Rooms[neighbor.Index].NextRoomTowardBoss != null) continue;
+                    Rooms[neighbor.Index].NextRoomTowardBoss = Rooms[room.Index];
+                    pending.Enqueue(neighbor);
+                }
             }
         }
 
