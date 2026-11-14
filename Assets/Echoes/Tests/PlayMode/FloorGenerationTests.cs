@@ -151,7 +151,8 @@ namespace Echoes.Tests
                     Assert.IsTrue(map.IsWalkable(Vector2Int.RoundToInt(map.StartPosition)));
                     Assert.IsTrue(map.IsWalkable(Vector2Int.RoundToInt(map.BossPosition)));
                     Assert.IsTrue(map.IsWalkable(Vector2Int.RoundToInt(map.AltarPosition)));
-                    Assert.AreEqual(RoomRole.Middle, map.RoomAtPosition(map.ShopCounterPosition).Role);
+                    Assert.AreEqual(map.Floor == 1 ? RoomRole.Middle : RoomRole.Start,
+                        map.RoomAtPosition(map.ShopCounterPosition).Role);
                     Assert.Greater(map.FindPath(map.StartPosition, map.ShopCounterPosition).Count, 0);
                     Assert.AreEqual(RoomRole.Start, map.RoomAtPosition(map.SignPosition).Role);
                     foreach (var room in map.Rooms)
@@ -238,7 +239,11 @@ namespace Echoes.Tests
             int level = run.Level;
             Projectile.Create(run, player.transform.position + Vector3.right, Vector2.right, 1, 1, false);
 
+            var bossBar = GameObject.Find("GameHUD").transform.Find("Bar").gameObject;
+            Assert.IsFalse(bossBar.activeInHierarchy);
             run.ActivateBoss();
+            yield return null;
+            Assert.IsTrue(bossBar.activeInHierarchy);
             run.Boss.TakeDamage(99999);
             Assert.AreEqual(RunState.FloorCleared, run.State);
             int roomsFloor1 = run.Map.Rooms.Count;
@@ -246,6 +251,7 @@ namespace Echoes.Tests
             yield return null;
 
             Assert.AreEqual(2, run.Floor);
+            Assert.IsFalse(bossBar.activeInHierarchy);
             Assert.AreEqual(2, run.Map.Floor);
             Assert.AreEqual("Floor2/", GameArt.Floor);
             Assert.AreEqual(FloorTheme.Title(2), run.FloorTitle);
@@ -268,11 +274,14 @@ namespace Echoes.Tests
             Assert.Greater(roomsFloor1, 0);
 
             run.ActivateBoss();
+            yield return null;
+            Assert.IsTrue(bossBar.activeInHierarchy);
             run.Boss.TakeDamage(99999);
             Assert.AreEqual(RunState.FloorCleared, run.State);
             run.AdvanceFloor();
             yield return null;
             Assert.AreEqual(3, run.Floor);
+            Assert.IsFalse(bossBar.activeInHierarchy);
             Assert.AreEqual("Floor3/", GameArt.Floor);
             Assert.AreEqual(RunState.Playing, run.State);
 

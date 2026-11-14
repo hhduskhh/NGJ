@@ -389,7 +389,8 @@ namespace Echoes
 
         private void PlaceShop(System.Random random)
         {
-            var candidates = Rooms.FindAll(room => room.Role == RoomRole.Middle);
+            var shopRole = Floor == 1 ? RoomRole.Middle : RoomRole.Start;
+            var candidates = Rooms.FindAll(room => room.Role == shopRole);
             Shuffle(candidates, random);
             foreach (var room in candidates)
             {
@@ -406,6 +407,8 @@ namespace Echoes
                 {
                     var spec = StartStall.Layout(room, tile);
                     var counter = Vector2Int.RoundToInt(StartStall.CounterPosition(spec));
+                    // Leave the spawn point and its exit sign clear of the kiosk.
+                    if (room.Role == RoomRole.Start && Vector2.Distance(counter, room.Bounds.center) < 7f) continue;
                     if (!IsWalkable(counter) || !IsWalkable(counter + Vector2Int.down)) continue;
                     if (traps.Exists(t => Vector2Int.Distance(t.Tile, counter) <= run.Config.trapAnchorSearchRadius + 6)) continue;
                     var blocked = new List<Vector2Int>();

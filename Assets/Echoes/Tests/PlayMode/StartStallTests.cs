@@ -116,7 +116,7 @@ namespace Echoes.Tests
                 Assert.IsNull(GameObject.Find("ShopSign"));
                 var counter = Vector2Int.RoundToInt(run.Shop.Position);
                 var room = run.Map.RoomAtPosition(counter);
-                Assert.AreEqual(RoomRole.Middle, room.Role);
+                Assert.AreEqual(floor == 1 ? RoomRole.Middle : RoomRole.Start, room.Role);
                 var spec = StartStall.Layout(room, counter + new Vector2Int(-2, 1));
                 spec.MeasureBase();
                 Assert.AreEqual(spec.CollisionBounds.size, stall.GetComponent<BoxCollider2D>().size);

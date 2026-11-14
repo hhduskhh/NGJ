@@ -167,6 +167,7 @@ namespace Echoes
         {
             if (State != RunState.FloorCleared || Floor >= FloorTheme.Count) return;
             Floor++;
+            BossActivated = false;
             ClearFloorObjects();
             Map.Generate(this, Floor - 1);
             Player.PlaceAt(Map.StartPosition);
@@ -175,7 +176,6 @@ namespace Echoes
             SpawnFloor();
             Visibility.Rebuild();
             Hud.RebuildMinimap();
-            BossActivated = false;
             SetState(RunState.Playing);
             Hud.Notify("进入第 " + Floor + " 层 · " + FloorTheme.Title(Floor), 4);
         }

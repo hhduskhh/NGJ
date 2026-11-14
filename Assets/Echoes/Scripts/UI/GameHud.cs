@@ -112,9 +112,11 @@ namespace Echoes
             Vector2 size = mapImage.rectTransform.rect.size;
             playerMarker.anchoredPosition = new Vector2((position.x + .5f) * size.x / DungeonMap.Width,
                 (position.y + .5f) * size.y / DungeonMap.Height);
-            if (run.BossActivated && run.Boss.Alive)
+            bool showBoss = run.BossActivated && run.Boss && run.Boss.Alive;
+            bossBar.transform.parent.gameObject.SetActive(showBoss);
+            bossText.gameObject.SetActive(showBoss);
+            if (showBoss)
             {
-                bossBar.transform.parent.gameObject.SetActive(true);
                 bossBar.fillAmount = run.Boss.Health / run.Boss.MaxHealth;
                 bossText.text = $"守关者   {Mathf.CeilToInt(run.Boss.Health)}";
             }
@@ -149,8 +151,6 @@ namespace Echoes
                 Panel("Center", playerMarker, Vector2.zero, Vector2.one * (side - 2), Color.white, Vector2.one * .5f);
             }
             DrawMinimap();
-            if (bossBar) bossBar.transform.parent.gameObject.SetActive(false);
-            if (bossText) bossText.text = "";
             mapTitle.text = $"第{run.Floor}层  {run.FloorTitle.Replace(" ", "")}";
         }
 
