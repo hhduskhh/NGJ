@@ -84,10 +84,14 @@ namespace Echoes.Tests
             run.Player.PlaceAt(run.Map.StartPosition);
             yield return new WaitForSeconds(run.Config.bombFuse + .2f);
             Assert.IsFalse(bomb);
+            var explosion = Object.FindObjectOfType<BombExplosion>();
+            Assert.IsTrue(explosion, "An evaded bomb still produces a blast");
+            Assert.Greater(explosion.GetComponentInChildren<LineRenderer>().transform.localScale.x, 0);
             Assert.AreEqual(health, run.Player.Health);
             var second = traps.First(t => t && t.name == "FloorBomb");
             run.Player.PlaceAt(second.transform.position);
             yield return new WaitForSeconds(run.Config.bombFuse + .2f);
+            Assert.IsFalse(explosion, "The previous blast has finished");
             Assert.AreEqual(health - run.Config.bombDamage, run.Player.Health);
             yield return new WaitForSeconds(run.Config.playerInvulnerability);
             run.Player.PlaceAt(traps.First(t => t && t.name == "SpikePlate").transform.position);

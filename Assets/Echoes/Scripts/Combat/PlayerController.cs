@@ -56,9 +56,12 @@ namespace Echoes
             player.Passives = new PassiveInventory(player);
             player.pressureRing = PixelArt.Circle("PressureRadius", player.transform,
                 new Color(.36f, .89f, .86f, .16f), .025f);
-            PixelArt.SetRadius(player.pressureRing, run.Config.pressureRadius);
+            player.pressureRing.sortingOrder = DungeonVisibility.DangerOrder;
+            player.SetPressureRadius(0);
             return player;
         }
+
+        public void SetPressureRadius(float radius) => pressureRing.transform.localScale = Vector3.one * radius;
 
         private void Update()
         {

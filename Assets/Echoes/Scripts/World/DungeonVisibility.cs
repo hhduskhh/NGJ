@@ -149,6 +149,30 @@ namespace Echoes
             nextWalkPulse += run.Config.walkPulseInterval;
         }
 
+        public float PlayerLightRadius(float limit)
+        {
+            Vector2 player = run.Player.transform.position;
+            float gradient = run.Config.gradientVisionRange;
+            float radius = gradient;
+            if (ScreenLightActive)
+            {
+                float halfHeight = viewCamera.orthographicSize;
+                float halfWidth = halfHeight * viewCamera.aspect;
+                Vector2 center = viewCamera.transform.position;
+                Vector2 offset = player - center;
+                float edge = Mathf.Min(halfWidth - Mathf.Abs(offset.x), halfHeight - Mathf.Abs(offset.y));
+                float wave = new Vector2(halfWidth, halfHeight).magnitude * ScreenLightWaveProgress;
+                radius = Mathf.Max(radius, Mathf.Min(edge, wave - offset.magnitude));
+            }
+            foreach (var echo in echoes)
+            {
+                // Only the part of this light disc surrounding the player extends the ring.
+                float reach = echo.RadiusAt(Time.time, run.Config) + gradient;
+                radius = Mathf.Max(radius, reach - Vector2.Distance(player, echo.Origin));
+            }
+            return Mathf.Min(radius, limit);
+        }
+
         public bool IsVisible(Vector2 position) => VisibilityAt(position) > .001f;
 
         public float VisibilityAt(Vector2 position)

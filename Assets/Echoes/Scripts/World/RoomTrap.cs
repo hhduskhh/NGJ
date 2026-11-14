@@ -55,7 +55,7 @@ namespace Echoes
                 Warn(clock);
                 if (clock < config.bombFuse) return;
                 if (inRange) run.Player.TakeDamage(config.bombDamage);
-                ArtEffect.Play(transform.position, true, PixelArt.Red);
+                BombExplosion.Play(transform.position, transform.parent, radius, config.bombFlashSeconds);
                 Destroy(gameObject);
                 return;
             }

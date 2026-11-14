@@ -203,10 +203,12 @@ namespace Echoes
 
         public void RefreshPressure()
         {
+            float radius = Visibility.PlayerLightRadius(Player.Weapons.MaxGunshotRadius);
+            Player.SetPressureRadius(radius);
             NearbyEnemies = 0;
             foreach (var enemy in Enemies)
                 if (enemy && CombatRules.CountsForPressure(enemy.Alive, enemy.Awake,
-                    enemy.transform.position, Player.transform.position, config.pressureRadius))
+                    enemy.transform.position, Player.transform.position, radius) && Visibility.IsVisible(enemy.transform.position))
                     NearbyEnemies++;
         }
 

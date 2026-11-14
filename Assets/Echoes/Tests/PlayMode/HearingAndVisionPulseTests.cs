@@ -19,6 +19,33 @@ namespace Echoes.Tests
             yield return new WaitForSeconds(.04f);
         }
 
+        [UnityTest]
+        public IEnumerator PressureRingAndBonusFollowCurrentLightAndGunNoiseCap()
+        {
+            yield return LoadFloor();
+            var run = Object.FindObjectOfType<RunController>();
+            Vector2 origin = DungeonTestGeometry.FindClearLane(run, 12);
+            run.Player.PlaceAt(origin);
+            var enemy = run.Enemies[0];
+            enemy.enabled = false;
+            EnemyRoleTests.PlaceEnemy(enemy, origin + Vector2.right * 4);
+            enemy.Hear(origin);
+            var ring = run.Player.transform.Find("PressureRadius");
+            run.RefreshPressure();
+            Assert.AreEqual(run.Config.gradientVisionRange, ring.localScale.x, .001f);
+            Assert.AreEqual(0, run.NearbyEnemies);
+
+            run.Visibility.Reveal(origin, 12);
+            yield return new WaitForSeconds(run.Config.visionExpandDuration + .02f);
+            run.RefreshPressure();
+            Assert.AreEqual(run.Player.Weapons.MaxGunshotRadius, ring.localScale.x, .001f);
+            Assert.AreEqual(1, run.NearbyEnemies);
+            run.Visibility.ClearPulses();
+            run.RefreshPressure();
+            Assert.AreEqual(run.Config.gradientVisionRange, ring.localScale.x, .001f);
+            Assert.AreEqual(0, run.NearbyEnemies);
+        }
+
         [Test]
         public void ExpansionSlowsAndContractionAcceleratesAroundHalfSecondHold()
         {

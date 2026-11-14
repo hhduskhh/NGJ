@@ -17,6 +17,16 @@ namespace Echoes
         public const int Capacity = 6;
         public WeaponInventory(RunController run) { this.run = run; Add(0, 0); slots[0].Cooldown = 0; }
         public WeaponDefinition Definition(Slot slot) => run.Config.weapons[slot.Kind];
+        private float GunshotRadius(Slot slot) => run.Player.NoiseRadius * Definition(slot).noise;
+        public float MaxGunshotRadius
+        {
+            get
+            {
+                float radius = 0;
+                foreach (var slot in slots) radius = Mathf.Max(radius, GunshotRadius(slot));
+                return radius;
+            }
+        }
         public float Interval(Slot slot) => Mathf.Max(.05f, Definition(slot).interval[slot.Tier] / run.Player.AttackSpeed);
         public int Match(int kind, int tier, int except = -1) => slots.FindIndex(s => s.Kind == kind && s.Tier == tier && slots.IndexOf(s) != except);
         public bool Add(int kind, int tier)
@@ -119,7 +129,7 @@ namespace Echoes
                     Projectile.Create(run, muzzle, shot, definition.speed, damage, false,
                         slot.Kind == 2 ? Mathf.Max(0, slot.Tier - 1) : 0, impactTargets);
                 }
-                run.Noise.Emit(run.Player.transform.position, run.Player.NoiseRadius * definition.noise, NoiseKind.Gunshot);
+                run.Noise.Emit(run.Player.transform.position, GunshotRadius(slot), NoiseKind.Gunshot);
                 ArtEffect.Play(muzzle, false, PixelArt.Gold);
                 weaponMask |= 1 << slot.Kind;
             }
