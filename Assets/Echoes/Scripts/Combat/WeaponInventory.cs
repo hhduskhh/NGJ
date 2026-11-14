@@ -22,7 +22,8 @@ namespace Echoes
         public bool Add(int kind, int tier)
         {
             if (slots.Count >= Capacity) return false;
-            var visual = PixelArt.Create("Weapon", "gun", run.Player.transform.position, 25, run.Player.transform).transform;
+            var visual = PixelArt.Create("Weapon", "weapon_" + (kind * 4 + tier),
+                run.Player.transform.position, 25, run.Player.transform).transform;
             slots.Add(new Slot { Kind = kind, Tier = tier, Visual = visual, Cooldown = run.Config.weapons[kind].interval[tier] });
             UpdateVisuals(run.Player.AimPoint);
             return true;
@@ -35,6 +36,9 @@ namespace Echoes
             float fraction = slot.Cooldown / Interval(slot);
             if (other >= 0) fraction = Mathf.Max(fraction, slots[other].Cooldown / Interval(slots[other]));
             slot.Tier++;
+            string art = "weapon_" + (slot.Kind * 4 + slot.Tier);
+            slot.Visual.GetComponent<ArtBinding>().Kind = art;
+            slot.Visual.GetComponent<SpriteRenderer>().sprite = PixelArt.Get(art);
             slot.Cooldown = Mathf.Max(0, fraction) * Interval(slot);
             if (other >= 0) Remove(other);
             return true;
@@ -68,10 +72,16 @@ namespace Echoes
             {
                 var slot = slots[i]; var position = Position(i);
                 var direction = Direction(slot, position, manualPoint, false);
-                slot.Visual.position = position;
+                var renderer = slot.Visual.GetComponent<SpriteRenderer>();
+                float tip = (renderer.sprite.rect.width * .5f - 1) / renderer.sprite.pixelsPerUnit;
+                // Align the visible barrel with the existing logical muzzle; ballistics do not move.
+                slot.Visual.position = position + direction * (.35f - tip);
                 slot.Visual.rotation = Quaternion.Euler(0, 0, Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg);
-                slot.Visual.localScale = new Vector3(slot.Kind == 1 ? 1.3f : 1, slot.Kind == 2 ? .65f : 1, 1);
-                slot.Visual.GetComponent<SpriteRenderer>().color = ShopController.TierColor(slot.Tier);
+                slot.Visual.localScale = Vector3.one;
+                renderer.color = Color.white;
+                renderer.flipY = direction.x < 0;
+                bool behind = slots.Count > 1 && position.y > run.Player.transform.position.y + .55f;
+                renderer.sortingOrder = GameArt.FootOrder(run.Player.transform.position.y) + (behind ? -1 : 1);
             }
         }
         public bool Fire(Vector2 manualPoint, bool manual)
@@ -96,7 +106,7 @@ namespace Echoes
                         slot.Kind == 2 ? Mathf.Max(0, slot.Tier - 1) : 0);
                 }
                 run.Noise.Emit(run.Player.transform.position, run.Player.NoiseRadius * definition.noise, NoiseKind.Gunshot);
-                ArtEffect.Play(muzzle, false, ShopController.TierColor(slot.Tier));
+                ArtEffect.Play(muzzle, false, PixelArt.Gold);
                 fired = true;
             }
             if (fired) run.Noise.PlayShot();

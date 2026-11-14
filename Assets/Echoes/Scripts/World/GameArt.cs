@@ -24,6 +24,8 @@ namespace Echoes
         public static string Floor => "Floor" + (Theme + 1) + "/";
         public static Sprite Get(string kind)
         {
+            if (kind.StartsWith("weapon_") && int.TryParse(kind.Substring(7), out int weapon))
+                return PresentationArt.Current.weapons[weapon];
             switch (kind)
             {
                 case "player": return Frame("Common/hero", 0);
@@ -35,6 +37,7 @@ namespace Echoes
                 case "wall": return Frame(Floor + "tiles", 4);
                 case "wallAlt": return Frame(Floor + "tiles", 5);
                 case "gun": return Frame("Common/items", 0);
+                case "gold": return PresentationArt.Current.goldPickup;
                 case "bell": return Frame("Common/items", 1);
                 case "bullet": return Frame("Common/items", 2);
                 case "hostileBullet": return Frame("Common/items", 3);
