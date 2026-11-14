@@ -31,9 +31,9 @@ MonoBehaviour:
   bonusEnemyCap: 8
   generationAttempts: 100
   extraDoorChance: 0.15
-  enemiesPerCell: 2
-  minEnemiesPerRoom: 3
-  maxEnemiesPerRoom: 12
+  enemiesPerCell: 6
+  minEnemiesPerRoom: 6
+  maxEnemiesPerRoom: 28
   enemyHealth: 32
   enemySpeed: 1.7
   enemyDamage: 9

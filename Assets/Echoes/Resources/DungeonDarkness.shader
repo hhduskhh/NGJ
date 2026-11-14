@@ -59,7 +59,7 @@ Shader "Echoes/DungeonDarkness"
                     direction.y == 0 ? 1e20 : abs(1 / direction.y));
                 float2 next = float2(direction.x == 0 ? 1e20 : (cell.x + step.x * .5 - origin.x) / direction.x,
                     direction.y == 0 ? 1e20 : (cell.y + step.y * .5 - origin.y) / direction.y);
-                [loop] for (int i = 0; i < 256; i++) // Covers the 90x70 floor with margin
+                [loop] for (int i = 0; i < 512; i++) // Covers the 180x180 floor with margin
                 {
                     if (all(cell == goal)) return true;
                     if (abs(next.x - next.y) <= .000001)
