@@ -110,22 +110,11 @@ namespace Echoes
                     // in every station room or rotate vertical architecture.
                     Native(result, variant == 0 ? "bell" : variant == 1 ? "crate" : "rubble",
                         cellBounds, .50f, .50f);
-                    Native(result, "crate", cellBounds, .22f, .22f);
-                    Native(result, "rubble", cellBounds, .78f, .78f);
-                    Native(result, variant == 2 ? "rubble" : "crate", cellBounds, .22f, .78f);
-                    Native(result, "crate", cellBounds, .78f, .22f);
                     bool vertical = room.Bounds.height > room.Bounds.width;
                     Native(result, vertical ? "pew_ns" : "pew", cellBounds, .28f, variant == 1 ? .36f : .40f);
-                    Native(result, vertical ? "pew_ns" : "pew", cellBounds, .72f, variant == 1 ? .64f : .60f);
-                    Native(result, "column", cellBounds, .16f, .50f);
-                    Native(result, "column", cellBounds, .84f, .50f);
-                    Native(result, "rubble", cellBounds, .50f, .20f);
-                    Native(result, "crate", cellBounds, .50f, .80f);
-                    if (variant == 2)
-                    {
-                        Native(result, "column", cellBounds, .36f, .36f);
-                        Native(result, "column", cellBounds, .64f, .64f);
-                    }
+                    Native(result, "column", cellBounds, .78f, .22f);
+                    Native(result, "rubble", cellBounds, .78f, .78f);
+                    Native(result, "crate", cellBounds, .22f, .78f);
                 }
             }
             foreach (var cell in room.Cells)
@@ -193,15 +182,10 @@ namespace Echoes
                     }
                     // Boiler islands, double receiver bays and broken drive
                     // assemblies share clear side routes, but different outlines.
-                    foreach (float x in new[] { .22f, .78f })
-                        foreach (float y in new[] { .22f, .78f })
-                            Native(result, (variant == 2 && x == y) ? "f2_gears" : "f2_tank", area, x, y);
-                    Native(result, vertical ? "f2_conveyor_ns" : "f2_conveyor", area, .15f, .50f);
-                    Native(result, vertical ? "f2_pipes_ns" : "f2_pipes", area, .85f, .50f);
-                    Native(result, "f2_gears", area, .50f, .20f);
-                    Native(result, "f2_gears", area, .50f, .80f);
-                    if (room.Shape == RoomShape.L && i != focus)
-                        Native(result, "f2_pipes", area, .28f, .62f);
+                    Native(result, vertical ? "f2_conveyor_ns" : "f2_conveyor", area, .22f, .22f);
+                    Native(result, vertical ? "f2_pipes_ns" : "f2_pipes", area, .78f, .78f);
+                    Native(result, "f2_gears", area, .22f, .78f);
+                    Native(result, variant == 2 ? "f2_gears" : "f2_tank", area, .78f, .22f);
                 }
             }
             foreach (var cell in room.Cells)

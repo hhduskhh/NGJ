@@ -33,6 +33,7 @@ MonoBehaviour:
   bonusPerEnemy: 0.08
   bonusEnemyCap: 8
   generationAttempts: 100
+  maxFurniturePerCell: 5
   extraDoorChance: 0.15
   enemiesPerCell: 7
   minEnemiesPerRoom: 6

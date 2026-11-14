@@ -51,6 +51,7 @@ namespace Echoes
         [Min(0)] public float bonusPerEnemy = .08f;
         [Min(1)] public int bonusEnemyCap = 8;
         [Header("Dungeon generation")]
+        [Min(0)] public int maxFurniturePerCell = 5;
         [Min(1)] public float altarEntranceDistance = 3;
         [Min(1)] public int generationAttempts = 100;
         [Range(0, 1)] public float extraDoorChance = .15f;

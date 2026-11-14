@@ -36,20 +36,10 @@ namespace Echoes
                         Native(result, "f3_shell", area, .40f, .50f);
                         Native(result, "f3_reliquary", area, .65f, .50f);
                     }
-                    foreach (float x in new[] { .20f, .80f })
-                        foreach (float y in new[] { .20f, .80f })
-                            Native(result, "f3_shell", area, x, y);
-                    Native(result, "f3_shell", area, .50f, .23f);
-                    Native(result, "f3_shell", area, .50f, .80f);
-                    Native(result, "f3_reliquary", area, .23f, variant == 1 ? .43f : .50f);
-                    Native(result, "f3_reliquary", area, .77f, variant == 1 ? .57f : .50f);
-                    foreach (float x in new[] { .35f, .65f })
-                        foreach (float y in new[] { .35f, .68f })
-                            Native(result, "f3_crystal", area, x, y);
-                    // Pipes stay upright and face south even in vertical/L-shaped rooms.
-                    // These are isolated ranks, not rotated copies of a long horizontal prop.
-                    Native(result, "f3_organ", area, .15f, .64f);
-                    Native(result, "f3_organ", area, .85f, .36f);
+                    Native(result, "f3_organ", area, .20f, .68f);
+                    Native(result, "f3_crystal", area, .80f, .22f);
+                    Native(result, "f3_shell", area, .20f, .22f);
+                    Native(result, "f3_reliquary", area, .77f, variant == 1 ? .67f : .78f);
                 }
             }
             foreach (var cell in room.Cells)

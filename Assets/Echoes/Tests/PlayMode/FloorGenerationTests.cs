@@ -8,6 +8,12 @@ namespace Echoes.Tests
 {
     public sealed class FloorGenerationTests
     {
+        private static void AssertFurnitureLimit(DungeonMap map, DungeonMap.Room room, int limit)
+        {
+            int shop = map.RoomAtPosition(map.ShopCounterPosition) == room ? 1 : 0;
+            Assert.LessOrEqual(map.SolidCount(room) - shop, room.CellCount * limit, room.Name);
+        }
+
         private IEnumerator Load()
         {
             yield return SceneManager.LoadSceneAsync("Prototype");
@@ -49,9 +55,7 @@ namespace Echoes.Tests
                 if (room.Role == RoomRole.Middle && room.Shape != RoomShape.Single) multiCell.Add(room.Shape);
                 if (room.Role == RoomRole.Middle)
                 {
-                    Assert.GreaterOrEqual(run.Map.SolidCount(room), 6, "Middle room needs cover");
-                    Assert.GreaterOrEqual(run.Map.SolidCoverage(room), .05f, "Middle room cover coverage");
-                    Assert.LessOrEqual(run.Map.SolidCoverage(room), .22f, "Middle room is not overfilled");
+                    AssertFurnitureLimit(run.Map, room, run.Config.maxFurniturePerCell);
                 }
                 Assert.GreaterOrEqual(run.Map.SpawnCells(room.Index).Count, 1);
                 foreach (var door in room.DoorOpenings)
@@ -163,10 +167,7 @@ namespace Echoes.Tests
                             "Every room has at least one valid spawn cell: " + room.Name);
                         if (room.Role == RoomRole.Middle)
                         {
-                            Assert.GreaterOrEqual(map.SolidCount(room), 5,
-                                "Middle room needs cover: " + room.Name);
-                            Assert.GreaterOrEqual(map.SolidCoverage(room), .04f,
-                                "Middle room cover coverage: " + room.Name);
+                            AssertFurnitureLimit(map, room, run.Config.maxFurniturePerCell);
                         }
                         if (room != map.Rooms[0])
                             Assert.Greater(map.FindPath(map.StartPosition, room.Center).Count, 0,

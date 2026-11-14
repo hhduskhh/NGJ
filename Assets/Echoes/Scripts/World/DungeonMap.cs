@@ -369,15 +369,23 @@ namespace Echoes
                 var specs = RoomLayouts.Build(room, theme, random);
                 var blocked = new List<Vector2Int>();
                 var accepted = new List<RoomPropSpec>();
+                var placedPerCell = new Dictionary<Vector2Int, int>();
                 foreach (var spec in specs)
-                    if (spec.Solid && TryBlockObstacle(spec, room, blocked)) accepted.Add(spec);
+                {
+                    if (!spec.Solid) continue;
+                    var cell = CellAtPosition(spec.ArtPosition);
+                    placedPerCell.TryGetValue(cell, out int placed);
+                    if (room.Role == RoomRole.Middle && placed >= run.Config.maxFurniturePerCell) continue;
+                    if (!TryBlockObstacle(spec, room, blocked)) continue;
+                    accepted.Add(spec);
+                    placedPerCell[cell] = placed + 1;
+                }
                 bool connected = RoomConnected(room);
                 if (connected)
                 {
                     obstacleSpecs.AddRange(accepted);
                     foreach (var spec in specs)
                         if (!spec.Solid) decorSpecs.Add(spec);
-                    EnsureRoomCover(room, theme, accepted);
                     return;
                 }
                 foreach (var tile in blocked) walkable[tile.x, tile.y] = true;
@@ -423,79 +431,6 @@ namespace Echoes
                 }
             }
             throw new System.InvalidOperationException("No reachable shop site on this floor.");
-        }
-
-        // Dense flow walls reject some planned furniture. Top the room back up
-        // with a few native props so cover stays useful without overfilling.
-        private void EnsureRoomCover(Room room, int theme, List<RoomPropSpec> accepted)
-        {
-            if (room.Role != RoomRole.Middle || room.CellCount == 0) return;
-            int area = room.CellCount * (CellWidth - 2) * (CellHeight - 2);
-            if (area <= 0) return;
-            float target = Floor == 1 ? .06f : .095f;
-            const int minSolids = 6;
-            int tiles = 0;
-            foreach (var spec in accepted) tiles += SolidTiles(spec);
-            if (tiles / (float)area >= target && accepted.Count >= minSolids) return;
-            var kinds = theme == 0
-                ? new[] { "room_rubble", "room_crate" }
-                : theme == 1
-                    ? new[] { "room_f2_pipes", "room_f2_pipes_ns", "room_f2_gears", "room_f2_tank" }
-                    : new[] { "room_f3_organ", "room_f3_crystal", "room_f3_reliquary" };
-            // Scan the room on coarse-to-tight grids. Wall-aware scanning packs
-            // the ring corridors far better than random attempts.
-            for (int pass = 0; pass < 3; pass++)
-            {
-                int step = pass == 0 ? 4 : pass == 1 ? 2 : 1;
-                foreach (var cell in room.Cells)
-                {
-                    int x0 = cell.x * CellWidth, y0 = CellOriginY(cell.y);
-                    for (int ly = 2; ly < CellHeight - 2; ly += step)
-                        for (int lx = 2; lx < CellWidth - 2; lx += step)
-                        {
-                            if (tiles / (float)area >= target && accepted.Count >= minSolids)
-                                return;
-                            var spec = TryFillerProp(room, kinds, x0 + lx, y0 + ly);
-                            if (spec == null) continue;
-                            accepted.Add(spec);
-                            obstacleSpecs.Add(spec);
-                            tiles += SolidTiles(spec);
-                            break;
-                        }
-                }
-            }
-        }
-
-        private static int SolidTiles(RoomPropSpec spec)
-        {
-            var bounds = spec.NavigationBounds;
-            if (bounds.width > 0 && bounds.height > 0) return bounds.width * bounds.height;
-            return Mathf.Max(1, spec.Width) * Mathf.Max(1, spec.Height);
-        }
-
-        private RoomPropSpec TryFillerProp(Room room, string[] kinds, int x, int y)
-        {
-            foreach (var kind in kinds)
-            {
-                var art = RoomArt.Definition(kind);
-                var spec = new RoomPropSpec
-                {
-                    Kind = art.Kind, X = x, Y = y,
-                    Width = Mathf.Max(1, art.Footprint.x),
-                    Height = Mathf.Max(1, art.Footprint.y),
-                    Scale = 1, Solid = true,
-                    Layer = RoomPropLayer.FloorObject, Owner = room
-                };
-                var blocked = new List<Vector2Int>();
-                if (!TryBlockObstacle(spec, room, blocked)) continue;
-                if (!RoomConnected(room))
-                {
-                    RestoreTiles(blocked);
-                    continue;
-                }
-                return spec;
-            }
-            return null;
         }
 
         private bool TryBlockObstacle(RoomPropSpec spec, Room room, List<Vector2Int> blocked)

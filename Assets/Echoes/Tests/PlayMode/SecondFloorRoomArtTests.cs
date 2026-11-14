@@ -66,7 +66,7 @@ namespace Echoes.Tests
                 if (room.Role != RoomRole.Middle) continue;
                 float coverage = run.Map.SolidCoverage(room);
                 Debug.Log("ECHOES_F2_COVERAGE " + room.Shape + " " + coverage);
-                Assert.That(coverage, Is.InRange(.05f, .18f), "Factory cover remains usable");
+                Assert.LessOrEqual(coverage, .09f, "Factory furniture leaves walking space");
             }
             Assert.IsTrue(run.Map.IsWalkable(Vector2Int.RoundToInt(run.Shop.Position)));
             Assert.Greater(run.Map.FindPath(run.Map.StartPosition, run.Shop.Position).Count, 0);
