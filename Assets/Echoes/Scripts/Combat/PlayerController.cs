@@ -87,7 +87,7 @@ namespace Echoes
             sprite.flipX = aim.x < 0;
         }
 
-        public EnemyController FindVisibleTarget(float range = float.MaxValue, Vector2? muzzle = null)
+        public EnemyController FindVisibleTarget(Vector2? muzzle = null)
         {
             EnemyController nearest = null;
             float closest = float.MaxValue;
@@ -96,7 +96,6 @@ namespace Echoes
                 if (!enemy || !enemy.Alive || (enemy.IsBoss && !run.BossActivated)) continue;
                 Vector2 position = enemy.transform.position;
                 float distance = (position - (Vector2)transform.position).sqrMagnitude;
-                if (distance > range * range) continue;
                 if (muzzle.HasValue && !run.Map.HasLineOfSight(muzzle.Value, position)) continue;
                 if (distance >= closest || !run.Visibility.IsVisible(position)) continue;
                 var viewport = Camera.main.WorldToViewportPoint(position);

@@ -73,9 +73,9 @@ namespace Echoes
             float angle = Mathf.PI * 2 * index / slots.Count;
             return center + new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * 1.1f;
         }
-        private Vector2 Direction(Slot slot, Vector2 position, Vector2 manualPoint, bool manual)
+        private Vector2 Direction(Vector2 position, Vector2 manualPoint, bool manual)
         {
-            EnemyController target = manual ? null : run.Player.FindVisibleTarget(Definition(slot).range, position);
+            EnemyController target = manual ? null : run.Player.FindVisibleTarget(position);
             Vector2 delta = (target ? (Vector2)target.transform.position : manualPoint) - position;
             return delta.sqrMagnitude > .001f ? delta.normalized : Vector2.right;
         }
@@ -84,7 +84,7 @@ namespace Echoes
             for (int i = 0; i < slots.Count; i++)
             {
                 var slot = slots[i]; var position = Position(i);
-                var direction = Direction(slot, position, manualPoint, false);
+                var direction = Direction(position, manualPoint, false);
                 var renderer = slot.Visual.GetComponent<SpriteRenderer>();
                 float tip = (renderer.sprite.rect.width * .5f - 1) / renderer.sprite.pixelsPerUnit;
                 // Align the visible barrel with the existing logical muzzle; ballistics do not move.
@@ -106,7 +106,7 @@ namespace Echoes
                 var slot = slots[i];
                 if (slot.Cooldown > 0) continue;
                 var definition = Definition(slot);
-                Vector2 position = Position(i), direction = Direction(slot, position, manualPoint, manual);
+                Vector2 position = Position(i), direction = Direction(position, manualPoint, manual);
                 Vector2 muzzle = position + direction * .35f;
                 if (!run.Map.HasClearInteractionPath(run.Player.transform.position, muzzle)) continue;
                 slot.Cooldown = Interval(slot);

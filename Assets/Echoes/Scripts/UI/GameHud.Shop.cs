@@ -66,7 +66,7 @@ namespace Echoes
                 else
                 {
                     var weapon = run.Config.weapons[offer.Weapon];
-                    description = $"伤害 {weapon.damage[offer.Tier] * run.Player.TotalDamageScale:0.#} × {weapon.pellets} · 间隔 {Mathf.Max(.1f, weapon.interval[offer.Tier] / run.Player.AttackSpeed):0.00}秒\n射程 {weapon.range} · 声音 {weapon.noise * run.Player.NoiseRadius:0.#}";
+                    description = $"伤害 {weapon.damage[offer.Tier] * run.Player.TotalDamageScale:0.#} × {weapon.pellets} · 间隔 {Mathf.Max(.1f, weapon.interval[offer.Tier] / run.Player.AttackSpeed):0.00}秒\n索敌：可见范围 · 声音 {weapon.noise * run.Player.NoiseRadius:0.#}";
                 }
                 Label(card, description, new Vector2(18, -90), new Vector2(298, 66), 17, Paper);
                 string blocked = run.Shop.Blocked(offer);
