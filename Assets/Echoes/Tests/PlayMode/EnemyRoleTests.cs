@@ -56,9 +56,9 @@ namespace Echoes.Tests
                     }
                     if (windingUp && !boss.IsWindingUp && firstBarrage < 0)
                     {
-                        var bullet = GameObject.Find("HostileProjectile");
-                        Assert.IsNotNull(bullet);
-                        Assert.AreEqual(Vector3.one * run.Config.bossBulletScale, bullet.transform.localScale);
+                        var bullets = Object.FindObjectsOfType<Projectile>().Where(p => p.name == "HostileProjectile").ToArray();
+                        Assert.AreEqual(18, bullets.Length, "First barrage emits a full ring");
+                        Assert.AreEqual(Vector3.one * run.Config.bossBulletScale, bullets[0].transform.localScale);
                         firstBarrage = Time.time - started;
                     }
                     windingUp = boss.IsWindingUp;

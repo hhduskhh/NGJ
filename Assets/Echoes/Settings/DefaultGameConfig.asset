@@ -79,15 +79,15 @@ MonoBehaviour:
   bossSpeed: 2.55
   bossHealth: 1100
   bossDamage: 14
-  bossAttackInterval: 1.2
-  bossWarningDuration: 0.6
+  bossAttackInterval: 0.8
+  bossWarningDuration: 0.4
   bossDashInterval: 1.4
   bossDashDuration: 0.32
   bossDashSpeed: 11
   finalBossAttackRate: 2
   bossBulletSpeed: 4
   bossBulletScale: 1.35
-  bossBulletCount: 12
+  bossBulletCount: 18
   bossSummonInterval: 8
   bossSummonCount: 2
   bossSummonLimit: 4
