@@ -10,6 +10,26 @@ namespace Echoes.Tests
     public sealed class CombatAudioTests
     {
         [UnityTest]
+        public IEnumerator EmptyCityLoopsOnFirstFloorOnly()
+        {
+            yield return SceneManager.LoadSceneAsync("Prototype");
+            yield return null;
+            var run = Object.FindObjectOfType<RunController>();
+            var clip = Resources.Load<AudioClip>("EmptyCity");
+            Assert.IsNotNull(clip);
+            var music = run.GetComponents<AudioSource>().Single(source => source.clip == clip);
+            Assert.IsTrue(music.loop);
+            Assert.IsTrue(music.isPlaying);
+            run.Player.PlaceAt(run.Map.BossPosition);
+            yield return null;
+            Assert.IsTrue(music.isPlaying);
+            run.SetState(RunState.FloorCleared);
+            run.AdvanceFloor();
+            Assert.AreEqual(2, run.Floor);
+            Assert.IsFalse(music.isPlaying);
+        }
+
+        [UnityTest]
         public IEnumerator EnemyStepsFollowDistanceAndDoNotRevealOrWake()
         {
             yield return SceneManager.LoadSceneAsync("Prototype");

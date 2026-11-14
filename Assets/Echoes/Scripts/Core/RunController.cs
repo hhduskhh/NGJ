@@ -9,6 +9,8 @@ namespace Echoes
     public sealed class RunController : MonoBehaviour
     {
         [SerializeField] private GameConfig config;
+        [SerializeField, Range(0f, 1f)] private float musicVolume = 0.12f;
+        private AudioSource explorationMusic;
         public GameConfig Config => config;
         public DungeonMap Map { get; private set; }
         public PlayerController Player { get; private set; }
@@ -61,6 +63,12 @@ namespace Echoes
             Visibility.Initialize(this);
             Hud = gameObject.AddComponent<GameHud>();
             Hud.Initialize(this);
+            explorationMusic = gameObject.AddComponent<AudioSource>();
+            explorationMusic.playOnAwake = false;
+            explorationMusic.clip = Resources.Load<AudioClip>("EmptyCity");
+            explorationMusic.loop = true;
+            explorationMusic.volume = musicVolume;
+            explorationMusic.Play();
         }
 
         private void SpawnFloor()
@@ -147,6 +155,7 @@ namespace Echoes
         {
             if (State != RunState.FloorCleared || Floor >= FloorTheme.Count) return;
             Floor++;
+            explorationMusic.Stop();
             ClearFloorObjects();
             Map.Generate(this, Floor - 1);
             Player.PlaceAt(Map.StartPosition);
