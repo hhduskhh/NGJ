@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: DefaultGameConfig
   m_EditorClassIdentifier: 
   playerHealth: 100
-  moveSpeed: 6
+  moveSpeed: 9
   bulletDamage: 10
   shotInterval: 0.28
   bulletSpeed: 22
@@ -29,7 +29,6 @@ MonoBehaviour:
   wakeVolume: 0.14
   enemyStepVolume: 0.07
   enemyStepDistance: 2.4
-  pressureRadius: 5
   bonusPerEnemy: 0.08
   bonusEnemyCap: 8
   generationAttempts: 100
@@ -59,8 +58,8 @@ MonoBehaviour:
   trapAnchorSearchRadius: 3
   trapDoorClearance: 2
   enemyHealth: 32
-  walkerSpeed: 5.0666667
-  guardSpeed: 2.0666667
+  walkerSpeed: 7.6
+  guardSpeed: 3.1
   guardRange: 9
   guardWindup: 0.75
   guardShotInterval: 2.2
@@ -77,7 +76,7 @@ MonoBehaviour:
   decoyCooldown: 12
   screenLightDuration: 5
   screenLightCooldown: 15
-  bossSpeed: 1.7
+  bossSpeed: 2.55
   bossHealth: 1100
   bossDamage: 14
   bossAttackInterval: 1.2

@@ -19,7 +19,7 @@ namespace Echoes
         public Color minimapExploredDoor = new Color32(194, 202, 205, 255);
         [Header("Player")]
         [Min(1)] public float playerHealth = 100;
-        [Min(.1f)] public float moveSpeed = 6f;
+        [Min(.1f)] public float moveSpeed = 9f;
         [Min(1)] public float bulletDamage = 10;
         [Min(.05f)] public float shotInterval = .28f;
         [Min(1)] public float bulletSpeed = 22;
@@ -47,7 +47,6 @@ namespace Echoes
         [Min(.1f)] public float enemyStepDistance = 2.4f;
         [Header("Sound — ignores walls in this prototype")]
         [Min(1)] public float gunNoiseRadius = 6;
-        [Min(1)] public float pressureRadius = 5;
         [Min(0)] public float bonusPerEnemy = .08f;
         [Min(1)] public int bonusEnemyCap = 8;
         [Header("Dungeon generation")]
@@ -78,10 +77,11 @@ namespace Echoes
         [Min(0)] public float bombDamage = 16;
         [Min(.1f)] public float bombRadius = 2.1f;
         [Min(.1f)] public float bombFuse = 1.1f;
+        [Min(.05f)] public float bombFlashSeconds = .4f;
         [Header("Finite floor population")]
         [Min(1)] public float enemyHealth = 32;
-        [Min(.1f)] public float walkerSpeed = 5.0666667f;
-        [Min(.1f)] public float guardSpeed = 2.0666667f;
+        [Min(.1f)] public float walkerSpeed = 7.6f;
+        [Min(.1f)] public float guardSpeed = 3.1f;
         [Min(.1f)] public float guardRange = 9;
         [Min(.1f)] public float guardWindup = .75f;
         [Min(.1f)] public float guardShotInterval = 2.2f;
@@ -107,7 +107,7 @@ namespace Echoes
         [Min(1)] public float decoyDuration = 4;
         [Min(1)] public float decoyCooldown = 12;
         [Header("Gatekeeper")]
-        [Min(.1f)] public float bossSpeed = 1.7f;
+        [Min(.1f)] public float bossSpeed = 2.55f;
         [Min(1)] public float bossHealth = 1100;
         [Min(1)] public float bossDamage = 14;
         [Min(.1f)] public float bossAttackInterval = 1.2f;
