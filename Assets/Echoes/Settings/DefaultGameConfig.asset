@@ -35,7 +35,12 @@ MonoBehaviour:
   minEnemiesPerRoom: 3
   maxEnemiesPerRoom: 12
   enemyHealth: 32
-  enemySpeed: 1.7
+  walkerSpeed: 3.8
+  guardSpeed: 1.55
+  guardRange: 9
+  guardWindup: 0.75
+  guardShotInterval: 2.2
+  guardBulletSpeed: 5.5
   enemyDamage: 9
   enemyAttackInterval: 1
   playerInvulnerability: 0.65
@@ -46,6 +51,7 @@ MonoBehaviour:
   decoyThrowRange: 6
   decoyDuration: 4
   decoyCooldown: 12
+  bossSpeed: 1.275
   bossHealth: 1100
   bossDamage: 14
   bossAttackInterval: 2.8
