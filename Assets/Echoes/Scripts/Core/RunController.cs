@@ -136,7 +136,8 @@ namespace Echoes
                 SetState(Floor >= FloorTheme.Count ? RunState.Won : RunState.FloorCleared);
                 return;
             }
-            GoldPickup.Drop(this, enemy.transform.position, config.goldPerKill);
+            bool doubleLoot = Player.DoubleLootChance > 0 && Random.NextDouble() < Player.DoubleLootChance;
+            GoldPickup.Drop(this, enemy.transform.position, config.goldPerKill * (doubleLoot ? 2 : 1));
             Player.Passives.OnKill();
             Experience += config.experiencePerKill;
             TryLevelUp();

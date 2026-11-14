@@ -17,7 +17,7 @@ namespace Echoes
         public const int Capacity = 6;
         public WeaponInventory(RunController run) { this.run = run; Add(0, 0); slots[0].Cooldown = 0; }
         public WeaponDefinition Definition(Slot slot) => run.Config.weapons[slot.Kind];
-        public float Interval(Slot slot) => Mathf.Max(.1f, Definition(slot).interval[slot.Tier] / run.Player.AttackSpeed);
+        public float Interval(Slot slot) => Mathf.Max(.05f, Definition(slot).interval[slot.Tier] / run.Player.AttackSpeed);
         public int Match(int kind, int tier, int except = -1) => slots.FindIndex(s => s.Kind == kind && s.Tier == tier && slots.IndexOf(s) != except);
         public bool Add(int kind, int tier)
         {

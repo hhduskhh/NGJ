@@ -45,6 +45,8 @@ MonoBehaviour:
   emergencyRepair: {fileID: 21300000, guid: e2353695e2767a24c996f8c4eeca3453, type: 3}
   resonanceAmplifier: {fileID: 21300000, guid: 789ead112fbd29d4ba8b4dd5fff79027, type: 3}
   decoyTuning: {fileID: 21300000, guid: 28bc77c953cf31c438329495c28b421e, type: 3}
+  criticalDamage: {fileID: 21300000, guid: 9fec52bd896c44cf91e2c4296d0e98f5, type: 3}
+  luckyClover: {fileID: 21300000, guid: 8aaed1b495aa461bbea19535c2eb2035, type: 3}
   passiveIcons:
   - {fileID: 21300000, guid: 75382432227446eebf3da32d8013e170, type: 3}
   - {fileID: 21300000, guid: 30c755458cac420b954c95c3662eead7, type: 3}

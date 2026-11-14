@@ -20,6 +20,46 @@ namespace Echoes.Tests
         }
 
         [UnityTest]
+        public IEnumerator EightUpgradesApplyToCombatAndLoot()
+        {
+            yield return LoadFloor();
+            var run = Object.FindObjectOfType<RunController>();
+            var player = run.Player;
+            var slot = player.Weapons.Slots[0];
+            float startInterval = player.Weapons.Interval(slot);
+            Assert.AreEqual(8, UpgradeDefinition.Catalog.Length);
+            void Apply(string title) => System.Array.Find(UpgradeDefinition.Catalog, card => card.Title == title).Apply(player);
+
+            foreach (var card in UpgradeDefinition.Catalog)
+            {
+                Assert.IsNotNull(PresentationArt.Current.Upgrade(card.Title), card.Title);
+                card.Apply(player);
+            }
+            Assert.AreEqual(startInterval * .88f, player.Weapons.Interval(slot), .0001f);
+            Assert.AreEqual(run.Config.decoyCooldown - 2, player.DecoyCooldown, .001f);
+            Assert.AreEqual(run.Config.gunNoiseRadius + 5, player.NoiseRadius, .001f);
+            Assert.AreEqual(run.Config.bonusPerEnemy + .01f, player.PressureBonus, .001f);
+            Assert.AreEqual(2.08f, player.CriticalMultiplier, .001f);
+            Assert.AreEqual(.08f, player.DoubleLootChance, .001f);
+            for (int i = 0; i < 30; i++)
+            {
+                Apply("快装枪机");
+                Apply("诱饵调校");
+                Apply("幸运四叶草");
+            }
+            Assert.AreEqual(.05f, player.Weapons.Interval(slot), .0001f);
+            Assert.AreEqual(4, player.DecoyCooldown);
+            Assert.AreEqual(1, player.DoubleLootChance);
+            var enemy = run.Enemies[0];
+            enemy.GetComponent<Rigidbody2D>().position = player.transform.position;
+            Physics2D.SyncTransforms();
+            enemy.TakeDamage(99999);
+            yield return new WaitForSeconds(.1f);
+            Assert.AreEqual(2 * run.Config.goldPerKill, run.Shop.Gold);
+            Assert.AreEqual(run.Config.experiencePerKill, run.Experience);
+        }
+
+        [UnityTest]
         public IEnumerator ShotsUseVisibleTargetsAndRespectManualOverride()
         {
             yield return LoadFloor();

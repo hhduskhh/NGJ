@@ -19,17 +19,21 @@ namespace Echoes
         public float DamageScale { get; set; } = 1;
         public float MoveScale { get; set; } = 1;
         public float ShotIntervalScale { get; set; } = 1;
-        public float DecoyCooldownScale { get; set; } = 1;
+        public float DecoyCooldownReduction { get; set; }
+        public float CriticalDamageBonus { get; set; }
+        public float PressureBonusPerEnemy { get; set; }
+        public float DoubleLootChance { get; set; }
         public float NoiseRadiusBonus { get; set; }
         public float NoiseRadius => Mathf.Clamp(run.Config.gunNoiseRadius + NoiseRadiusBonus + Passives.Noise, 3, 12);
-        public float AttackSpeed => Mathf.Max(.1f, 1 / ShotIntervalScale + Passives.AttackSpeed + Passives.ConvertedAttackSpeed);
+        public float AttackSpeed => Mathf.Max(.1f, 1 + Passives.AttackSpeed + Passives.ConvertedAttackSpeed) / ShotIntervalScale;
         public float CriticalChance => Mathf.Clamp01(.1f + Passives.Critical);
-        public float CriticalMultiplier => Mathf.Clamp(2 + Passives.CriticalDamage, 1, 5);
+        public float CriticalMultiplier => Mathf.Clamp(2 + CriticalDamageBonus + Passives.CriticalDamage, 1, 5);
         public float TotalDamageScale => Mathf.Max(.1f, DamageScale + Passives.Damage + Passives.ConvertedDamage +
             (Passives.Has(ItemSpecial.LoneFighter) ? (run.NearbyEnemies <= 1 ? .3f : -.1f) : 0));
-        public float PressureBonus => Mathf.Clamp(run.Config.bonusPerEnemy + Passives.Pressure, 0, .2f);
+        public float PressureBonus => Mathf.Clamp(run.Config.bonusPerEnemy + PressureBonusPerEnemy + Passives.Pressure, 0, .2f);
         public int PressureCap => Mathf.Clamp(run.Config.bonusEnemyCap + Passives.PressureCap, 1, 12);
         public float DecoyCooldownRemaining => Mathf.Max(0, decoyReadyAt - Time.time);
+        public float DecoyCooldown => Mathf.Max(4, run.Config.decoyCooldown * Mathf.Max(.1f, 1 + Passives.DecoyCooldown) - DecoyCooldownReduction);
         public Vector2 AimPoint { get; private set; }
         public Vector2 AimDirection => aim;
         public EnemyController AimTarget { get; private set; }
@@ -132,7 +136,7 @@ namespace Echoes
             if (!run.Map.HasClearInteractionPath(transform.position, point))
             { run.Hud.Notify("诱饵投掷路径被墙壁挡住", 2); return; }
             BellDecoy.Create(run, point);
-            decoyReadyAt = Time.time + Mathf.Max(5, run.Config.decoyCooldown * Mathf.Max(.1f, DecoyCooldownScale + Passives.DecoyCooldown));
+            decoyReadyAt = Time.time + DecoyCooldown;
         }
 
         public void TakeDamage(float amount)
