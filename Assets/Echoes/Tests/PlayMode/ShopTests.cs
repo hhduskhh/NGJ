@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Linq;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -11,7 +12,9 @@ namespace Echoes.Tests
         private RunController run;
         private sealed class QualitySample : System.Random
         {
-            public override double NextDouble() => .63;
+            private readonly double sample;
+            public QualitySample(double sample) { this.sample = sample; }
+            public override double NextDouble() => sample;
             public override int Next(int maxValue) => 0;
         }
         [UnitySetUp] public IEnumerator Load()
@@ -61,7 +64,7 @@ namespace Echoes.Tests
         [UnityTest] public IEnumerator QualityChangesOnRefreshAfterFiveLevels()
         {
             typeof(ShopController).GetField("random", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
-                .SetValue(run.Shop, new QualitySample());
+                .SetValue(run.Shop, new QualitySample(.63));
             run.Shop.BeginFloor(run.Map.Rooms[0].Center);
             Assert.AreEqual(4, run.Shop.Offers.Count);
             foreach (var offer in run.Shop.Offers) Assert.AreEqual(0, offer.Tier);
@@ -98,21 +101,71 @@ namespace Echoes.Tests
             Assert.Less(Vector2.Distance(run.Shop.Position, run.Map.Rooms[1].Center), 3);
             yield return null;
         }
-        [UnityTest] public IEnumerator PassiveLimitsConversionsAndRepair()
+        [Test] public void RuntimePassiveCatalogMatchesEachTier()
         {
-            var player = run.Player; var items = run.Config.passives;
-            Assert.IsTrue(player.Passives.Add(items[2])); Assert.AreEqual(116, player.MaxHealth); Assert.AreEqual(116, player.Health);
-            Assert.IsTrue(player.Passives.Add(items[2])); Assert.IsFalse(player.Passives.Add(items[2]));
-            Assert.IsTrue(player.Passives.Add(items[18]));
-            Assert.AreEqual(.21f, player.Passives.ConvertedDamage, .001f);
-            Assert.IsFalse(player.Passives.Add(items[18]));
+            var expected = new[]
+            {
+                new[] { "硬质弹头", "轻型枪机", "厚衬外套", "软底长靴" },
+                new[] { "消声套管", "扩音枪口", "承压线圈", "回声铜铃" },
+                new[] { "疾行发电机", "应急修复器" },
+                new[] { "遗迹扩声阵列", "寂静终焉" }
+            };
+            var items = run.Config.passives;
+            Assert.AreEqual(12, items.Length);
+            for (int tier = 0; tier < expected.Length; tier++)
+                CollectionAssert.AreEquivalent(expected[tier], items.Where(i => i.tier == tier).Select(i => i.title));
+        }
+
+        [Test] public void PassiveStackAndHealthLimits()
+        {
+            var player = run.Player;
+            var coat = run.Config.passives.Single(i => i.title == "厚衬外套");
+            Assert.IsTrue(player.Passives.Add(coat));
+            Assert.AreEqual(116, player.MaxHealth);
+            Assert.AreEqual(116, player.Health);
+            Assert.IsTrue(player.Passives.Add(coat));
+            Assert.IsFalse(player.Passives.Add(coat));
+            Assert.AreEqual(2, player.Passives.Count(coat));
             player.MaxHealth = 25; player.Heal(0);
-            Assert.IsFalse(player.Passives.CanAdd(items[3]));
-            player.MaxHealth = 100; player.Heal(100); player.TakeDamage(40);
-            Assert.IsTrue(player.Passives.Add(items[21])); Assert.AreEqual(72, player.Health);
-            for (int i = 0; i < 5; i++) player.Passives.OnKill();
-            Assert.AreEqual(72, player.Health); player.Passives.OnKill(); Assert.AreEqual(80, player.Health);
-            yield return null;
+            Assert.IsFalse(player.Passives.CanAdd(run.Config.passives.Single(i => i.title == "软底长靴")));
+        }
+
+        [Test] public void PurplePurchasesConvertSpeedAndRepairEverySixKills()
+        {
+            var player = run.Player;
+            player.TakeDamage(50);
+            Assert.IsTrue(run.Shop.Open());
+            run.Shop.Credit(200);
+            // At level one .94 selects purple for both passive slots.
+            typeof(ShopController).GetField("random", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
+                .SetValue(run.Shop, new QualitySample(.94));
+            Assert.IsTrue(run.Shop.RefreshStock());
+            int gold = run.Shop.Gold;
+            foreach (var special in new[] { ItemSpecial.SpeedDamage, ItemSpecial.Repair })
+            {
+                var offer = run.Shop.Offers.Single(o => o.Item?.special == special);
+                Assert.IsTrue(run.Shop.Buy(run.Shop.Offers.ToList().IndexOf(offer)));
+                gold -= 60;
+                Assert.AreEqual(gold, run.Shop.Gold);
+                Assert.AreEqual(1, player.Passives.Count(offer.Item));
+                Assert.IsFalse(player.Passives.CanAdd(offer.Item));
+            }
+            Assert.AreEqual(62, player.Health);
+            Assert.AreEqual(1.048f, player.TotalDamageScale, .001f);
+            player.MoveScale += .12f;
+            Assert.AreEqual(1.12f, player.TotalDamageScale, .001f);
+            player.MoveScale += .5f;
+            Assert.AreEqual(1.24f, player.TotalDamageScale, .001f);
+            run.Shop.Close();
+            var enemies = run.Enemies.Where(e => !e.IsBoss).Take(12).ToArray();
+            Assert.AreEqual(12, enemies.Length);
+            for (int i = 0; i < enemies.Length; i++)
+            {
+                enemies[i].TakeDamage(99999);
+                Assert.AreEqual(62 + (i + 1) / 6 * 8, player.Health, $"Kill {i + 1}");
+                if (run.State == RunState.Upgrade)
+                    run.ChooseUpgrade(run.Choices.FindIndex(choice => choice.Title != "应急修复"));
+            }
         }
         [UnityTest] public IEnumerator WeaponVolleyRangeAndPiercing()
         {
