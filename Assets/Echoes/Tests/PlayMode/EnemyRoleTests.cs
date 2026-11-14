@@ -128,7 +128,7 @@ namespace Echoes.Tests
             PlaceEnemy(walker, start + Vector2.left * 3);
             walker.Hear(start);
             yield return new WaitForSeconds(.16f);
-            Assert.AreEqual(3.8f, walker.GetComponent<Rigidbody2D>().velocity.magnitude, .01f);
+            Assert.AreEqual(run.Config.walkerSpeed, walker.GetComponent<Rigidbody2D>().velocity.magnitude, .01f);
             float gap = Vector2.Distance(walker.transform.position, start);
             var movement = typeof(PlayerController).GetField("movement",
                 System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);

@@ -12,7 +12,7 @@ namespace Echoes
         [Min(.01f)] public float victoryRevealSeconds = 1.2f;
         [Header("Player")]
         [Min(1)] public float playerHealth = 100;
-        [Min(.1f)] public float moveSpeed = 4.5f;
+        [Min(.1f)] public float moveSpeed = 6f;
         [Min(1)] public float bulletDamage = 10;
         [Min(.05f)] public float shotInterval = .28f;
         [Min(1)] public float bulletSpeed = 22;
@@ -58,8 +58,8 @@ namespace Echoes
         [Min(.1f)] public float bombFuse = 1.1f;
         [Header("Finite floor population")]
         [Min(1)] public float enemyHealth = 32;
-        [Min(.1f)] public float walkerSpeed = 3.8f;
-        [Min(.1f)] public float guardSpeed = 1.55f;
+        [Min(.1f)] public float walkerSpeed = 5.0666667f;
+        [Min(.1f)] public float guardSpeed = 2.0666667f;
         [Min(.1f)] public float guardRange = 9;
         [Min(.1f)] public float guardWindup = .75f;
         [Min(.1f)] public float guardShotInterval = 2.2f;
@@ -79,7 +79,7 @@ namespace Echoes
         [Min(1)] public float decoyDuration = 4;
         [Min(1)] public float decoyCooldown = 12;
         [Header("Gatekeeper")]
-        [Min(.1f)] public float bossSpeed = 1.275f;
+        [Min(.1f)] public float bossSpeed = 1.7f;
         [Min(1)] public float bossHealth = 1100;
         [Min(1)] public float bossDamage = 14;
         [Min(.1f)] public float bossAttackInterval = 2.8f;
