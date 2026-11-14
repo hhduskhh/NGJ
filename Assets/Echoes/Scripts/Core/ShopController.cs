@@ -33,7 +33,7 @@ namespace Echoes
         public void BeginFloor(Vector2 spawn)
         {
             foreach (Transform child in transform) Destroy(child.gameObject);
-            // DungeonMap owns the single formal sprite and its 5x3 solid footprint.
+            // DungeonMap owns the kiosk sprite and its measured counter base.
             // Interact with a reachable floor tile in front, never a blocked counter tile.
             Position = run.Map.ShopCounterPosition;
             Refreshes = 0;

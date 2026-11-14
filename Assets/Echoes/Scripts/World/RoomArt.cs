@@ -12,10 +12,14 @@ namespace Echoes
             public readonly string Kind, Path;
             public readonly Vector2Int Canvas, Footprint;
             public readonly bool Ground;
-            public Entry(string kind, string path, int w, int h, int fw = 0, int fh = 0, bool ground = false)
+            // Contact patch in source pixels, measured from the bottom-left of the sprite rect.
+            public readonly RectInt BasePixels;
+            public Entry(string kind, string path, int w, int h, int fw = 0, int fh = 0,
+                int baseX = 0, int baseY = 0, int baseWidth = 0, int baseHeight = 0, bool ground = false)
             {
                 Kind = "room_" + kind; Path = "Art/Room/" + path;
                 Canvas = new Vector2Int(w, h); Footprint = new Vector2Int(fw, fh); Ground = ground;
+                BasePixels = new RectInt(baseX, baseY, baseWidth, baseHeight);
             }
         }
 
@@ -23,41 +27,41 @@ namespace Echoes
         {
             new Entry("lintel", "Common/f0_door_lintel_6_96x32", 96, 32, ground:true),
             new Entry("threshold", "Common/f0_door_threshold_6_96x16", 96, 16, ground:true),
-            new Entry("stall", "Common/f0_start_stall_96x64", 96, 64, 5, 3),
-            new Entry("bell", "Floor1/f1_hero_bell_frame_128", 128, 128, 6, 6),
-            new Entry("rubble", "Floor1/f1_med_rubble_64x48", 64, 48, 4, 3),
-            new Entry("crate", "Floor1/f1_med_crate_stack_64x64", 64, 64, 4, 4),
-            new Entry("pew", "Floor1/f1_long_stone_pew_96x32", 96, 32, 6, 1),
-            new Entry("pew_ns", "Floor1/f1_long_stone_pew_ns_32x96", 32, 96, 1, 6),
-            new Entry("column", "Floor1/f1_tall_broken_column_32x96", 32, 96, 2, 2),
+            new Entry("stall", "Common/f0_start_stall_96x64", 96, 64, 5, 3, 26, 6, 57, 16),
+            new Entry("bell", "Floor1/f1_hero_bell_frame_128", 128, 128, 6, 6, 18, 20, 92, 26),
+            new Entry("rubble", "Floor1/f1_med_rubble_64x48", 64, 48, 4, 3, 5, 8, 51, 6),
+            new Entry("crate", "Floor1/f1_med_crate_stack_64x64", 64, 64, 4, 4, 11, 10, 41, 25),
+            new Entry("pew", "Floor1/f1_long_stone_pew_96x32", 96, 32, 6, 1, 5, 13, 86, 7),
+            new Entry("pew_ns", "Floor1/f1_long_stone_pew_ns_32x96", 32, 96, 1, 6, 10, 15, 12, 70),
+            new Entry("column", "Floor1/f1_tall_broken_column_32x96", 32, 96, 2, 2, 11, 12, 10, 10),
             new Entry("crack", "Floor1/f1_decal_crack_32x32", 32, 32, ground:true),
             new Entry("moss", "Floor1/f1_decal_moss_32x32", 32, 32, ground:true),
             new Entry("coins", "Floor1/f1_decal_coins_32x32", 32, 32, ground:true),
             new Entry("sconce", "Floor1/f1_wall_sconce_16x32", 16, 32),
-            new Entry("boss_pillar", "Boss/f1_boss_pillar_48x48", 48, 48, 3, 3),
-            new Entry("f2_boiler", "Floor2/f2_hero_boiler_128", 128, 128, 6, 6),
-            new Entry("f2_tank", "Floor2/f2_med_pressure_tank_64x64", 64, 64, 4, 4),
-            new Entry("f2_gears", "Floor2/f2_med_gear_pile_64x48", 64, 48, 4, 3),
-            new Entry("f2_conveyor", "Floor2/f2_long_conveyor_96x32", 96, 32, 6, 1),
-            new Entry("f2_conveyor_ns", "Floor2/f2_long_conveyor_ns_32x96", 32, 96, 1, 6),
-            new Entry("f2_pipes", "Floor2/f2_long_pipe_manifold_96x32", 96, 32, 5, 1),
-            new Entry("f2_pipes_ns", "Floor2/f2_long_pipe_manifold_ns_32x96", 32, 96, 1, 5),
+            new Entry("boss_pillar", "Boss/f1_boss_pillar_48x48", 48, 48, 3, 3, 10, 10, 27, 16),
+            new Entry("f2_boiler", "Floor2/f2_hero_boiler_128", 128, 128, 6, 6, 17, 20, 94, 37),
+            new Entry("f2_tank", "Floor2/f2_med_pressure_tank_64x64", 64, 64, 4, 4, 11, 10, 41, 28),
+            new Entry("f2_gears", "Floor2/f2_med_gear_pile_64x48", 64, 48, 4, 3, 6, 9, 51, 18),
+            new Entry("f2_conveyor", "Floor2/f2_long_conveyor_96x32", 96, 32, 6, 1, 4, 10, 87, 6),
+            new Entry("f2_conveyor_ns", "Floor2/f2_long_conveyor_ns_32x96", 32, 96, 1, 6, 10, 14, 11, 77),
+            new Entry("f2_pipes", "Floor2/f2_long_pipe_manifold_96x32", 96, 32, 5, 1, 9, 10, 78, 6),
+            new Entry("f2_pipes_ns", "Floor2/f2_long_pipe_manifold_ns_32x96", 32, 96, 1, 5, 9, 15, 13, 67),
             new Entry("f2_oil", "Floor2/f2_decal_oil_32x32", 32, 32, ground:true),
             new Entry("f2_water", "Floor2/f2_decal_water_32x32", 32, 32, ground:true),
             new Entry("f2_scrap", "Floor2/f2_decal_scrap_32x32", 32, 32, ground:true),
             new Entry("f2_wall_pipes", "Floor2/f2_wall_pipes_16x32", 16, 32),
-            new Entry("f2_boss_pillar", "Boss/f2_boss_pillar_48x48", 48, 48, 3, 3),
+            new Entry("f2_boss_pillar", "Boss/f2_boss_pillar_48x48", 48, 48, 3, 3, 9, 7, 30, 17),
             // The selected B shrine is tall and narrow; match its visible foot, not its canopy.
-            new Entry("f3_shrine", "Floor3/f3_hero_tuning_fork_shrine_128", 128, 128, 3, 2),
-            new Entry("f3_crystal", "Floor3/f3_med_crystal_cluster_64x80", 64, 80, 2, 2),
-            new Entry("f3_shell", "Floor3/f3_med_ceramic_shell_64x64", 64, 64, 4, 3),
-            new Entry("f3_organ", "Floor3/f3_tall_organ_pipes_64x96", 64, 96, 3, 1),
-            new Entry("f3_reliquary", "Floor3/f3_med_reliquary_64x48", 64, 48, 4, 2),
+            new Entry("f3_shrine", "Floor3/f3_hero_tuning_fork_shrine_128", 128, 128, 3, 2, 48, 21, 32, 14),
+            new Entry("f3_crystal", "Floor3/f3_med_crystal_cluster_64x80", 64, 80, 2, 2, 22, 14, 21, 13),
+            new Entry("f3_shell", "Floor3/f3_med_ceramic_shell_64x64", 64, 64, 4, 3, 9, 13, 46, 20),
+            new Entry("f3_organ", "Floor3/f3_tall_organ_pipes_64x96", 64, 96, 3, 1, 11, 13, 42, 7),
+            new Entry("f3_reliquary", "Floor3/f3_med_reliquary_64x48", 64, 48, 4, 2, 5, 9, 54, 17),
             new Entry("f3_shards", "Floor3/f3_decal_crystal_shard_32x32", 32, 32, ground:true),
             new Entry("f3_gold", "Floor3/f3_decal_gold_filings_32x32", 32, 32, ground:true),
             new Entry("f3_inlay", "Floor3/f3_decal_geometric_inlay_32x32", 32, 32, ground:true),
             new Entry("f3_wall_shelf", "Floor3/f3_wall_reliquary_shelf_16x32", 16, 32),
-            new Entry("f3_boss_pillar", "Boss/f3_boss_pillar_48x48", 48, 48, 1, 1)
+            new Entry("f3_boss_pillar", "Boss/f3_boss_pillar_48x48", 48, 48, 1, 1, 17, 7, 14, 7)
         };
         private static readonly Dictionary<string, Sprite> sprites = new Dictionary<string, Sprite>();
 

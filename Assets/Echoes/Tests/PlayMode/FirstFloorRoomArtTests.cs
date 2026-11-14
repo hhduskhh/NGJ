@@ -71,26 +71,25 @@ namespace Echoes.Tests
             yield return new WaitForSeconds(run.Config.visionExpandDuration + .02f);
             run.Visibility.RefreshMask();
             RuntimeSmokeTests.Capture("TestResults/FirstFloorArt/04-gameplay-vision.png");
-            // Seed 713 has no Square2. Capture the remaining shape from a
-            // generated first-floor seed as an empty art layout fixture.
-            if (!captured.Contains(RoomShape.Square2))
+            // The generator can omit any shape on a particular seed.
+            if (captured.Count < 5)
             {
                 int originalSeed = run.Config.randomSeed;
                 cover.enabled = false;
                 foreach (var enemy in run.Enemies) enemy.gameObject.SetActive(false);
                 try
                 {
-                    for (int seed = 100; seed < 120; seed++)
+                    for (int seed = 100; seed < 120 && captured.Count < 5; seed++)
                     {
                         run.Config.randomSeed = seed;
                         run.Map.Generate(run, 0);
-                        var square = run.Map.Rooms.Find(r => r.Role == RoomRole.Middle && r.Shape == RoomShape.Square2);
-                        if (square == null) continue;
-                        Move(run, square.Center);
-                        yield return null;
-                        Capture(run, "05-Square2", square);
-                        captured.Add(RoomShape.Square2);
-                        break;
+                        foreach (var room in run.Map.Rooms)
+                        {
+                            if (room.Role != RoomRole.Middle || !captured.Add(room.Shape)) continue;
+                            Move(run, room.Center);
+                            yield return null;
+                            Capture(run, "05-" + room.Shape, room);
+                        }
                     }
                 }
                 finally { run.Config.randomSeed = originalSeed; cover.enabled = true; }

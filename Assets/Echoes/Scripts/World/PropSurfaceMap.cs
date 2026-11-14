@@ -47,8 +47,9 @@ namespace Echoes
                     if (box && renderer.name.StartsWith("Obstacle_"))
                     {
                         var bounds = box.bounds;
-                        footprint = new Vector4(Mathf.Round(bounds.min.x + .5f), Mathf.Round(bounds.min.y + .5f),
-                            Mathf.Round(bounds.size.x), Mathf.Round(bounds.size.y));
+                        var min = Vector2Int.FloorToInt((Vector2)bounds.min + Vector2.one * .5f);
+                        var max = Vector2Int.CeilToInt((Vector2)bounds.max + Vector2.one * .5f);
+                        footprint = new Vector4(min.x, min.y, max.x - min.x, max.y - min.y);
                     }
                     var properties = new MaterialPropertyBlock();
                     properties.SetTexture("_MainTex", sprite.texture);

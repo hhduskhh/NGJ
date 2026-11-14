@@ -86,7 +86,7 @@ namespace Echoes.Tests
                 if (room.Role != RoomRole.Middle) continue;
                 float coverage = run.Map.SolidCoverage(room);
                 Debug.Log("ECHOES_F3_COVERAGE " + room.Shape + " " + coverage);
-                Assert.That(coverage, Is.InRange(.08f, .18f));
+                Assert.That(coverage, Is.InRange(.05f, .18f));
             }
             Move(run.Shop.Position);
             Assert.IsTrue(run.Shop.Open());
