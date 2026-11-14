@@ -84,6 +84,12 @@ namespace Echoes.Tests
         {
             var vision = run.Visibility;
             var cover = run.transform.Find("UnseenDungeon").gameObject;
+            var hero = run.Player.GetComponent<SpriteRenderer>();
+            var castFrames = Resources.LoadAll<Sprite>("Art/Common/heroLaugh");
+            Assert.AreEqual(8, castFrames.Length);
+            Assert.AreEqual(hero.sprite.pixelsPerUnit, castFrames[0].pixelsPerUnit);
+            Assert.AreEqual(hero.sprite.pivot, castFrames[0].pivot);
+            Assert.AreEqual(hero.sprite.rect.size, castFrames[0].rect.size);
             var laugh = Resources.Load<AudioClip>("CombatAudio/ScreenLightLaugh");
             Assert.IsNotNull(laugh);
             Assert.AreEqual(4f, laugh.length, .01f);
@@ -100,6 +106,7 @@ namespace Echoes.Tests
             Assert.IsFalse(vision.IsVisible(origin + Vector2.up * 1000));
             yield return null;
             Assert.IsTrue(cover.activeSelf);
+            CollectionAssert.Contains(castFrames, hero.sprite);
             var material = cover.GetComponent<SpriteRenderer>().sharedMaterial;
             yield return new WaitForSeconds(run.Config.screenLightWaveDuration * .25f);
             float wave = material.GetFloat("_ScreenLightWave");
@@ -120,7 +127,12 @@ namespace Echoes.Tests
             Assert.AreEqual(pausedWave, material.GetFloat("_ScreenLightWave"));
             run.SetState(RunState.Playing);
             Time.captureDeltaTime = .25f;
-            yield return new WaitForSeconds(4f);
+            yield return new WaitForSeconds(2.5f);
+            CollectionAssert.Contains(castFrames, hero.sprite);
+            Assert.GreaterOrEqual(run.Player.GetComponent<CharacterArt>().CurrentFrame, 4);
+            yield return new WaitForSeconds(1.5f);
+            yield return null; // CharacterArt selects the sprite in LateUpdate.
+            CollectionAssert.DoesNotContain(castFrames, hero.sprite);
             Assert.IsFalse(cover.activeSelf);
             Assert.IsTrue(vision.IsVisible(destination));
             Assert.AreSame(target, run.Player.FindVisibleTarget());

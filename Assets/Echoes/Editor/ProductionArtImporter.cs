@@ -56,10 +56,11 @@ namespace Echoes.Editor
                 return;
             }
             string name = Path.GetFileNameWithoutExtension(importer.assetPath);
-            int size = name == "hero" || name == "props" || name == "walker" || name == "guard" || name == "elite" ? 32 :
+            bool laugh = name == "heroLaugh";
+            int size = name == "hero" || laugh || name == "props" || name == "walker" || name == "guard" || name == "elite" ? 32 :
                 name == "boss" ? 64 : 16;
-            int cols = name == "hero" ? 4 : name == "walker" || name == "guard" || name == "elite" || name == "boss" ? 6 : 8;
-            int rows = name == "hero" ? 5 : name == "props" ? 2 : 1;
+            int cols = name == "hero" || laugh ? 4 : name == "walker" || name == "guard" || name == "elite" || name == "boss" ? 6 : 8;
+            int rows = name == "hero" ? 5 : name == "props" || laugh ? 2 : 1;
             importer.textureType = TextureImporterType.Sprite;
             importer.spritePixelsPerUnit = 16;
             importer.filterMode = FilterMode.Point;
@@ -69,7 +70,7 @@ namespace Echoes.Editor
             importer.npotScale = TextureImporterNPOTScale.None;
             importer.textureCompression = TextureImporterCompression.Uncompressed;
             importer.maxTextureSize = 2048;
-            bool actor = name == "hero" || name == "walker" || name == "guard" || name == "elite" || name == "boss";
+            bool actor = laugh || name == "hero" || name == "walker" || name == "guard" || name == "elite" || name == "boss";
             Vector2 pivot = actor || name == "props" ? new Vector2(.5f, .125f) : new Vector2(.5f,.5f);
             if (name == "solid" || name == "spikePlate" || name == "raisedSpikes" || name == "floorBomb" ||
                 name == "signpost" || name == "signArrow")

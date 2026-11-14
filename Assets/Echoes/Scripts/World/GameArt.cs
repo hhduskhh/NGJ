@@ -93,6 +93,14 @@ namespace Echoes
         private PlayerController player;
         private EnemyController enemy;
         private float clock, pulse, hurt, deathClock;
+        // Ten beats per second, authored against the four-second ScreenLightLaugh clip.
+        private static readonly int[] laughFrames = {
+            0, 1, 2, 3, 2, 3, 3, 2, 3, 2,
+            3, 2, 3, 3, 2, 3, 2, 3, 2, 4,
+            4, 5, 4, 5, 6, 5, 6, 6, 5, 6,
+            5, 7, 4, 5, 4, 7, 4, 7, 1, 0
+        };
+        private float laughStartedAt = float.NegativeInfinity;
         private bool wasDead;
         private SpriteRenderer footShadow;
         private GameConfig corpseConfig;
@@ -111,6 +119,7 @@ namespace Echoes
         }
         public void BeginCorpseFade(GameConfig config) => corpseConfig = config;
         public void Attack() => pulse = .2f;
+        public void PlayCastLaugh() => laughStartedAt = Time.time;
         public void Hurt(float duration = .22f) => hurt = duration;
         private void LateUpdate()
         {
@@ -120,12 +129,16 @@ namespace Echoes
             float dt = dead ? Time.unscaledDeltaTime : Mathf.Min(Time.deltaTime, .05f);
             clock += dt; pulse = Mathf.Max(0, pulse - dt); hurt = Mathf.Max(0, hurt - dt);
             bool moving = body && body.velocity.sqrMagnitude > .03f;
+            float laughBeat = (Time.time - laughStartedAt) * 10;
+            bool laughing = player && !dead && laughBeat < laughFrames.Length;
             if (dead)
             {
                 if (!wasDead) { deathClock = 0; wasDead = true; }
                 deathClock += dt;
                 CurrentFrame = player ? 16 + Mathf.Min(3, (int)(deathClock * 10)) : deathClock < .09f ? 1 : 5;
             }
+            else if (laughing)
+                CurrentFrame = laughFrames[(int)laughBeat];
             else if (player)
             {
                 int row = hurt > 0 ? 12 : pulse > 0 ? 8 : moving ? 4 : 0;
@@ -136,7 +149,8 @@ namespace Echoes
                 CurrentFrame = enemy.State == EnemyState.Sleeping ? 0 :
                     enemy.IsWindingUp || enemy.IsContactTelegraph || pulse > 0 ? 4 : moving ? 2 + (int)(clock * 8) % 2 : 1;
             }
-            renderer2D.sprite = GameArt.Frame(player ? "Common/hero" : GameArt.Floor + Species, CurrentFrame);
+            string sheet = laughing ? "Common/heroLaugh" : player ? "Common/hero" : GameArt.Floor + Species;
+            renderer2D.sprite = GameArt.Frame(sheet, CurrentFrame);
             if (enemy) enemy.UpdateDamageShape(renderer2D.sprite, renderer2D.flipX);
             renderer2D.sortingOrder = GameArt.FootOrder(transform.position.y);
             var tint = hurt > 0 && (int)(hurt * 40) % 2 == 0 ? new Color(1, .6f, .6f) : Color.white;

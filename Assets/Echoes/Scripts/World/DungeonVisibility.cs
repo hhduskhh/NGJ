@@ -28,6 +28,7 @@ namespace Echoes
             screenLightEndsAt = screenLightStartedAt + run.Config.screenLightDuration;
             screenLightReadyAt = Time.time + run.Config.screenLightCooldown;
             run.Noise.PlayScreenLight();
+            run.Player.GetComponent<CharacterArt>().PlayCastLaugh();
             Vector2 source = run.Player.transform.position;
             foreach (var enemy in run.Enemies)
             {
