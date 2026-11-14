@@ -27,11 +27,12 @@ namespace Echoes
             run = controller;
             if (!font)
             {
-                font = Resources.Load<TMP_FontAsset>("PrototypeFont");
-                if (!font) throw new System.InvalidOperationException("Run Echoes > Create or Update Prototype Scene to create the CJK font asset.");
+                font = Resources.Load<TMP_FontAsset>("FusionPixelUI");
+                if (!font) throw new System.InvalidOperationException("Run Echoes > Bake Interface Font to create the pixel font asset.");
             }
             canvas = new GameObject("GameHUD", typeof(RectTransform), typeof(Canvas),
                 typeof(UnityEngine.UI.CanvasScaler), typeof(UnityEngine.UI.GraphicRaycaster)).GetComponent<RectTransform>();
+            canvas.GetComponent<Canvas>().pixelPerfect = true;
             canvas.GetComponent<Canvas>().renderMode = RenderMode.ScreenSpaceOverlay;
             var scaler = canvas.GetComponent<UnityEngine.UI.CanvasScaler>();
             scaler.uiScaleMode = UnityEngine.UI.CanvasScaler.ScaleMode.ScaleWithScreenSize;
@@ -43,7 +44,7 @@ namespace Echoes
             var vitals = Panel("Vitals", canvas, new Vector2(24, -24), new Vector2(256, 76), iron);
             ArtPanel("Explorer", vitals, new Vector2(2, -6), new Vector2(64, 64),
                 GameArt.Get("player"), icon: true);
-            healthText = Label(vitals, "", new Vector2(70, -5), new Vector2(180, 28), 21, Paper);
+            healthText = Label(vitals, "", new Vector2(70, -5), new Vector2(180, 30), 24, Paper);
             healthBar = Bar(vitals, new Vector2(70, -34), new Vector2(174, 8), new Color32(198, 81, 64, 255));
             damageTrail = Instantiate(healthBar, healthBar.transform.parent);
             damageTrail.name = "DamageTrail";
@@ -167,7 +168,7 @@ namespace Echoes
             label.rectTransform.pivot = new Vector2(label.rectTransform.anchorMin.x, label.rectTransform.anchorMin.y);
             label.rectTransform.sizeDelta = size; label.rectTransform.anchoredPosition = position;
             label.font = font; label.text = text; label.fontSize = fontSize; label.color = color;
-            label.fontStyle = fontSize >= 24 ? FontStyles.Bold : FontStyles.Normal;
+            label.fontStyle = FontStyles.Normal;
             label.enableWordWrapping = true; label.raycastTarget = false;
             return label;
         }
@@ -193,7 +194,7 @@ namespace Echoes
             button.onClick.AddListener(action);
             if (text.Length > 0)
             {
-                var label = Label(face, text, Vector2.zero, size, 20, Paper, new Vector2(.5f, .5f));
+                var label = Label(face, text, Vector2.zero, size, 24, Paper, new Vector2(.5f, .5f));
                 label.alignment = TextAlignmentOptions.Center;
             }
             return rect;

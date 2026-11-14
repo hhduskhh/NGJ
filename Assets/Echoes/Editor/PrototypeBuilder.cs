@@ -23,30 +23,7 @@ namespace Echoes.Editor
             Directory.CreateDirectory("Assets/Echoes/Settings");
             Directory.CreateDirectory("Assets/Echoes/Resources");
             AssetDatabase.Refresh();
-            const string fontPath = "Assets/Echoes/Resources/PrototypeFont.asset";
-            if (!AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(fontPath))
-            {
-                var sourceFont = AssetDatabase.LoadAssetAtPath<Font>("Assets/Echoes/Fonts/NotoSansSC.ttf");
-                var font = TMP_FontAsset.CreateFontAsset(sourceFont, 36, 4,
-                    UnityEngine.TextCore.LowLevel.GlyphRenderMode.SDFAA, 2048, 2048);
-                if (!font) throw new System.Exception("Unable to create the bundled CJK font.");
-                font.name = "PrototypeFont";
-                AssetDatabase.CreateAsset(font, fontPath);
-                AssetDatabase.AddObjectToAsset(font.material, font);
-                foreach (var texture in font.atlasTextures) AssetDatabase.AddObjectToAsset(texture, font);
-                EditorUtility.SetDirty(font);
-            }
-            var generatedFont = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(fontPath);
-            if (!generatedFont.material)
-                generatedFont.material = AssetDatabase.LoadAllAssetsAtPath(fontPath).OfType<Material>().First();
-            if (!generatedFont.atlasTextures[0])
-                generatedFont.atlasTextures = new[] { AssetDatabase.LoadAllAssetsAtPath(fontPath).OfType<Texture2D>().First() };
-            // Prewarm the actual source strings and persist subasset references after assigning local IDs.
-            string characters = string.Concat(Directory.GetFiles("Assets/Echoes/Scripts", "*.cs", SearchOption.AllDirectories).Select(File.ReadAllText));
-            generatedFont.TryAddCharacters(characters);
-            EditorUtility.SetDirty(generatedFont);
-            EditorUtility.SetDirty(generatedFont.material);
-            foreach (var texture in generatedFont.atlasTextures) EditorUtility.SetDirty(texture);
+            BakeInterfaceFont();
             const string materialPath = "Assets/Echoes/Resources/EchoesSprite.mat";
             if (!AssetDatabase.LoadAssetAtPath<Material>(materialPath))
             {
@@ -100,6 +77,43 @@ namespace Echoes.Editor
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };
             AssetDatabase.SaveAssets();
             Debug.Log("ECHOES_SETUP_OK: " + ScenePath);
+        }
+
+        [MenuItem("Echoes/Bake Interface Font")]
+        public static void BakeInterfaceFont()
+        {
+            const string path = "Assets/Echoes/Resources/FusionPixelUI.asset";
+            var font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(path);
+            if (!font)
+            {
+                var source = AssetDatabase.LoadAssetAtPath<Font>("Assets/Echoes/Fonts/FusionPixel12.ttf");
+                font = TMP_FontAsset.CreateFontAsset(source, 12, 1,
+                    UnityEngine.TextCore.LowLevel.GlyphRenderMode.RASTER, 1024, 1024,
+                    AtlasPopulationMode.Dynamic, false);
+                font.name = "FusionPixelUI";
+                font.material.name = "Fusion Pixel Bitmap";
+                font.atlasTexture.name = "Fusion Pixel Atlas";
+                AssetDatabase.CreateAsset(font, path);
+                AssetDatabase.AddObjectToAsset(font.material, font);
+                AssetDatabase.AddObjectToAsset(font.atlasTexture, font);
+            }
+
+            // Include authored names/descriptions and the characters used to format live counters.
+            var files = Directory.GetFiles("Assets/Echoes/Scripts", "*.cs", SearchOption.AllDirectories)
+                .Concat(Directory.GetFiles("Assets/Echoes/Settings", "*.asset", SearchOption.AllDirectories));
+            var characters = string.Concat(files.Select(File.ReadAllText)) + "0123456789";
+            string repertoire = new string(characters.Where(c => !char.IsControl(c)).Distinct().OrderBy(c => c).ToArray());
+            font.atlasPopulationMode = AtlasPopulationMode.Dynamic;
+            var fallback = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>("Assets/Echoes/Resources/PrototypeFont.asset");
+            font.fallbackFontAssetTable = new System.Collections.Generic.List<TMP_FontAsset> { fallback };
+            if (!font.TryAddCharacters(repertoire, out var missing))
+                Debug.LogWarning("Interface font fallback characters: " + missing);
+            font.atlasTexture.filterMode = FilterMode.Point;
+            font.atlasPopulationMode = AtlasPopulationMode.Static;
+            EditorUtility.SetDirty(font);
+            EditorUtility.SetDirty(font.material);
+            EditorUtility.SetDirty(font.atlasTexture);
+            AssetDatabase.SaveAssets();
         }
 
         [MenuItem("Echoes/Build Windows Prototype")]
