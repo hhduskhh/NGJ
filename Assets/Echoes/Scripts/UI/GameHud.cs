@@ -12,6 +12,7 @@ namespace Echoes
         private UnityEngine.UI.Image healthBar, xpBar, bossBar;
         private RectTransform mapPanel;
         private TMP_Text mapTitle;
+        private TMP_Text screenLightStatus;
         private Texture2D mapTexture;
         private UnityEngine.UI.RawImage mapImage;
         private RectTransform playerMarker;
@@ -69,6 +70,9 @@ namespace Echoes
             bellIcon = ArtPanel("Bell", belt, new Vector2(2, -2), new Vector2(48, 48), GameArt.Get("bell"), icon: true);
             Label(belt, "Q   诱饵", new Vector2(56, -4), new Vector2(96, 24), 18, Paper);
             statusText = Label(belt, "", new Vector2(56, -28), new Vector2(96, 21), 15, Brass);
+            var light = Panel("ScreenLight", canvas, new Vector2(188, 24), new Vector2(144, 52), iron, Vector2.zero);
+            Label(light, "F   全屏点亮", new Vector2(12, -4), new Vector2(124, 24), 18, Paper);
+            screenLightStatus = Label(light, "", new Vector2(12, -28), new Vector2(124, 21), 15, Brass);
             var purse = Panel("Purse", canvas, new Vector2(-24, 24), new Vector2(116, 40), iron, Vector2.right);
             ArtPanel("HudGoldIcon", purse, new Vector2(6, -4), new Vector2(32, 32),
                 PresentationArt.Current.shopGoldCoin, icon: true);
@@ -100,6 +104,8 @@ namespace Echoes
             float cooldown = run.Player.DecoyCooldownRemaining;
             statusText.text = cooldown <= 0 ? "就绪" : $"{cooldown:0.0} 秒";
             UpdateHudFeedback(cooldown);
+            float lightCooldown = run.Visibility.ScreenLightCooldownRemaining;
+            screenLightStatus.text = lightCooldown > 0 ? $"{lightCooldown:0.0} 秒" : "就绪";
             if (Time.unscaledTime >= noticeUntil) noticeText.text = "";
             if (drawnRoom != run.Map.CurrentRoom) DrawMinimap();
             Vector2 position = run.Player.transform.position;

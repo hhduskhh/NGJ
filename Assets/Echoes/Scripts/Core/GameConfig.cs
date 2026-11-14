@@ -87,6 +87,10 @@ namespace Echoes
         [Min(1)] public int experiencePerKill = 1;
         [Min(1)] public int firstLevelExperience = 4;
         [Min(1)] public int experienceStep = 3;
+        [Header("Full-screen light")]
+        [Min(.1f)] public float screenLightDuration = 3;
+        [Min(.1f)] public float screenLightCooldown = 15;
+
         [Header("Bell decoy")]
         [Min(1)] public float decoyRadius = 9;
         [Min(1)] public float decoyThrowRange = 6;

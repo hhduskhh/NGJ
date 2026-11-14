@@ -48,6 +48,35 @@ namespace Echoes.Tests
         public void RestoreClock() => Time.captureDeltaTime = previousStep;
 
         [UnityTest]
+        public IEnumerator ScreenLightRevealsViewportAndRechargesInPlayTime()
+        {
+            var vision = run.Visibility;
+            var cover = run.transform.Find("UnseenDungeon").gameObject;
+            run.SetState(RunState.Paused);
+            Assert.IsFalse(vision.TryLightScreen());
+            run.SetState(RunState.Playing);
+            Assert.IsTrue(vision.TryLightScreen());
+            Assert.AreEqual(15f, vision.ScreenLightCooldownRemaining, .01f);
+            Assert.AreEqual(1f, vision.VisibilityAt(destination));
+            Assert.AreSame(target, run.Player.FindVisibleTarget());
+            Assert.IsFalse(vision.IsVisible(origin + Vector2.up * 1000));
+            yield return null;
+            Assert.IsFalse(cover.activeSelf);
+            run.SetState(RunState.Paused);
+            float remaining = vision.ScreenLightCooldownRemaining;
+            yield return null;
+            Assert.AreEqual(remaining, vision.ScreenLightCooldownRemaining);
+            run.SetState(RunState.Playing);
+            Time.captureDeltaTime = .25f;
+            yield return new WaitForSeconds(run.Config.screenLightDuration + .25f);
+            Assert.IsTrue(cover.activeSelf);
+            Assert.IsFalse(vision.IsVisible(destination));
+            Assert.IsFalse(vision.TryLightScreen());
+            yield return new WaitForSeconds(vision.ScreenLightCooldownRemaining + .25f);
+            Assert.IsTrue(vision.TryLightScreen());
+        }
+
+        [UnityTest]
         public IEnumerator FurnitureBlocksTheCloserTargetButNotTheShotToTheOtherEnemy()
         {
             var near = run.Enemies.First(e => !e.IsBoss && e != target);

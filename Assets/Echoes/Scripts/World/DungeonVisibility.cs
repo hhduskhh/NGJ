@@ -13,6 +13,18 @@ namespace Echoes
         private Texture2D walkableTexture;
         private RenderTexture propSurfaces;
         private Transform cover;
+        private float screenLightEndsAt, screenLightReadyAt;
+        public bool ScreenLightActive => Time.time < screenLightEndsAt;
+        public float ScreenLightCooldownRemaining => Mathf.Max(0, screenLightReadyAt - Time.time);
+
+        public bool TryLightScreen()
+        {
+            if (run.State != RunState.Playing || ScreenLightCooldownRemaining > 0) return false;
+            screenLightEndsAt = Time.time + run.Config.screenLightDuration;
+            screenLightReadyAt = Time.time + run.Config.screenLightCooldown;
+            return true;
+        }
+
         private readonly List<VisionPulse> echoes = new List<VisionPulse>();
         private readonly Vector4[] shaderEchoes = new Vector4[MaxEchoes];
         public sealed class ShotTrail
@@ -47,7 +59,7 @@ namespace Echoes
         }
 
         public bool CanSeeDanger(Vector2 point) => InCamera(point) &&
-            run.Map.HasLineOfSight(run.Player.transform.position, point);
+            (ScreenLightActive || run.Map.HasLineOfSight(run.Player.transform.position, point));
 
         public void Initialize(RunController controller)
         {
@@ -66,6 +78,7 @@ namespace Echoes
         // Called after a floor transition: the layout and its walkable texture are rebuilt.
         public void Rebuild()
         {
+            screenLightEndsAt = 0;
             ClearPulses();
             trails.Clear();
             CreateObstacleMask();
@@ -116,6 +129,7 @@ namespace Echoes
 
         public float VisibilityAt(Vector2 position)
         {
+            if (ScreenLightActive && InCamera(position)) return 1;
             float visible = CoverageFrom(position, run.Player.transform.position, 0);
             foreach (var echo in echoes)
             {
@@ -182,6 +196,7 @@ namespace Echoes
 
         public void RefreshMask()
         {
+            cover.gameObject.SetActive(!ScreenLightActive);
             RemoveExpiredEchoes();
             Vector2 player = run.Player.transform.position;
             darkness.SetVector("_PlayerVision", new Vector4(player.x, player.y, 0, run.Config.gradientVisionRange));

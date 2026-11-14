@@ -65,6 +65,7 @@ namespace Echoes
             if (run.State != RunState.Playing) { movement = Vector2.zero; waitForFireRelease = true; return; }
             movement = new Vector2(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical")).normalized;
             AimPoint = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+            if (Input.GetKeyDown(KeyCode.F)) run.Visibility.TryLightScreen();
             UpdateAim(AimPoint, false);
             Weapons.Tick(Time.deltaTime, AimPoint);
             if (!Input.GetMouseButton(0)) waitForFireRelease = false;

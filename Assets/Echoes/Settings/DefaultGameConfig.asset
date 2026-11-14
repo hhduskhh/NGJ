@@ -57,6 +57,8 @@ MonoBehaviour:
   decoyThrowRange: 6
   decoyDuration: 4
   decoyCooldown: 12
+  screenLightDuration: 3
+  screenLightCooldown: 15
   bossSpeed: 1.7
   bossHealth: 1100
   bossDamage: 14
