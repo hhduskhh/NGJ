@@ -40,20 +40,21 @@ MonoBehaviour:
   - 5
   spawnCellDraws:
   - 24
-  - 64
-  - 120
+  - 28
+  - 32
   spawnCellWeights:
   - 1
   - 1
   - 1
   spawnAmountMin:
   - 1
-  - 4
-  - 9
+  - 2
+  - 2
   spawnAmountMax:
   - 3
-  - 8
-  - 15
+  - 3
+  - 4
+  maxInitialEnemiesPerRoom: 18
   spawnCellStride: 2
   trapAnchorSearchRadius: 3
   trapDoorClearance: 2

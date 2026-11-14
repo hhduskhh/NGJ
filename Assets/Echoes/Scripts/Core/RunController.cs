@@ -93,6 +93,8 @@ namespace Echoes
             int min = Mathf.Max(1, FloorValue(config.spawnAmountMin, 1));
             int max = Mathf.Max(min, FloorValue(config.spawnAmountMax, 3));
             int weight = Mathf.Max(1, FloorValue(config.spawnCellWeights, 1));
+            int roomLimit = Mathf.Max(1, config.maxInitialEnemiesPerRoom);
+            var roomCounts = new int[Map.Rooms.Count];
             // Spawn rolls use their own per-floor seed so combat randomness cannot
             // shift the layout of later floors.
             var spawnRandom = new System.Random(config.randomSeed + Floor * 1013 + 29);
@@ -115,6 +117,7 @@ namespace Echoes
                 if (chosen == null) continue;
 
                 int count = Mathf.Min(spawnRandom.Next(min, max + 1), chosen.Points.Count);
+                count = Mathf.Min(count, roomLimit - roomCounts[chosen.RoomIndex]);
                 for (int i = 0; i < count; i++)
                 {
                     int index = spawnRandom.Next(chosen.Points.Count);
@@ -124,6 +127,9 @@ namespace Echoes
                     bool elite = roleRandom.NextDouble() < config.eliteSpawnChance;
                     Enemies.Add(EnemyController.Create(this, point, false, elite));
                 }
+                roomCounts[chosen.RoomIndex] += count;
+                if (roomCounts[chosen.RoomIndex] == roomLimit)
+                    areas.RemoveAll(area => area.RoomIndex == chosen.RoomIndex);
             }
         }
 

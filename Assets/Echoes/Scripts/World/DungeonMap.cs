@@ -922,6 +922,7 @@ namespace Echoes
 
         public sealed class SpawnArea
         {
+            public int RoomIndex;
             public Vector2Int Cell;
             public readonly List<Vector2> Points = new List<Vector2>();
         }
@@ -935,7 +936,7 @@ namespace Echoes
             var result = new List<SpawnArea>();
             foreach (var cell in room.Cells)
             {
-                var area = new SpawnArea { Cell = cell };
+                var area = new SpawnArea { RoomIndex = roomIndex, Cell = cell };
                 int x0 = cell.x * CellWidth;
                 int y0 = WorldCellY(cell.y);
                 for (int x = x0 + 2; x < x0 + CellWidth - 1; x += stride)

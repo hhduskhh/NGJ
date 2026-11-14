@@ -305,8 +305,16 @@ namespace Echoes.Tests
                 int min = run.Config.spawnAmountMin[index];
                 int max = run.Config.spawnAmountMax[index];
                 var normal = run.Enemies.Where(e => !e.IsBoss).ToArray();
-                Assert.GreaterOrEqual(normal.Length, draws * min,
-                    "Every spawn draw adds at least its minimum amount on floor " + floor);
+                var middleRooms = run.Map.Rooms.Where(room => room.Role == RoomRole.Middle).ToArray();
+                int roomLimit = run.Config.maxInitialEnemiesPerRoom;
+                // A draw can end early when only a few slots remain in its room.
+                int minimum = Mathf.Min(draws * min - middleRooms.Length * (min - 1),
+                    middleRooms.Length * roomLimit);
+                Assert.GreaterOrEqual(normal.Length, Mathf.Max(1, minimum));
+                int busiestRoom = normal.GroupBy(e => run.Map.RoomAtPosition(e.transform.position))
+                    .Max(group => group.Count());
+                Assert.LessOrEqual(busiestRoom, roomLimit, "Initial enemies per room");
+                Debug.Log($"Floor {floor}: {normal.Length} initial enemies, busiest room {busiestRoom}");
                 Assert.LessOrEqual(normal.Length, draws * max,
                     "Spawn draws stay within the configured maximum on floor " + floor);
                 Assert.AreEqual(1, run.Enemies.Count(e => e.IsBoss), "Each floor has one boss");

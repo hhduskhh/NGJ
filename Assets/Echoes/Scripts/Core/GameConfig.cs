@@ -58,13 +58,15 @@ namespace Echoes
         [Tooltip("每层地图房间格的边长；索引 0/1/2 对应第 1/2/3 层。")]
         public int[] floorGridSizes = { 3, 4, 5 };
         [Tooltip("每层随机选择中间房格子的次数；索引 0/1/2 对应第 1/2/3 层。")]
-        public int[] spawnCellDraws = { 24, 64, 120 };
+        public int[] spawnCellDraws = { 24, 28, 32 };
         [Tooltip("每层每个格子的刷新权重；同一层内所有格子目前使用相同权重。")]
         public int[] spawnCellWeights = { 1, 1, 1 };
         [Tooltip("每层每次选中格子时生成的小怪数量下限。")]
-        public int[] spawnAmountMin = { 1, 4, 9 };
+        public int[] spawnAmountMin = { 1, 2, 2 };
         [Tooltip("每层每次选中格子时生成的小怪数量上限。")]
-        public int[] spawnAmountMax = { 3, 8, 15 };
+        public int[] spawnAmountMax = { 3, 3, 4 };
+        [Tooltip("每间中间房初始生成的小怪总数上限（含精英）。")]
+        [Min(1)] public int maxInitialEnemiesPerRoom = 18;
         [Tooltip("Tile stride used to collect enemy spawn points; lower values add more points.")]
         [Min(1)] public int spawnCellStride = 2;
         [Header("Room traps")]
