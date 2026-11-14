@@ -71,7 +71,11 @@ namespace Echoes.Editor
             importer.maxTextureSize = 2048;
             bool actor = name == "hero" || name == "walker" || name == "guard" || name == "elite" || name == "boss";
             Vector2 pivot = actor || name == "props" ? new Vector2(.5f, .125f) : new Vector2(.5f,.5f);
-            if (name == "solid") { importer.spriteImportMode = SpriteImportMode.Single; return; }
+            if (name == "solid" || name == "spikePlate" || name == "raisedSpikes" || name == "floorBomb")
+            {
+                importer.spriteImportMode = SpriteImportMode.Single;
+                return;
+            }
             importer.spriteImportMode = SpriteImportMode.Multiple;
             importer.spritesheet = Enumerable.Range(0, cols * rows).Select(i => new SpriteMetaData
             {

@@ -25,6 +25,9 @@ Shader "Echoes/DungeonDarkness"
                 float4 _Echoes[32];
                 int _UsePropSurfaces;
                 int _EchoCount;
+                float4 _Trails[32];
+                int _TrailCount;
+                float _TrailRadius;
             CBUFFER_END
             sampler2D _Walkable;
             sampler2D _PropSurfaces;
@@ -137,6 +140,14 @@ Shader "Echoes/DungeonDarkness"
                 {
                     if (visible >= 1) break;
                     visible = max(visible, InCircle(input.world, _Echoes[i], visible, footprint));
+                }
+                [loop] for (int t = 0; t < _TrailCount && visible < 1; t++)
+                {
+                    float2 start = _Trails[t].xy;
+                    float2 delta = _Trails[t].zw - start;
+                    float along = saturate(dot(input.world - start, delta) / max(dot(delta, delta), .000001));
+                    float2 nearest = start + delta * along;
+                    visible = max(visible, InCircle(input.world, float4(nearest, 0, _TrailRadius), visible, 0));
                 }
                 return half4(0, 0, 0, 1 - visible);
             }

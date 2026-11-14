@@ -12,7 +12,10 @@ namespace Echoes
         private UnityEngine.UI.Image healthBar, xpBar, bossBar;
         private RectTransform mapPanel;
         private TMP_Text mapTitle;
-        private UnityEngine.UI.Image[] roomIcons;
+        private Texture2D mapTexture;
+        private UnityEngine.UI.RawImage mapImage;
+        private RectTransform playerMarker;
+        private int drawnRoom = -1;
         private RectTransform modalBackdrop;
         private float noticeUntil;
         private bool settingsOpen;
@@ -92,16 +95,9 @@ namespace Echoes
             statusText.text = cooldown <= 0 ? "就绪" : $"{cooldown:0.0} 秒";
             UpdateHudFeedback(cooldown);
             if (Time.unscaledTime >= noticeUntil) noticeText.text = "";
-            for (int i = 0; i < roomIcons.Length; i++)
-            {
-                if (!roomIcons[i]) continue;
-                int col = i % DungeonMap.GridSize;
-                int row = i / DungeonMap.GridSize;
-                var room = run.Map.RoomAtCell(col, row);
-                roomIcons[i].color = room == null ? new Color(.08f, .11f, .16f) :
-                    room.Index == run.Map.CurrentRoom ? new Color(.16f, .52f, .53f) :
-                    room.Visited ? new Color(.27f, .34f, .43f) : new Color(.12f, .17f, .25f);
-            }
+            if (drawnRoom != run.Map.CurrentRoom) DrawMinimap();
+            var cell = run.Map.CurrentCell;
+            playerMarker.anchoredPosition = new Vector2((cell.x + .5f) * 20 - 2, -(cell.y + .5f) * 20 + 2);
             if (run.BossActivated && run.Boss.Alive)
             {
                 bossBar.transform.parent.gameObject.SetActive(true);
@@ -117,33 +113,61 @@ namespace Echoes
         public void RebuildMinimap()
         {
             if (!mapPanel) return;
-            if (roomIcons != null)
-                for (int i = 0; i < roomIcons.Length; i++)
-                    if (roomIcons[i]) Destroy(roomIcons[i].gameObject);
-            roomIcons = new UnityEngine.UI.Image[DungeonMap.GridSize * DungeonMap.GridSize];
+            if (!mapImage)
+            {
+                mapImage = new GameObject("RoomMap", typeof(UnityEngine.UI.RawImage)).GetComponent<UnityEngine.UI.RawImage>();
+                var rect = mapImage.rectTransform;
+                rect.SetParent(mapPanel, false);
+                rect.anchorMin = rect.anchorMax = rect.pivot = Vector2.up;
+                rect.sizeDelta = new Vector2(100, 100);
+                rect.anchoredPosition = new Vector2(40, -35);
+                mapImage.raycastTarget = false;
+                mapTexture = new Texture2D(DungeonMap.Width, DungeonMap.Height, TextureFormat.RGBA32, false)
+                    { filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp };
+                mapImage.texture = mapTexture;
+                playerMarker = Panel("CurrentCell", rect, Vector2.zero, new Vector2(4, 4), Color.white);
+            }
+            DrawMinimap();
             if (bossBar) bossBar.transform.parent.gameObject.SetActive(false);
             if (bossText) bossText.text = "";
-            for (int row = 0; row < DungeonMap.GridSize; row++)
-                for (int col = 0; col < DungeonMap.GridSize; col++)
-                {
-                    var room = run.Map.RoomAtCell(col, row);
-                    if (room == null) continue;
-                    int index = row * DungeonMap.GridSize + col;
-                    var icon = Panel("RoomCell" + index, mapPanel,
-                        new Vector2(12 + col * 32, -37 - row * 20),
-                        new Vector2(28, 16), new Color(.12f, .17f, .25f));
-                    roomIcons[index] = icon.GetComponent<UnityEngine.UI.Image>();
-                    if (room.Role == RoomRole.Start || room.Role == RoomRole.Boss)
-                    {
-                        var label = Label(icon,
-                            room.Role == RoomRole.Start ? "起" : "终",
-                            Vector2.zero, new Vector2(28, 16), 12,
-                            room.Role == RoomRole.Start ? PixelArt.Gold : PixelArt.Red,
-                            new Vector2(.5f, .5f));
-                        label.alignment = TextAlignmentOptions.Center;
-                    }
-                }
             mapTitle.text = $"第{run.Floor}层  {run.FloorTitle.Replace(" ", "")}";
+        }
+
+        private void DrawMinimap()
+        {
+            var map = run.Map;
+            drawnRoom = map.CurrentRoom;
+            var pixels = new Color32[DungeonMap.Width * DungeonMap.Height];
+            foreach (var room in map.Rooms)
+            {
+                if (!room.Visited) continue;
+                Color32 color = room.Role == RoomRole.Boss ? PixelArt.Red : room.Role == RoomRole.Start ? PixelArt.Gold :
+                    room.Index == drawnRoom ? new Color(.16f, .52f, .53f) : new Color(.35f, .43f, .50f);
+                foreach (var cell in room.Cells)
+                {
+                    int left = cell.x * DungeonMap.CellWidth, bottom = DungeonMap.CellOriginY(cell.y);
+                    for (int y = bottom; y < bottom + DungeonMap.CellHeight; y++)
+                        for (int x = left; x < left + DungeonMap.CellWidth; x++)
+                            if (map.IsFloorTile(new Vector2Int(x, y))) pixels[y * DungeonMap.Width + x] = color;
+                }
+            }
+            foreach (var door in map.Doors)
+            {
+                if (!door.A.Visited && !door.B.Visited) continue;
+                var opening = door.Opening;
+                // Extend the door mark into each floor so it reads at HUD scale.
+                int dx = opening.width == 2 ? 3 : 0, dy = opening.height == 2 ? 3 : 0;
+                for (int y = opening.yMin - dy; y < opening.yMax + dy; y++)
+                    for (int x = opening.xMin - dx; x < opening.xMax + dx; x++)
+                        pixels[y * DungeonMap.Width + x] = Brass;
+            }
+            mapTexture.SetPixels32(pixels);
+            mapTexture.Apply(false);
+        }
+
+        private void OnDestroy()
+        {
+            if (mapTexture) Destroy(mapTexture);
         }
 
         public void Notify(string text, float seconds)

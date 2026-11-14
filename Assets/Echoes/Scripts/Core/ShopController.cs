@@ -23,7 +23,7 @@ namespace Echoes
         public Vector2 Position { get; private set; }
         public int RefreshPrice => run.Config.shopRefreshCost + Refreshes * run.Config.shopRefreshIncrease;
         public bool InRange => Vector2.Distance(run.Player.transform.position, Position) <= run.Config.shopInteractRadius &&
-            run.Map.HasLineOfSight(run.Player.transform.position, Position);
+            run.Map.HasClearInteractionPath(run.Player.transform.position, Position);
         public void Initialize(RunController controller)
         {
             run = controller;

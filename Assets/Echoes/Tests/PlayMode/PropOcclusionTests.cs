@@ -11,13 +11,12 @@ namespace Echoes.Tests
     public sealed class PropOcclusionTests
     {
         [UnityTest]
-        public IEnumerator BenchesDoNotReserveInvisibleExtraWidth()
+        public IEnumerator NativeSanctuaryPropsDoNotReserveInvisibleExtraWidth()
         {
             yield return SceneManager.LoadSceneAsync("Prototype");
             yield return null;
             var run = Object.FindObjectOfType<RunController>();
-            // The first two floors now use native art. Exercise the remaining
-            // P0 chair layouts on floor 3, including their different scales.
+            // All three floors now use P1 art; check actual sanctuary bases.
             for (int floor = 1; floor < 3; floor++)
             {
                 run.SetState(RunState.FloorCleared); run.AdvanceFloor();
@@ -25,37 +24,38 @@ namespace Echoes.Tests
             }
             yield return null;
             Physics2D.SyncTransforms();
-            var benches = run.Map.GetComponentsInChildren<ArtBinding>().Where(a => a.Kind == "bench").ToArray();
-            Assert.IsNotEmpty(benches);
-            foreach (var bench in benches)
+            var props = run.Map.GetComponentsInChildren<ArtBinding>()
+                .Where(a => a.Kind.StartsWith("room_f3_") && a.GetComponent<BoxCollider2D>()).ToArray();
+            Assert.IsNotEmpty(props);
+            foreach (var prop in props)
             {
-                var box = bench.GetComponent<BoxCollider2D>();
-                var sprite = bench.GetComponent<SpriteRenderer>();
+                var box = prop.GetComponent<BoxCollider2D>();
+                var sprite = prop.GetComponent<SpriteRenderer>();
                 float canvasWidth = sprite.sprite.rect.width / sprite.sprite.pixelsPerUnit * sprite.transform.lossyScale.x;
-                Debug.Log("BENCH_BOUNDS " + bench.transform.position + " physics=" + box.bounds.size +
+                Debug.Log("PROP_BOUNDS " + prop.transform.position + " physics=" + box.bounds.size +
                     " canvasWidth=" + canvasWidth);
-                Assert.LessOrEqual(box.bounds.size.x, Mathf.Ceil(canvasWidth), "Chair must not reserve empty floor beyond its image");
+                Assert.LessOrEqual(box.bounds.size.x, Mathf.Ceil(canvasWidth), "Props must not reserve empty floor beyond their image");
             }
-            var selected = benches[0].GetComponent<BoxCollider2D>();
+            var selected = props.First(a => a.Kind == "room_f3_organ").GetComponent<BoxCollider2D>();
             Vector2 front = run.Map.NearestFloor((Vector2)selected.bounds.center + Vector2.down * 3);
             run.Player.PlaceAt(front);
             run.Player.Weapons.Slots[0].Cooldown = 0;
             run.Visibility.ClearPulses();
             Assert.IsTrue(run.Player.TryFire(selected.bounds.center, true));
             yield return new WaitForSeconds(run.Config.visionExpandDuration + .03f);
-            AssertBenchPixelsVisible(run, selected.GetComponent<SpriteRenderer>());
+            AssertOpaquePropPixelsVisible(run, selected.GetComponent<SpriteRenderer>());
             Camera.main.Render();
             var frame = DrawFootprint(selected.bounds);
-            run.Hud.Notify("青框：椅子实体碰撞与视野遮挡共用占地", 5);
+            run.Hud.Notify("青框：管风琴阻挡移动的占地", 5);
             Directory.CreateDirectory("TestResults/PropOcclusion");
             var cover = run.transform.Find("UnseenDungeon").GetComponent<SpriteRenderer>();
             cover.enabled = false;
-            RuntimeSmokeTests.Capture("TestResults/PropOcclusion/bench-reference.png");
+            RuntimeSmokeTests.Capture("TestResults/PropOcclusion/sanctuary-reference.png");
             cover.enabled = true;
             Vector2 anchor = new Vector2(Mathf.Clamp(front.x, selected.bounds.min.x - .01f, selected.bounds.max.x + .01f),
                 Mathf.Clamp(front.y, selected.bounds.min.y - .01f, selected.bounds.max.y + .01f));
-            Assert.IsTrue(run.Map.HasLineOfSight(front, anchor), "The chair's front remains visible after floor changes");
-            RuntimeSmokeTests.Capture("TestResults/PropOcclusion/bench-footprint.png");
+            Assert.IsTrue(run.Map.HasLineOfSight(front, anchor), "The prop's front remains visible after floor changes");
+            RuntimeSmokeTests.Capture("TestResults/PropOcclusion/sanctuary-footprint.png");
             Object.Destroy(frame.gameObject);
         }
 
@@ -98,7 +98,7 @@ namespace Echoes.Tests
                 cover.enabled = false; Read(clear); cover.enabled = true;
                 Directory.CreateDirectory("TestResults/PropOcclusion");
                 File.WriteAllBytes("TestResults/PropOcclusion/tall-prop.png", shaded.EncodeToPNG());
-                int checkedPixels = 0, cutPixels = 0, hiddenGaps = 0, litGaps = 0;
+                int checkedPixels = 0, cutPixels = 0, clearGaps = 0, litGaps = 0;
                 for (int y = 1; y < art.height; y += 2)
                     for (int x = 1; x < art.width; x += 2)
                     {
@@ -118,19 +118,19 @@ namespace Echoes.Tests
                                 if (x + dx < 0 || y + dy < 0 || x + dx >= art.width || y + dy >= art.height ||
                                     art.GetPixel(x + dx, y + dy).a >= .05f) clearPatch = false;
                         if (clearPatch && run.Map.IsWalkable(Vector2Int.FloorToInt(sampleWorld + Vector2.one * .5f)) &&
-                            !run.Map.HasLineOfSight(source, sampleWorld))
+                            run.Map.HasLineOfSight(source, sampleWorld))
                         {
-                            hiddenGaps++;
+                            clearGaps++;
                             if (shaded.GetPixel(px, py).maxColorComponent > .01f) litGaps++;
                         }
                         if (alpha < .95f) continue;
                         checkedPixels++;
                         if (shaded.GetPixel(px, py).maxColorComponent < reference * .8f) cutPixels++;
                     }
-                Debug.Log("PROP_SELF_OCCLUSION checked=" + checkedPixels + " cut=" + cutPixels + " gaps=" + hiddenGaps + " lit=" + litGaps);
+                Debug.Log("PROP_SELF_OCCLUSION checked=" + checkedPixels + " cut=" + cutPixels + " gaps=" + clearGaps + " lit=" + litGaps);
                 Assert.Greater(checkedPixels, 50);
-                Assert.Greater(hiddenGaps, 0, "Exercise transparent pixels over shadowed floor");
-                Assert.AreEqual(0, litGaps, "Transparent sprite gaps must not reveal the shadowed floor");
+                Assert.Greater(clearGaps, 0, "Exercise transparent pixels over visible floor");
+                Assert.AreEqual(clearGaps, litGaps, "Floor stays visible through transparent gaps");
                 Assert.AreEqual(0, cutPixels, "Opaque upper-body pixels must not be cut by the prop's own footprint");
             }
             finally
@@ -146,7 +146,7 @@ namespace Echoes.Tests
             run.Visibility.RefreshMask();
             RuntimeSmokeTests.Capture("TestResults/PropOcclusion/tall-prop-fixed.png");
             var outline = DrawFootprint(box.bounds);
-            run.Hud.Notify("青框：实体碰撞与视野遮挡共用占地", 5);
+            run.Hud.Notify("青框：阻挡移动的占地", 5);
             RuntimeSmokeTests.Capture("TestResults/PropOcclusion/tall-prop-footprint.png");
             Object.Destroy(outline.gameObject);
         }
@@ -160,7 +160,7 @@ namespace Echoes.Tests
             return outline;
         }
 
-        private static void AssertBenchPixelsVisible(RunController run, SpriteRenderer renderer)
+        private static void AssertOpaquePropPixelsVisible(RunController run, SpriteRenderer renderer)
         {
             var camera = new GameObject("BenchPixelCamera").AddComponent<Camera>();
             camera.transform.position = renderer.bounds.center + Vector3.back * 10;
@@ -173,7 +173,8 @@ namespace Echoes.Tests
             var previous = RenderTexture.active;
             try
             {
-                sheet.LoadImage(File.ReadAllBytes("Assets/Echoes/Resources/Art/Floor3/props.png"));
+                string kind = renderer.GetComponent<ArtBinding>().Kind;
+                sheet.LoadImage(File.ReadAllBytes("Assets/Echoes/Resources/" + RoomArt.Definition(kind).Path + ".png"));
                 camera.targetTexture = target; camera.Render();
                 void Read(Texture2D image)
                 {
@@ -195,8 +196,8 @@ namespace Echoes.Tests
                         count++;
                         if (shaded.GetPixel(px, py).maxColorComponent < reference * .8f) cut++;
                     }
-                Debug.Log("BENCH_PIXELS checked=" + count + " cut=" + cut);
-                Assert.Greater(count, 20); Assert.AreEqual(0, cut, "The chair backrest must not disappear into its own shadow");
+                Debug.Log("PROP_PIXELS checked=" + count + " cut=" + cut);
+                Assert.Greater(count, 20); Assert.AreEqual(0, cut, "The organ pipes must not disappear into their own shadow");
             }
             finally
             {

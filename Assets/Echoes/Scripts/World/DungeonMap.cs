@@ -51,7 +51,8 @@ namespace Echoes
         private readonly List<RoomPropSpec> obstacleSpecs = new List<RoomPropSpec>();
         private readonly List<RoomPropSpec> decorSpecs = new List<RoomPropSpec>();
         private readonly Dictionary<string, TileBase> floorTiles = new Dictionary<string, TileBase>();
-        private Transform generatedRoot;
+        private Transform generatedRoot, wallRoot;
+        public bool IsWall(Collider2D collider) => collider.transform.parent == wallRoot;
         private Tilemap floorMap;
         private TilemapRenderer floorRenderer;
         private RunController run;
@@ -59,6 +60,7 @@ namespace Echoes
         public List<Room> Rooms { get; } = new List<Room>();
         public List<Door> Doors { get; } = new List<Door>();
         public int CurrentRoom { get; private set; }
+        public Vector2Int CurrentCell { get; private set; }
         public int Floor { get; private set; } = 1;
         public int MapWidth { get { return Width; } }
         public int MapHeight { get { return Height; } }
@@ -84,15 +86,7 @@ namespace Echoes
             }
         }
 
-        public Vector2 AltarPosition
-        {
-            get
-            {
-                if (Rooms.Count == 0) return Vector2.zero;
-                var boss = Rooms[Rooms.Count - 1];
-                return FindWalkableInRoom(boss.Center + Vector2.down * 6f, boss);
-            }
-        }
+        public Vector2 AltarPosition { get; private set; }
 
         public void Generate(RunController controller, int floorIndex)
         {
@@ -123,8 +117,18 @@ namespace Echoes
             BuildWorldRooms(plan);
             CarveRooms(plan);
             CarveDoors(plan);
+            foreach (var room in Rooms)
+                foreach (var wall in RoomInterior.Partitions(room))
+                    for (int x = wall.xMin; x < wall.xMax; x++)
+                        for (int y = wall.yMin; y < wall.yMax; y++)
+                            floor[x, y] = walkable[x, y] = false;
             ApplyTerrain(plan);
             ComputeCenters();
+            var bossRoom = Rooms[Rooms.Count - 1];
+            Vector2 entrance = bossRoom.DoorOpenings[0].center;
+            Vector2 inward = (bossRoom.Bounds.center - entrance).normalized;
+            AltarPosition = FindWalkableInRoom(entrance + inward * config.altarEntranceDistance, bossRoom);
+            TrackCell(StartPosition);
             RenderDungeon();
         }
 
@@ -408,6 +412,8 @@ namespace Echoes
             var root = new GameObject("DungeonTiles");
             generatedRoot = root.transform;
             generatedRoot.SetParent(transform);
+            wallRoot = new GameObject("Walls").transform;
+            wallRoot.SetParent(generatedRoot, false);
             RenderFloorTiles();
             foreach (var room in Rooms)
                 foreach (var cell in room.Cells)
@@ -419,14 +425,16 @@ namespace Echoes
                         {
                             if (floor[x, y]) continue;
                             var renderer = PixelArt.Create("Wall", WallKind(x, y),
-                                new Vector2(x, y), GameArt.FootOrder(y), generatedRoot);
+                                new Vector2(x, y), GameArt.FootOrder(y), wallRoot);
                             renderer.gameObject.AddComponent<BoxCollider2D>();
                         }
                 }
             RenderDoorposts();
-            if (Floor <= 2) RenderNativeDoorDetails();
+            RenderNativeDoorDetails();
             RenderObstacles();
             RenderDecorations();
+            foreach (var room in Rooms)
+                RoomInterior.PlaceTraps(this, room, run, generatedRoot);
             PixelArt.Create("ChallengeAltar", "altar", AltarPosition, -120, generatedRoot);
         }
 
@@ -595,11 +603,17 @@ namespace Echoes
             return cellRooms[col, row];
         }
 
-        public Room RoomAtPosition(Vector2 position)
+        private static Vector2Int CellAtPosition(Vector2 position)
         {
             int col = Mathf.FloorToInt((position.x + .5f) / CellWidth);
             int row = GridSize - 1 - Mathf.FloorToInt((position.y + .5f) / CellHeight);
-            return RoomAtCell(col, row);
+            return new Vector2Int(col, row);
+        }
+
+        public Room RoomAtPosition(Vector2 position)
+        {
+            var cell = CellAtPosition(position);
+            return RoomAtCell(cell.x, cell.y);
         }
 
         public Vector2 StartPosition
@@ -618,8 +632,15 @@ namespace Echoes
         private void Update()
         {
             if (!run || !run.Player) return;
-            var room = RoomAtPosition(run.Player.transform.position);
+            TrackCell(run.Player.transform.position);
+        }
+
+        private void TrackCell(Vector2 position)
+        {
+            var cell = CellAtPosition(position);
+            var room = RoomAtCell(cell.x, cell.y);
             if (room == null) return;
+            CurrentCell = cell;
             CurrentRoom = room.Index;
             room.Visited = true;
         }
@@ -653,11 +674,18 @@ namespace Echoes
 
         // Traverse every crossed cell, including both sides of an exact corner.
         // Keep this traversal in sync with DungeonDarkness.shader.
-        public bool HasLineOfSight(Vector2 from, Vector2 to, bool revealBlockingWall = false)
+        public bool HasLineOfSight(Vector2 from, Vector2 to, bool revealBlockingWall = false) =>
+            ClearSegment(from, to, floor, revealBlockingWall);
+
+        public bool HasClearInteractionPath(Vector2 from, Vector2 to) =>
+            ClearSegment(from, to, walkable, false);
+
+        private static bool ClearSegment(Vector2 from, Vector2 to, bool[,] grid, bool revealBlockingWall)
         {
+            bool Open(Vector2Int p) => InBounds(p.x, p.y) && grid[p.x, p.y];
             var cell = Vector2Int.FloorToInt(from + Vector2.one * .5f);
             var goal = Vector2Int.FloorToInt(to + Vector2.one * .5f);
-            if (!IsWalkable(cell)) return false;
+            if (!Open(cell)) return false;
             Vector2 direction = to - from;
             int stepX = direction.x > 0 ? 1 : -1;
             int stepY = direction.y > 0 ? 1 : -1;
@@ -673,13 +701,13 @@ namespace Echoes
                 if (Mathf.Min(nextX, nextY) >= 1 - .000001f)
                 {
                     if (Mathf.Abs(nextX - nextY) <= .000001f &&
-                        (!IsWalkable(cell + new Vector2Int(stepX, 0)) || !IsWalkable(cell + new Vector2Int(0, stepY)))) return false;
-                    return IsWalkable(goal) || (revealBlockingWall && goal.x >= 0 && goal.y >= 0 && goal.x < Width && goal.y < Height);
+                        (!Open(cell + new Vector2Int(stepX, 0)) || !Open(cell + new Vector2Int(0, stepY)))) return false;
+                    return Open(goal) || (revealBlockingWall && goal.x >= 0 && goal.y >= 0 && goal.x < Width && goal.y < Height);
                 }
                 if (Mathf.Abs(nextX - nextY) <= .000001f)
                 {
-                    if (!IsWalkable(cell + new Vector2Int(stepX, 0)) ||
-                        !IsWalkable(cell + new Vector2Int(0, stepY))) return false;
+                    if (!Open(cell + new Vector2Int(stepX, 0)) ||
+                        !Open(cell + new Vector2Int(0, stepY))) return false;
                     cell += new Vector2Int(stepX, stepY);
                     nextX += deltaX; nextY += deltaY;
                 }
@@ -687,7 +715,7 @@ namespace Echoes
                 else { cell.y += stepY; nextY += deltaY; }
                 if (cell == goal && revealBlockingWall)
                     return cell.x >= 0 && cell.y >= 0 && cell.x < Width && cell.y < Height;
-                if (!IsWalkable(cell)) return false;
+                if (!Open(cell)) return false;
             }
             return false;
         }

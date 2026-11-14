@@ -40,7 +40,6 @@ namespace Echoes
     {
         public const int GridSize = 5;
         public static readonly Vector2Int StartCell = new Vector2Int(2, 0);
-        public static readonly Vector2Int BossCell = new Vector2Int(2, 4);
 
         public PlannedRoom[,] CellRooms { get; private set; }
         public List<PlannedRoom> Rooms { get; private set; }
@@ -104,9 +103,10 @@ namespace Echoes
         {
             var occupancy = new PlannedRoom[GridSize, GridSize];
             var start = CreateRoom(RoomRole.Start, RoomShape.Single, 0, new[] { StartCell });
-            var boss = CreateRoom(RoomRole.Boss, RoomShape.Single, 0, new[] { BossCell });
+            var bossCell = new Vector2Int(random.Next(GridSize), random.Next(1, GridSize));
+            var boss = CreateRoom(RoomRole.Boss, RoomShape.Single, 0, new[] { bossCell });
             occupancy[StartCell.x, StartCell.y] = start;
-            occupancy[BossCell.x, BossCell.y] = boss;
+            occupancy[bossCell.x, bossCell.y] = boss;
 
             var middles = new List<PlannedRoom>();
             int steps = 0;
@@ -426,7 +426,8 @@ namespace Echoes
             var plan = new DungeonPlan();
             var occupancy = new PlannedRoom[GridSize, GridSize];
             var start = CreateRoom(RoomRole.Start, RoomShape.Single, 0, new[] { StartCell });
-            var boss = CreateRoom(RoomRole.Boss, RoomShape.Single, 0, new[] { BossCell });
+            var bossCell = new Vector2Int(2, 4);
+            var boss = CreateRoom(RoomRole.Boss, RoomShape.Single, 0, new[] { bossCell });
             var middles = new List<PlannedRoom>();
             AddFallbackRoom(occupancy, middles, RoomShape.Square2, 0, new[]
             {
@@ -455,7 +456,7 @@ namespace Echoes
             AddFallbackRoom(occupancy, middles, RoomShape.Line2, 0, new[]
                 { new Vector2Int(3, 4), new Vector2Int(4, 4) });
             occupancy[StartCell.x, StartCell.y] = start;
-            occupancy[BossCell.x, BossCell.y] = boss;
+            occupancy[bossCell.x, bossCell.y] = boss;
             if (!plan.Assemble(occupancy, start, boss, middles)) return plan;
             var random = new System.Random(seed);
             if (plan.BuildDoors(random, 0)) { plan.Valid = true; return plan; }

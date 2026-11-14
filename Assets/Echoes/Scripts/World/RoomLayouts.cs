@@ -19,7 +19,7 @@ namespace Echoes
 
     // P0 layout library: uses the existing 16 prop slices in denser clusters and
     // several room archetypes. P1 art can replace kinds/scales without changing rules.
-    public static class RoomLayouts
+    public static partial class RoomLayouts
     {
         private static readonly string[][] SolidPools =
         {
@@ -50,6 +50,7 @@ namespace Echoes
                 return firstFloor;
             }
             if (theme == 1) return BuildSecondFloor(room, random);
+            if (theme == 2) return BuildThirdFloor(room, random);
             var result = new List<RoomPropSpec>();
             if (room.Role == RoomRole.Start) result.Add(StartStall.Layout(room));
             if (room.Role == RoomRole.Boss) BuildBoss(result, room, theme, random);

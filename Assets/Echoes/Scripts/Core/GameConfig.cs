@@ -16,6 +16,8 @@ namespace Echoes
         [Min(1)] public float bulletDamage = 10;
         [Min(.05f)] public float shotInterval = .28f;
         [Min(1)] public float bulletSpeed = 22;
+        [Min(.01f)] public float bulletTrailSeconds = .35f;
+        [Min(.1f)] public float bulletTrailRadius = 1.15f;
         [Header("Visibility")]
         [Tooltip("Walking pulse main radius. The stationary main radius is always zero.")]
         [Min(1)] public float playerVisionRadius = 3;
@@ -34,11 +36,21 @@ namespace Echoes
         [Min(0)] public float bonusPerEnemy = .08f;
         [Min(1)] public int bonusEnemyCap = 8;
         [Header("Dungeon generation")]
+        [Min(1)] public float altarEntranceDistance = 3;
         [Min(1)] public int generationAttempts = 100;
         [Range(0, 1)] public float extraDoorChance = .15f;
         [Min(1)] public int enemiesPerCell = 6;
         [Min(1)] public int minEnemiesPerRoom = 6;
         [Min(1)] public int maxEnemiesPerRoom = 28;
+        [Header("Room traps")]
+        [Min(0)] public float spikeDamage = 10;
+        [Min(.1f)] public float spikeRadius = .85f;
+        [Min(.1f)] public float spikeRest = 2f;
+        [Min(.1f)] public float spikeWarning = .75f;
+        [Min(.1f)] public float spikeActive = .65f;
+        [Min(0)] public float bombDamage = 16;
+        [Min(.1f)] public float bombRadius = 2.1f;
+        [Min(.1f)] public float bombFuse = 1.1f;
         [Header("Finite floor population")]
         [Min(1)] public float enemyHealth = 32;
         [Min(.1f)] public float walkerSpeed = 3.8f;

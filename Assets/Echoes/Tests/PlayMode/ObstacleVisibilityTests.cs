@@ -124,14 +124,12 @@ namespace Echoes.Tests
         {
             yield return LoadFloor();
             var room = run.Map.Rooms[0];
-            // This is an empty-rectangle wall-face fixture. The formal start
-            // room now contains solid furniture, which correctly casts shadows
-            // and must not be mistaken for triangular wall shader gaps.
-            var open = (bool[,])typeof(DungeonMap).GetField("walkable",
+            // Use an empty interior to isolate the outer wall faces from interior partitions.
+            var floor = (bool[,])typeof(DungeonMap).GetField("floor",
                 System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).GetValue(run.Map);
-            for (int x = room.Bounds.x; x < room.Bounds.xMax; x++)
-                for (int y = room.Bounds.y; y < room.Bounds.yMax; y++)
-                    if (run.Map.IsFloorTile(new Vector2Int(x, y))) open[x, y] = true;
+            for (int x = room.Bounds.xMin + 1; x < room.Bounds.xMax - 1; x++)
+                for (int y = room.Bounds.yMin + 1; y < room.Bounds.yMax - 1; y++)
+                    floor[x, y] = true;
             run.Visibility.Rebuild();
             Vector2 source = room.Center;
             PlacePlayer(source);

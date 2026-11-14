@@ -15,6 +15,26 @@ namespace Echoes
         private Transform cover;
         private readonly List<VisionPulse> echoes = new List<VisionPulse>();
         private readonly Vector4[] shaderEchoes = new Vector4[MaxEchoes];
+        public sealed class ShotTrail
+        {
+            public Vector2 Origin, Direction, End;
+            public float Speed, LastMove;
+            public void Advance(Vector2 end) { End = end; LastMove = Time.time; }
+            public Vector2 Tail(float duration) => Vector2.MoveTowards(End, Origin,
+                Speed * Mathf.Max(0, duration - (Time.time - LastMove)));
+        }
+
+        private readonly List<ShotTrail> trails = new List<ShotTrail>();
+        private readonly Vector4[] shaderTrails = new Vector4[32];
+        public ShotTrail BeginTrail(Vector2 origin, Vector2 direction, float speed)
+        {
+            var trail = new ShotTrail { Origin = origin, Direction = direction, Speed = speed };
+            trail.Advance(origin);
+            if (trails.Count == shaderTrails.Length) trails.RemoveAt(0);
+            trails.Add(trail);
+            return trail;
+        }
+
         private Vector2 lastWalkPosition;
         private float walkingTime, nextWalkPulse;
         public IReadOnlyList<VisionPulse> Pulses => echoes;
@@ -47,6 +67,7 @@ namespace Echoes
         public void Rebuild()
         {
             ClearPulses();
+            trails.Clear();
             CreateObstacleMask();
             lastWalkPosition = run.Player.GetComponent<Rigidbody2D>().position;
             nextWalkPulse = run.Config.walkFirstPulseDelay;
@@ -102,6 +123,15 @@ namespace Echoes
                 if (!Expired(echo)) visible = Mathf.Max(visible, CoverageFrom(position,
                     echo.Origin, echo.RadiusAt(Time.time, run.Config)));
             }
+            foreach (var trail in trails)
+            {
+                if (Time.time - trail.LastMove >= run.Config.bulletTrailSeconds) continue;
+                Vector2 tail = trail.Tail(run.Config.bulletTrailSeconds);
+                float along = Mathf.Clamp(Vector2.Dot(position - tail, trail.Direction), 0, Vector2.Distance(tail, trail.End));
+                Vector2 closest = tail + trail.Direction * along;
+                float light = VisionPulse.Coverage(position, closest, 0, run.Config.bulletTrailRadius);
+                if (light > visible && run.Map.HasLineOfSight(closest, position, true)) visible = light;
+            }
             return visible;
         }
 
@@ -123,7 +153,7 @@ namespace Echoes
             for (int y = 0; y < height; y++)
                 for (int x = 0; x < width; x++)
                     pixels[y * width + x] = new Color32(
-                        run.Map.IsWalkable(new Vector2Int(x, y)) ? (byte)255 : (byte)0, 0, 0, 255);
+                        run.Map.IsFloorTile(new Vector2Int(x, y)) ? (byte)255 : (byte)0, 0, 0, 255);
             walkableTexture.SetPixels32(pixels);
             walkableTexture.Apply(false, true);
             darkness.SetTexture("_Walkable", walkableTexture);
@@ -162,6 +192,18 @@ namespace Echoes
                 shaderEchoes[i] = new Vector4(pulse.Origin.x, pulse.Origin.y, radius, run.Config.gradientVisionRange);
                 PixelArt.SetRadius(pulse.Outline, radius);
             }
+            int count = 0;
+            float duration = run.Config.bulletTrailSeconds;
+            for (int i = trails.Count - 1; i >= 0; i--)
+            {
+                var trail = trails[i];
+                if (Time.time - trail.LastMove >= duration) { trails.RemoveAt(i); continue; }
+                Vector2 tail = trail.Tail(duration);
+                shaderTrails[count++] = new Vector4(tail.x, tail.y, trail.End.x, trail.End.y);
+            }
+            darkness.SetVectorArray("_Trails", shaderTrails);
+            darkness.SetInt("_TrailCount", count);
+            darkness.SetFloat("_TrailRadius", run.Config.bulletTrailRadius);
             darkness.SetVectorArray("_Echoes", shaderEchoes);
             darkness.SetInt("_EchoCount", echoes.Count);
             cover.position = new Vector3(viewCamera.transform.position.x, viewCamera.transform.position.y, 0);

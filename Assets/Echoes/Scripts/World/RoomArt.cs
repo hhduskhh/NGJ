@@ -46,7 +46,18 @@ namespace Echoes
             new Entry("f2_water", "Floor2/f2_decal_water_32x32", 32, 32, ground:true),
             new Entry("f2_scrap", "Floor2/f2_decal_scrap_32x32", 32, 32, ground:true),
             new Entry("f2_wall_pipes", "Floor2/f2_wall_pipes_16x32", 16, 32),
-            new Entry("f2_boss_pillar", "Boss/f2_boss_pillar_48x48", 48, 48, 3, 3)
+            new Entry("f2_boss_pillar", "Boss/f2_boss_pillar_48x48", 48, 48, 3, 3),
+            // The selected B shrine is tall and narrow; match its visible foot, not its canopy.
+            new Entry("f3_shrine", "Floor3/f3_hero_tuning_fork_shrine_128", 128, 128, 3, 2),
+            new Entry("f3_crystal", "Floor3/f3_med_crystal_cluster_64x80", 64, 80, 2, 2),
+            new Entry("f3_shell", "Floor3/f3_med_ceramic_shell_64x64", 64, 64, 4, 3),
+            new Entry("f3_organ", "Floor3/f3_tall_organ_pipes_64x96", 64, 96, 3, 1),
+            new Entry("f3_reliquary", "Floor3/f3_med_reliquary_64x48", 64, 48, 4, 2),
+            new Entry("f3_shards", "Floor3/f3_decal_crystal_shard_32x32", 32, 32, ground:true),
+            new Entry("f3_gold", "Floor3/f3_decal_gold_filings_32x32", 32, 32, ground:true),
+            new Entry("f3_inlay", "Floor3/f3_decal_geometric_inlay_32x32", 32, 32, ground:true),
+            new Entry("f3_wall_shelf", "Floor3/f3_wall_reliquary_shelf_16x32", 16, 32),
+            new Entry("f3_boss_pillar", "Boss/f3_boss_pillar_48x48", 48, 48, 1, 1)
         };
         private static readonly Dictionary<string, Sprite> sprites = new Dictionary<string, Sprite>();
 
