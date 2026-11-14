@@ -424,7 +424,7 @@ namespace Echoes
                         }
                 }
             RenderDoorposts();
-            if (Floor <= 2) RenderNativeDoorDetails();
+            RenderNativeDoorDetails();
             RenderObstacles();
             RenderDecorations();
             PixelArt.Create("ChallengeAltar", "altar", AltarPosition, -120, generatedRoot);

@@ -11,6 +11,7 @@ namespace Echoes.Editor
     {
         public const string SourceRoot = "美术/房间资源-第一层-20261114";
         public const string SecondFloorSourceRoot = "美术/房间资源-第二层-20261114";
+        public const string ThirdFloorSourceRoot = "美术/房间资源-第三层-20261114";
         [Serializable] private sealed class Sources { public Source[] items; }
         [Serializable] private sealed class Source { public string kind, file, prompt; }
         private static readonly string[] Palette = {
@@ -31,6 +32,14 @@ namespace Echoes.Editor
             "191d2c", "282733", "3d3c46", "62514f", "997059", "a16b49", "d99e60",
             "354846", "54716d", "789087", "1c252b", "414d57", "66717a", "929594",
             "332c2d", "493733", "714f3b", "b78454", "282f3b", "445565", "687987"
+        });
+
+        [MenuItem("Echoes/Art/Prepare Third Floor Room Sprites")]
+        public static void PrepareThirdFloor() => Prepare(ThirdFloorSourceRoot, 3, new[] {
+            "1b2337", "222b43", "303b54", "48516b", "59647c", "718098", "95a0b1",
+            "8f8a82", "aaa397", "c4b89e", "d8cdb4", "eee0c2", "f5ebd5",
+            "526c7a", "678997", "789eaa", "94bdc6", "b2d6dc", "d3e8e5",
+            "635c48", "837451", "a08d60", "bdab7d", "93866b", "b2a281"
         });
 
         private static void Prepare(string sourceRoot, int floor, string[] paletteHex)
@@ -66,6 +75,19 @@ namespace Echoes.Editor
                         int sx = left + Mathf.Min(right - left, (int)((x + .5f) * (right - left + 1) / dw));
                         int sy = bottom + Mathf.Min(top - bottom, (int)((y + .5f) * (top - bottom + 1) / dh));
                         var color = pixels[sy * original.width + sx];
+                        // Thin floor inlays/filings may lie between nearest-neighbour samples.
+                        // Preserve source coverage inside this output pixel without inventing marks.
+                        if (floor == 3 && entry.Ground && color.a < 180)
+                        {
+                            int x1 = left + x * (right - left + 1) / dw;
+                            int x2 = left + (x + 1) * (right - left + 1) / dw;
+                            int y1 = bottom + y * (top - bottom + 1) / dh;
+                            int y2 = bottom + (y + 1) * (top - bottom + 1) / dh;
+                            for (int py = y1; py < y2 && color.a < 180; py++)
+                                for (int px = x1; px < x2; px++)
+                                    if (pixels[py * original.width + px].a >= 180)
+                                    { color = pixels[py * original.width + px]; break; }
+                        }
                         if (color.a < 180) continue;
                         int best = int.MaxValue; Color32 nearest = palette[0];
                         foreach (var candidate in palette)
@@ -119,7 +141,8 @@ namespace Echoes.Editor
                 UnityEngine.Object.DestroyImmediate(image);
             }
             preview.SetPixels32(pixels); preview.Apply();
-            File.WriteAllBytes(sourceRoot + (floor == 1 ? "/第一层资源预览.png" : "/第二层资源预览.png"), preview.EncodeToPNG());
+            string title = floor == 1 ? "第一层" : floor == 2 ? "第二层" : "第三层";
+            File.WriteAllBytes(sourceRoot + "/" + title + "资源预览.png", preview.EncodeToPNG());
             UnityEngine.Object.DestroyImmediate(preview);
         }
     }
