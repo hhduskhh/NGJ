@@ -5,7 +5,7 @@ Unity 2D 俯视角像素风肉鸽射击原型。以可视声波惊醒有限敌�
 ## 运行
 
 1. 用 Unity Hub 添加本目录，使用 **2022.3.62f3c1** 打开。
-2. 打开 `Assets/Echoes/Scenes/Prototype.unity`，点击 Play。
+2. 打开 `Assets/Echoes/Scenes/Opening.unity`，点击 Play。片头播完进入第一层，空格或 Esc 跳过。直接调试战斗时打开 `Assets/Echoes/Scenes/Prototype.unity`。
 3. 若场景尚未生成，执行编辑器菜单 **Echoes > Create or Update Prototype Scene**。
 4. 如需 Windows 程序，执行 **Echoes > Build Windows Prototype**，输出到 `Builds/Windows/EchoesBelow.exe`。
 
