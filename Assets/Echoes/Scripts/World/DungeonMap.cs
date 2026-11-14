@@ -123,6 +123,11 @@ namespace Echoes
             BuildWorldRooms(plan);
             CarveRooms(plan);
             CarveDoors(plan);
+            foreach (var room in Rooms)
+                foreach (var wall in RoomInterior.Partitions(room))
+                    for (int x = wall.xMin; x < wall.xMax; x++)
+                        for (int y = wall.yMin; y < wall.yMax; y++)
+                            floor[x, y] = walkable[x, y] = false;
             ApplyTerrain(plan);
             ComputeCenters();
             RenderDungeon();
@@ -427,6 +432,8 @@ namespace Echoes
             RenderNativeDoorDetails();
             RenderObstacles();
             RenderDecorations();
+            foreach (var room in Rooms)
+                RoomInterior.PlaceTraps(this, room, run, generatedRoot);
             PixelArt.Create("ChallengeAltar", "altar", AltarPosition, -120, generatedRoot);
         }
 

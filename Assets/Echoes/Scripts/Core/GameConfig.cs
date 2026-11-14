@@ -39,6 +39,15 @@ namespace Echoes
         [Min(1)] public int enemiesPerCell = 6;
         [Min(1)] public int minEnemiesPerRoom = 6;
         [Min(1)] public int maxEnemiesPerRoom = 28;
+        [Header("Room traps")]
+        [Min(0)] public float spikeDamage = 10;
+        [Min(.1f)] public float spikeRadius = .85f;
+        [Min(.1f)] public float spikeRest = 2f;
+        [Min(.1f)] public float spikeWarning = .75f;
+        [Min(.1f)] public float spikeActive = .65f;
+        [Min(0)] public float bombDamage = 16;
+        [Min(.1f)] public float bombRadius = 2.1f;
+        [Min(.1f)] public float bombFuse = 1.1f;
         [Header("Finite floor population")]
         [Min(1)] public float enemyHealth = 32;
         [Min(.1f)] public float walkerSpeed = 3.8f;
