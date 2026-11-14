@@ -60,6 +60,12 @@ MonoBehaviour:
   enemyHealth: 32
   walkerSpeed: 7.6
   guardSpeed: 3.1
+  eliteSpawnChance: 0.15
+  eliteScatterCount: 3
+  eliteScatterAngle: 40
+  eliteBurstCount: 6
+  eliteBurstInterval: 0.12
+  eliteRingCount: 12
   guardRange: 9
   guardWindup: 0.75
   guardShotInterval: 2.2

@@ -162,7 +162,7 @@ namespace Echoes.Tests
             Assert.Greater(run.Map.FindPath(enemy.transform.position, source).Count, 10);
             enemy.TakeDamage(1);
             Assert.AreEqual(EnemyState.Chasing, enemy.State, "A distant hit starts pursuit");
-            Assert.AreEqual(run.Config.enemyHealth - 1, enemy.Health);
+            Assert.AreEqual(enemy.MaxHealth - 1, enemy.Health);
             var before = run.Boss.Health;
             run.Boss.TakeDamage(99999);
             Assert.AreEqual(before, run.Boss.Health, "Boss must be deliberately activated");

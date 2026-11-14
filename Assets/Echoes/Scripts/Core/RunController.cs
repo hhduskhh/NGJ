@@ -96,6 +96,7 @@ namespace Echoes
             // Spawn rolls use their own per-floor seed so combat randomness cannot
             // shift the layout of later floors.
             var spawnRandom = new System.Random(config.randomSeed + Floor * 1013 + 29);
+            var roleRandom = new System.Random(config.randomSeed + Floor * 1013 + 30);
             for (int draw = 0; draw < draws; draw++)
             {
                 int totalWeight = 0;
@@ -120,7 +121,8 @@ namespace Echoes
                     Vector2 point = chosen.Points[index];
                     chosen.Points[index] = chosen.Points[chosen.Points.Count - 1];
                     chosen.Points.RemoveAt(chosen.Points.Count - 1);
-                    Enemies.Add(EnemyController.Create(this, point, false));
+                    bool elite = roleRandom.NextDouble() < config.eliteSpawnChance;
+                    Enemies.Add(EnemyController.Create(this, point, false, elite));
                 }
             }
         }

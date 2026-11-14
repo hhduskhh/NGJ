@@ -27,6 +27,9 @@ namespace Echoes
         private readonly List<Vector2> outline = new List<Vector2>();
         private Sprite lastDamageSprite;
         private bool lastFlip, trackingHit, holdingPosition;
+        private int burstRemaining;
+        public bool IsElite { get; private set; }
+        private bool UsesRangedAttack => IsElite || IsGuard;
         public bool IsGuard { get; private set; }
         public EnemyState State { get; private set; } = EnemyState.Sleeping;
         public bool IsBoss { get; private set; }
@@ -35,23 +38,25 @@ namespace Echoes
         public float Health { get; private set; }
         public float MaxHealth { get; private set; }
         public bool IsWindingUp => warningTimer > 0;
-        public bool IsContactTelegraph => !IsBoss && !IsGuard && State == EnemyState.Chasing &&
+        public bool IsContactTelegraph => !IsBoss && !UsesRangedAttack && State == EnemyState.Chasing &&
             Vector2.Distance(transform.position, run.Player.transform.position) > .8f &&
             Vector2.Distance(transform.position, run.Player.transform.position) < 1.4f;
         public Vector2 InvestigationTarget => destination;
         public Vector2 LastSeenPosition => lastSeen;
 
-        public static EnemyController Create(RunController run, Vector2 position, bool boss)
+        public static EnemyController Create(RunController run, Vector2 position, bool boss, bool elite = false)
         {
-            bool isGuard = !boss && run.Enemies.Count % 2 == 1;
-            string species = boss ? "boss" : isGuard ? "guard" : "walker";
-            var renderer = PixelArt.Create(boss ? "Gatekeeper" : "Sleeper", species,
+            elite = elite && !boss;
+            bool isGuard = !elite && !boss && run.Enemies.Count % 2 == 1;
+            string species = boss ? "boss" : elite ? "elite" : isGuard ? "guard" : "walker";
+            var renderer = PixelArt.Create(boss ? "Gatekeeper" : elite ? "Elite" : "Sleeper", species,
                 position, 9);
             var enemy = renderer.gameObject.AddComponent<EnemyController>();
             enemy.run = run; enemy.sprite = renderer; enemy.IsBoss = boss;
+            enemy.IsElite = elite;
             enemy.MaxHealth = enemy.Health = boss ?
                 run.Config.bossHealth * run.BossHealthScale :
-                run.Config.enemyHealth * run.EnemyHealthScale;
+                run.Config.enemyHealth * run.EnemyHealthScale * (elite ? 3f : 1f);
             enemy.destination = enemy.lastSeen = position;
             enemy.lastStepPosition = position;
             enemy.body = renderer.gameObject.AddComponent<Rigidbody2D>();
@@ -65,7 +70,7 @@ namespace Echoes
             enemy.art = renderer.gameObject.AddComponent<CharacterArt>();
             enemy.IsGuard = isGuard;
             enemy.art.Initialize(species);
-            if (enemy.IsGuard)
+            if (enemy.UsesRangedAttack)
             {
                 enemy.muzzleWarning = PixelArt.Create("GuardMuzzleWarning", "guardMuzzle",
                     position, DungeonVisibility.DangerOrder, enemy.transform);
@@ -126,7 +131,7 @@ namespace Echoes
         private bool CanDetectPlayer()
         {
             float radius = run.Config.WalkingDetectionRadius;
-            if (IsGuard && State == EnemyState.Chasing) radius = Mathf.Max(radius, run.Config.guardRange);
+            if (UsesRangedAttack && State == EnemyState.Chasing) radius = Mathf.Max(radius, run.Config.guardRange);
             return Vector2.Distance(transform.position, run.Player.transform.position) <= radius &&
                 run.Map.HasLineOfSight(transform.position, run.Player.transform.position);
         }
@@ -146,7 +151,7 @@ namespace Echoes
                 if (lostSight > 2.5f) { State = EnemyState.Alert; destination = lastSeen; wanderTimer = 2; }
             }
             if (State == EnemyState.Chasing) destination = lastSeen;
-            holdingPosition = IsGuard && UpdateGuardAttack(dt, seesPlayer, player);
+            holdingPosition = UsesRangedAttack && UpdateRangedAttack(dt, seesPlayer, player);
             if (holdingPosition)
             {
                 body.velocity = Vector2.zero;
@@ -170,7 +175,7 @@ namespace Echoes
             repath -= dt;
             if (repath <= 0)
             { repath = .55f; path = run.Map.FindPath(body.position, destination); pathIndex = 0; }
-            if (!IsGuard && (!IsBoss || run.Floor == 1) &&
+            if (!UsesRangedAttack && (!IsBoss || run.Floor == 1) &&
                 Vector2.Distance(transform.position, player) < (IsBoss ? 1.15f : .8f) && Time.time >= contactReady)
             {
                 contactReady = Time.time + run.Config.enemyAttackInterval;
@@ -226,14 +231,14 @@ namespace Echoes
             while (pathIndex < path.Count && Vector2.Distance(position, path[pathIndex]) < .22f) pathIndex++;
             Vector2 delta = pathIndex < path.Count ? path[pathIndex] - position : Vector2.zero;
             Vector2 direction = delta.normalized;
-            float speed = IsBoss ? run.Config.bossSpeed : IsGuard ? run.Config.guardSpeed : run.Config.walkerSpeed;
+            float speed = IsBoss ? run.Config.bossSpeed : UsesRangedAttack ? run.Config.guardSpeed : run.Config.walkerSpeed;
             // Advance at the physics cadence and stop at the waypoint, even
             // when a slow render frame contains several physics steps.
             body.velocity = direction * Mathf.Min(speed, delta.magnitude / Time.fixedDeltaTime);
             if (direction.x != 0) sprite.flipX = direction.x < 0;
         }
 
-        private bool UpdateGuardAttack(float dt, bool seesPlayer, Vector2 player)
+        private bool UpdateRangedAttack(float dt, bool seesPlayer, Vector2 player)
         {
             attackTimer -= dt;
             Vector2 origin = transform.position;
@@ -242,20 +247,19 @@ namespace Echoes
                 !run.Map.HasFiringLine(origin, player, run.Player.transform))
             {
                 warningTimer = 0;
+                burstRemaining = 0;
                 return false;
             }
             Vector2 direction = (player - origin).normalized;
             sprite.flipX = direction.x < 0;
-            if (warningTimer > 0)
+            if (burstRemaining > 0)
+            {
+                if (attackTimer <= 0) FireBurstRound(origin, direction);
+            }
+            else if (warningTimer > 0)
             {
                 warningTimer -= dt;
-                if (warningTimer <= 0)
-                {
-                    Projectile.Create(run, origin, direction, run.Config.guardBulletSpeed,
-                        run.Config.enemyDamage * run.EnemyDamageScale, true);
-                    attackTimer = run.Config.guardShotInterval - run.Config.guardWindup;
-                    art.Attack();
-                }
+                if (warningTimer <= 0) FireRangedVolley(origin, direction);
             }
             else if (attackTimer <= 0)
             {
@@ -263,6 +267,43 @@ namespace Echoes
                 run.Noise.PlayGuardReady(origin);
             }
             return true;
+        }
+
+        private void FireRangedVolley(Vector2 origin, Vector2 aim)
+        {
+            if (IsElite && run.Floor == 2)
+            {
+                burstRemaining = run.Config.eliteBurstCount;
+                FireBurstRound(origin, aim);
+                return;
+            }
+
+            bool ring = IsElite && run.Floor == 3;
+            int count = ring ? run.Config.eliteRingCount : IsElite ? run.Config.eliteScatterCount : 1;
+            for (int i = 0; i < count; i++)
+            {
+                float angle = ring ? 360f * i / count : count == 1 ? 0f :
+                    run.Config.eliteScatterAngle * ((float)i / (count - 1) - .5f);
+                Vector2 direction = Quaternion.Euler(0, 0, angle) * aim;
+                FireRound(origin, direction, ring ? 2.5f : 1f);
+            }
+            attackTimer = run.Config.guardShotInterval - run.Config.guardWindup;
+            art.Attack();
+        }
+
+        private void FireBurstRound(Vector2 origin, Vector2 aim)
+        {
+            FireRound(origin, aim, 1f);
+            burstRemaining--;
+            attackTimer = burstRemaining > 0 ? run.Config.eliteBurstInterval :
+                run.Config.guardShotInterval - run.Config.guardWindup;
+            art.Attack();
+        }
+
+        private void FireRound(Vector2 origin, Vector2 direction, float speedMultiplier)
+        {
+            Projectile.Create(run, origin, direction, run.Config.guardBulletSpeed * speedMultiplier,
+                run.Config.enemyDamage * run.EnemyDamageScale, true);
         }
 
         private void LateUpdate()

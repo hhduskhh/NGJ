@@ -39,6 +39,7 @@ namespace Echoes
                 case "enemy": return Frame(Floor + "walker", 0);
                 case "walker":
                 case "guard":
+                case "elite":
                 case "boss": return Frame(Floor + kind, 0);
                 case "floor": return Frame(Floor + "tiles", 0);
                 case "floorAlt": return Frame(Floor + "tiles", 1);

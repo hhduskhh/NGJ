@@ -28,7 +28,7 @@ namespace Echoes.Tests
             Assert.AreEqual(Vector2.zero, run.Boss.GetComponent<CircleCollider2D>().offset);
             Assert.IsTrue(Object.FindObjectsOfType<ArtBinding>().Length > 1000);
             float elapsed = run.Elapsed;
-            var enemy = run.Enemies[0];
+            var enemy = run.Enemies.Find(e => !e.IsBoss && !e.IsGuard && !e.IsElite);
             enemy.GetComponent<Rigidbody2D>().position = (Vector2)run.Player.transform.position + Vector2.right * 4;
             run.Enemies[1].GetComponent<Rigidbody2D>().position = (Vector2)run.Player.transform.position + new Vector2(5,2);
             Physics2D.SyncTransforms();
@@ -72,14 +72,15 @@ namespace Echoes.Tests
             int rooms = run.Map.Rooms.Count;
             var cover = run.transform.Find("UnseenDungeon").GetComponent<SpriteRenderer>();
             cover.enabled = false;
+            var walker = run.Enemies.Find(e => !e.IsBoss && !e.IsGuard && !e.IsElite);
             for (int theme = 1; theme <= 2; theme++)
             {
                 run.Map.ApplyArtTheme(theme);
-                run.Enemies[0].GetComponent<Rigidbody2D>().position = (Vector2)run.Player.transform.position + Vector2.right * 4;
+                walker.GetComponent<Rigidbody2D>().position = (Vector2)run.Player.transform.position + Vector2.right * 4;
                 Physics2D.SyncTransforms();
                 yield return new WaitForSeconds(.1f);
-                Assert.AreEqual("walker", run.Enemies[0].GetComponent<CharacterArt>().Species);
-                Assert.That(run.Enemies[0].GetComponent<SpriteRenderer>().sprite.texture.name, Is.EqualTo("walker"));
+                Assert.AreEqual("walker", walker.GetComponent<CharacterArt>().Species);
+                Assert.That(walker.GetComponent<SpriteRenderer>().sprite.texture.name, Is.EqualTo("walker"));
                 foreach (var species in new[] { "walker", "guard", "elite", "boss" })
                     Assert.AreEqual(6, Resources.LoadAll<Sprite>("Art/Floor" + (theme+1) + "/" + species).Length);
                 Assert.AreEqual(population, run.Enemies.Count);

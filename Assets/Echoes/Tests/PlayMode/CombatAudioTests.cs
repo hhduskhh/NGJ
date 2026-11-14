@@ -40,7 +40,7 @@ namespace Echoes.Tests
             yield return SceneManager.LoadSceneAsync("Prototype");
             yield return null;
             var run = Object.FindObjectOfType<RunController>();
-            var enemy = run.Enemies.First(e => !e.IsGuard && !e.IsBoss);
+            var enemy = run.Enemies.First(e => !e.IsGuard && !e.IsElite && !e.IsBoss);
             var sleeper = run.Enemies.First(e => e != enemy && !e.IsBoss);
             var body = enemy.GetComponent<Rigidbody2D>();
             body.constraints = RigidbodyConstraints2D.FreezeAll;

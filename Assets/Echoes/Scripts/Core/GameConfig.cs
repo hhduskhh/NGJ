@@ -91,6 +91,14 @@ namespace Echoes
         [Min(.1f)] public float playerInvulnerability = .65f;
         [Min(0)] public float corpseHoldSeconds = .3f;
         [Min(.05f)] public float corpseFadeSeconds = 1.1f;
+        [Header("Elite enemies")]
+        [Range(0, 1)] public float eliteSpawnChance = .15f;
+        [Min(1)] public int eliteScatterCount = 3;
+        [Range(0, 180)] public float eliteScatterAngle = 40f;
+        [Min(1)] public int eliteBurstCount = 6;
+        [Min(.02f)] public float eliteBurstInterval = .12f;
+        [Min(1)] public int eliteRingCount = 12;
+
         [Header("Progression")]
         [Min(1)] public int experiencePerKill = 1;
         [Min(1)] public int firstLevelExperience = 4;

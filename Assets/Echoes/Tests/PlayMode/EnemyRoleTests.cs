@@ -111,6 +111,52 @@ namespace Echoes.Tests
             }
         }
 
+        [UnityTest] public IEnumerator ElitesUseFloorSpecificVolleys()
+        {
+            for (int floor = 1; floor <= 3; floor++)
+            {
+                var elite = run.Enemies.First(e => e.IsElite);
+                Vector2 origin = (Vector2)run.Player.transform.position + Vector2.right * 4;
+                PlaceEnemy(elite, origin);
+                elite.Hear(run.Player.transform.position);
+                var seen = new System.Collections.Generic.HashSet<int>();
+                int expected = floor == 1 ? run.Config.eliteScatterCount :
+                    floor == 2 ? run.Config.eliteBurstCount : run.Config.eliteRingCount;
+                var angles = new System.Collections.Generic.List<float>();
+                float deadline = Time.time + run.Config.guardWindup + 1.3f;
+                while (seen.Count < expected && Time.time < deadline)
+                {
+                    yield return null;
+                    int before = seen.Count;
+                    foreach (var bullet in Object.FindObjectsOfType<Projectile>())
+                    {
+                        Vector2 delta = (Vector2)bullet.transform.position - origin;
+                        if (delta.sqrMagnitude < .00001f || !seen.Add(bullet.GetInstanceID())) continue;
+                        float speed = run.Config.guardBulletSpeed * (floor == 3 ? 2.5f : 1);
+                        Assert.AreEqual(speed * Time.deltaTime, delta.magnitude, .015f);
+                        angles.Add(Vector2.SignedAngle(Vector2.left, delta));
+                    }
+                    if (seen.Count > before)
+                        Assert.AreEqual(floor == 2 ? 1 : expected, seen.Count - before);
+                }
+                Assert.AreEqual(expected, seen.Count);
+                angles.Sort();
+                if (floor == 1) Assert.AreEqual(run.Config.eliteScatterAngle, angles.Last() - angles.First(), .2f);
+                for (int i = 1; i < angles.Count; i++)
+                {
+                    float spacing = floor == 3 ? 360f / expected : floor == 1 ?
+                        run.Config.eliteScatterAngle / (expected - 1) : 0f;
+                    Assert.AreEqual(spacing, angles[i] - angles[i - 1], .2f);
+                }
+                if (floor < 3)
+                {
+                    run.SetState(RunState.FloorCleared);
+                    run.AdvanceFloor();
+                    yield return null;
+                }
+            }
+        }
+
         private Projectile Shot() => Object.FindObjectsOfType<Projectile>().SingleOrDefault();
 
         [UnityTest] public IEnumerator GuardAcquiresAtShortRangeTracksDuringWindupAndFiresStraight()
@@ -194,13 +240,14 @@ namespace Echoes.Tests
         {
             for (int floor = 1; floor <= 3; floor++)
             {
-                var roles = new[] { "walker", "guard", "boss" };
+                var roles = new[] { "walker", "guard", "elite", "boss" };
                 var sleepingSprites = roles.ToDictionary(role => role, role =>
                     Resources.LoadAll<Sprite>($"Art/Floor{floor}/{role}").Single(s => s.name == role + "_00"));
                 foreach (var e in run.Enemies)
                 {
                     Assert.AreEqual(EnemyState.Sleeping, e.State);
-                    string role = e.IsBoss ? "boss" : e.IsGuard ? "guard" : "walker";
+                    string role = e.IsBoss ? "boss" : e.IsElite ? "elite" : e.IsGuard ? "guard" : "walker";
+                    if (e.IsElite) Assert.AreEqual(3 * run.Config.enemyHealth * run.EnemyHealthScale, e.MaxHealth);
                     Assert.AreEqual(role, e.GetComponent<CharacterArt>().Species);
                     var renderer = e.GetComponent<SpriteRenderer>();
                     Assert.AreSame(sleepingSprites[role], renderer.sprite);
@@ -214,7 +261,7 @@ namespace Echoes.Tests
                     yield return null;
                 }
             }
-            var walker = run.Enemies.First(e => !e.IsBoss && !e.IsGuard);
+            var walker = run.Enemies.First(e => !e.IsBoss && !e.IsGuard && !e.IsElite);
             var start = (Vector2)run.Player.transform.position;
             PlaceEnemy(walker, start + Vector2.left * 3);
             walker.Hear(start);

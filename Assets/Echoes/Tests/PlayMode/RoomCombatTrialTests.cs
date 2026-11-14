@@ -30,7 +30,7 @@ namespace Echoes.Tests
                 var room = run.Map.Rooms[0];
                 Assert.AreEqual(RoomRole.Start, room.Role);
                 Vector2 lane = room.Center - Vector2.right * 6f;
-                var walkers = run.Enemies.Where(e => !e.IsBoss && !e.IsGuard).ToArray();
+                var walkers = run.Enemies.Where(e => !e.IsBoss && !e.IsGuard && !e.IsElite).ToArray();
                 var guards = run.Enemies.Where(e => !e.IsBoss && e.IsGuard).ToArray();
                 Assert.GreaterOrEqual(walkers.Length, 2);
                 Assert.GreaterOrEqual(guards.Length, 2);
