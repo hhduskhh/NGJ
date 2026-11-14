@@ -1,0 +1,47 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 71dc12dbbe656b845854e597c1dc3fdf, type: 3}
+  m_Name: PresentationArt
+  m_EditorClassIdentifier:
+  shopBackground: {fileID: 21300000, guid: 7a969e41f5cf5f0489798150b94b4f8f, type: 3}
+  shopMainPanel: {fileID: 21300000, guid: 8ec1cb0ea56fe094c9850c73aacece55, type: 3}
+  shopWeaponSlot: {fileID: 21300000, guid: 55ce969479f57a14582abb56feef834e, type: 3}
+  shopGoldCoin: {fileID: 21300000, guid: b685672961f080c448efb58e3b8b08dd, type: 3}
+  goldPickup: {fileID: 21300000, guid: 8d60474f82b9aa44bb4729ae3dc8711d, type: 3}
+  offerPanels:
+  - {fileID: 21300000, guid: 89ada3d7ec227c6419f5df0e31ac1983, type: 3}
+  - {fileID: 21300000, guid: 8267fe2c7ffb16a4a94eb0173a1f02af, type: 3}
+  - {fileID: 21300000, guid: 8b9ba8571d3897e4cad0950537c5861c, type: 3}
+  - {fileID: 21300000, guid: 0b44f4e97f6f69549af0e8a155071bfa, type: 3}
+  buttonStates:
+  - {fileID: 21300000, guid: daf19e29bc1928241bc7fb7d34294dab, type: 3}
+  - {fileID: 21300000, guid: 560274f3ed1a5364f8f890426cc8ea7e, type: 3}
+  - {fileID: 21300000, guid: 74932ec88f9789d43b15c9a571699ef5, type: 3}
+  - {fileID: 21300000, guid: 03448888d3176264bb4e38e3a676f10c, type: 3}
+  weapons:
+  - {fileID: 21300000, guid: f212527ffeca2e94ab16d441a98e75e0, type: 3}
+  - {fileID: 21300000, guid: 0ea4281a27c5250488097574d882efaf, type: 3}
+  - {fileID: 21300000, guid: 134f478e5d71f524abd37c44b18ffdb4, type: 3}
+  - {fileID: 21300000, guid: 6d073d84421789b40816192867630f88, type: 3}
+  - {fileID: 21300000, guid: a54b697b82ab8054f9234da5e2c42f36, type: 3}
+  - {fileID: 21300000, guid: a90a7caa2b3307245a15a8ca11c5dee7, type: 3}
+  - {fileID: 21300000, guid: 6da253779ec7a8c4cb40c9e6b5d021ad, type: 3}
+  - {fileID: 21300000, guid: 84bfdc86503f97a419091b03cfadb11b, type: 3}
+  - {fileID: 21300000, guid: 5b585f34b3a7d6c45a8f815f25a7d242, type: 3}
+  - {fileID: 21300000, guid: 8e508df07a8351c46aa7b0dfd080cb0a, type: 3}
+  - {fileID: 21300000, guid: cb976d6e54c39d443a780aacf4a4780e, type: 3}
+  - {fileID: 21300000, guid: d97d34fe40aa37540ab2dc7a6d6564bb, type: 3}
+  quickBolt: {fileID: 21300000, guid: 91a2190e872f23043ada840ad1bc6def, type: 3}
+  lightStep: {fileID: 21300000, guid: 5d4450a6254ab7d46870c6a31bba4f7c, type: 3}
+  emergencyRepair: {fileID: 21300000, guid: e2353695e2767a24c996f8c4eeca3453, type: 3}
+  resonanceAmplifier: {fileID: 21300000, guid: 789ead112fbd29d4ba8b4dd5fff79027, type: 3}
+  decoyTuning: {fileID: 21300000, guid: 28bc77c953cf31c438329495c28b421e, type: 3}
