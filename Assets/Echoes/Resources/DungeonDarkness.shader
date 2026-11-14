@@ -1,5 +1,6 @@
 Shader "Echoes/DungeonDarkness"
 {
+    Properties { [HideInInspector] _ScreenLightWave ("Screen Light Wave", Float) = -1 }
     SubShader
     {
         Tags { "RenderPipeline"="UniversalPipeline" "Queue"="Transparent" "RenderType"="Transparent" }
@@ -17,7 +18,7 @@ Shader "Echoes/DungeonDarkness"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
 
             struct Attributes { float3 positionOS : POSITION; };
-            struct Varyings { float4 positionCS : SV_POSITION; float2 world : TEXCOORD0; };
+            struct Varyings { float4 positionCS : SV_POSITION; float2 world : TEXCOORD0; float4 screen : TEXCOORD1; };
 
             CBUFFER_START(UnityPerMaterial)
                 float4 _MapSize;
@@ -28,6 +29,7 @@ Shader "Echoes/DungeonDarkness"
                 float4 _Trails[32];
                 int _TrailCount;
                 float _TrailRadius;
+                float _ScreenLightWave;
             CBUFFER_END
             sampler2D _Walkable;
             sampler2D _PropSurfaces;
@@ -37,6 +39,7 @@ Shader "Echoes/DungeonDarkness"
                 Varyings output;
                 float3 world = TransformObjectToWorld(input.positionOS);
                 output.positionCS = TransformWorldToHClip(world);
+                output.screen = ComputeScreenPos(output.positionCS);
                 output.world = world.xy;
                 return output;
             }
@@ -131,6 +134,19 @@ Shader "Echoes/DungeonDarkness"
 
             half4 Frag(Varyings input) : SV_Target
             {
+                [branch] if (_ScreenLightWave >= 0)
+                {
+                    float2 offset = input.screen.xy / input.screen.w * 2 - 1;
+                    float aspect = abs(UNITY_MATRIX_P._m11 / UNITY_MATRIX_P._m00);
+                    float corner = length(float2(aspect, 1));
+                    float distanceFromCenter = length(offset * float2(aspect, 1));
+                    float front = lerp(0, corner + .18, _ScreenLightWave);
+                    float behind = front - distanceFromCenter;
+                    float rim = 1 - smoothstep(.006, .024, abs(behind));
+                    float glow = smoothstep(-.024, 0, behind) * (1 - smoothstep(0, .18, behind));
+                    return half4(lerp(half3(.25, .85, .8), half3(.88, 1, .97), rim),
+                        max(.85 * rim, .32 * glow));
+                }
                 float4 footprint = 0;
                 float2 mapUV = (input.world + .5) * _MapSize.zw;
                 [branch] if (_UsePropSurfaces != 0 && all(mapUV >= 0) && all(mapUV <= 1))

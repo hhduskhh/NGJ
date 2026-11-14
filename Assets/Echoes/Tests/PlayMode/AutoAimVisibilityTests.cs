@@ -99,11 +99,23 @@ namespace Echoes.Tests
             Assert.AreSame(target, run.Player.FindVisibleTarget());
             Assert.IsFalse(vision.IsVisible(origin + Vector2.up * 1000));
             yield return null;
-            Assert.IsFalse(cover.activeSelf);
+            Assert.IsTrue(cover.activeSelf);
+            var material = cover.GetComponent<SpriteRenderer>().sharedMaterial;
+            yield return new WaitForSeconds(run.Config.screenLightWaveDuration * .25f);
+            float wave = material.GetFloat("_ScreenLightWave");
+            Assert.That(wave, Is.InRange(.15f, .5f));
+            if (SystemInfo.graphicsDeviceType != UnityEngine.Rendering.GraphicsDeviceType.Null)
+            {
+                System.IO.Directory.CreateDirectory("TestResults");
+                RuntimeSmokeTests.Capture("TestResults/screen-light-wave.png");
+            }
             run.SetState(RunState.Paused);
             float remaining = vision.ScreenLightCooldownRemaining;
             yield return null;
             Assert.AreEqual(remaining, vision.ScreenLightCooldownRemaining);
+            float pausedWave = material.GetFloat("_ScreenLightWave");
+            yield return null;
+            Assert.AreEqual(pausedWave, material.GetFloat("_ScreenLightWave"));
             run.SetState(RunState.Playing);
             Time.captureDeltaTime = .25f;
             yield return new WaitForSeconds(4f);

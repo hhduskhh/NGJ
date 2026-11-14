@@ -97,6 +97,7 @@ namespace Echoes
         [Min(1)] public int experienceStep = 3;
         [Header("Full-screen light")]
         [Min(.1f)] public float screenLightDuration = 5;
+        [Min(.05f)] public float screenLightWaveDuration = .7f;
         [Min(.1f)] public float screenLightCooldown = 15;
         [Range(0, 1)] public float screenLightVolume = .16f;
 

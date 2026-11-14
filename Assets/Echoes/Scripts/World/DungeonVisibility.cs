@@ -14,13 +14,15 @@ namespace Echoes
         private RenderTexture propSurfaces;
         private Transform cover;
         private float screenLightEndsAt, screenLightReadyAt;
+        private float screenLightStartedAt;
         public bool ScreenLightActive => Time.time < screenLightEndsAt;
         public float ScreenLightCooldownRemaining => Mathf.Max(0, screenLightReadyAt - Time.time);
 
         public bool TryLightScreen()
         {
             if (run.State != RunState.Playing || ScreenLightCooldownRemaining > 0) return false;
-            screenLightEndsAt = Time.time + run.Config.screenLightDuration;
+            screenLightStartedAt = Time.time;
+            screenLightEndsAt = screenLightStartedAt + run.Config.screenLightDuration;
             screenLightReadyAt = Time.time + run.Config.screenLightCooldown;
             run.Noise.PlayScreenLight();
             Vector2 source = run.Player.transform.position;
@@ -203,7 +205,12 @@ namespace Echoes
 
         public void RefreshMask()
         {
-            cover.gameObject.SetActive(!ScreenLightActive);
+            // During the opening sweep the cover draws the wave instead of darkness.
+            float waveProgress = ScreenLightActive
+                ? Mathf.Clamp01((Time.time - screenLightStartedAt) / Mathf.Max(.05f, run.Config.screenLightWaveDuration))
+                : -1;
+            darkness.SetFloat("_ScreenLightWave", waveProgress);
+            cover.gameObject.SetActive(waveProgress < 1);
             RemoveExpiredEchoes();
             Vector2 player = run.Player.transform.position;
             darkness.SetVector("_PlayerVision", new Vector4(player.x, player.y, 0, run.Config.gradientVisionRange));
