@@ -71,7 +71,8 @@ MonoBehaviour:
   firstLevelExperience: 4
   experienceStep: 3
   decoyRadius: 9
-  decoyThrowRange: 6
+  decoyFlightSeconds: 0.4
+  decoyArcHeight: 1.2
   decoyDuration: 4
   decoyCooldown: 12
   screenLightDuration: 5

@@ -103,7 +103,8 @@ namespace Echoes
 
         [Header("Bell decoy")]
         [Min(1)] public float decoyRadius = 9;
-        [Min(1)] public float decoyThrowRange = 6;
+        [Min(.05f)] public float decoyFlightSeconds = .4f;
+        [Min(0)] public float decoyArcHeight = 1.2f;
         [Min(1)] public float decoyDuration = 4;
         [Min(1)] public float decoyCooldown = 12;
         [Header("Gatekeeper")]

@@ -44,6 +44,36 @@ namespace Echoes.Tests
         }
 
         [UnityTest]
+        public IEnumerator DecoyFliesToLoudestEquippedGunshotRangeBeforeRinging()
+        {
+            yield return LoadFloor();
+            var run = Object.FindObjectOfType<RunController>();
+            var player = run.Player;
+            Assert.AreEqual(6f, player.Weapons.MaxGunshotRadius);
+            Assert.IsTrue(player.Weapons.Add(1, 0));
+            Assert.AreEqual(9f, player.Weapons.MaxGunshotRadius);
+            player.NoiseRadiusBonus = 1;
+            Assert.AreEqual(10.5f, player.Weapons.MaxGunshotRadius);
+            player.NoiseRadiusBonus = 0;
+
+            Vector2 origin = DungeonTestGeometry.FindClearLane(run, 9);
+            player.PlaceAt(origin);
+            Assert.IsTrue(player.TryThrowDecoy(origin + 20 * Vector2.right));
+            Assert.IsFalse(player.TryThrowDecoy(origin));
+            var bell = Object.FindObjectOfType<BellDecoy>();
+            var start = bell.transform.position;
+            Assert.Less(Vector2.Distance(origin, start), 1);
+            Assert.IsNull(GameObject.Find("DecoySoundWave"));
+            yield return null;
+            Assert.AreNotEqual(start, bell.transform.position);
+            Assert.IsNull(GameObject.Find("DecoySoundWave"));
+            yield return new WaitForSeconds(run.Config.decoyFlightSeconds);
+            Vector2 expected = origin + Vector2.right * 9;
+            Assert.Less(Vector2.Distance(expected, bell.transform.position), .001f);
+            Assert.Less(Vector2.Distance(expected, GameObject.Find("DecoySoundWave").transform.position), .001f);
+        }
+
+        [UnityTest]
         public IEnumerator EightUpgradesApplyToCombatAndLoot()
         {
             yield return LoadFloor();

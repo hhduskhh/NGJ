@@ -75,7 +75,7 @@ namespace Echoes
             else if (Input.GetMouseButtonDown(0) && UnityEngine.EventSystems.EventSystem.current && UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject())
                 waitForFireRelease = true;
             if (!waitForFireRelease && Input.GetMouseButton(0)) TryFire(AimPoint);
-            if (Input.GetKeyDown(KeyCode.Q) && DecoyCooldownRemaining <= 0) ThrowDecoy();
+            if (Input.GetKeyDown(KeyCode.Q)) TryThrowDecoy(AimPoint);
         }
 
         private void FixedUpdate()
@@ -133,15 +133,20 @@ namespace Echoes
             waitForFireRelease = true;
         }
 
-        private void ThrowDecoy()
+        public bool TryThrowDecoy(Vector2 target)
         {
-            var delta = Vector2.ClampMagnitude(AimPoint - (Vector2)transform.position, run.Config.decoyThrowRange);
-            var point = run.Map.NearestFloor((Vector2)transform.position + delta);
+            if (run.State != RunState.Playing || DecoyCooldownRemaining > 0) return false;
+            Vector2 origin = transform.position;
+            float range = Weapons.MaxGunshotRadius;
+            var point = origin + Vector2.ClampMagnitude(target - origin, range);
+            if (!run.Map.IsWalkable(Vector2Int.RoundToInt(point)))
+                point = run.Map.NearestFloor(point);
             // Do not throw through walls, even though the resulting sound ignores walls.
-            if (!run.Map.HasClearInteractionPath(transform.position, point))
-            { run.Hud.Notify("诱饵投掷路径被墙壁挡住", 2); return; }
-            BellDecoy.Create(run, point);
+            if ((point - origin).sqrMagnitude > range * range + .0001f || !run.Map.HasClearInteractionPath(origin, point))
+            { run.Hud.Notify("诱饵投掷路径被墙壁挡住", 2); return false; }
+            BellDecoy.Throw(run, origin, point);
             decoyReadyAt = Time.time + DecoyCooldown;
+            return true;
         }
 
         public void TakeDamage(float amount)
