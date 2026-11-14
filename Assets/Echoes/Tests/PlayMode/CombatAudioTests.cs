@@ -10,13 +10,45 @@ namespace Echoes.Tests
     public sealed class CombatAudioTests
     {
         [UnityTest]
+        public IEnumerator EnemyStepsFollowDistanceAndDoNotRevealOrWake()
+        {
+            yield return SceneManager.LoadSceneAsync("Prototype");
+            yield return null;
+            var run = Object.FindObjectOfType<RunController>();
+            var enemy = run.Enemies.First(e => !e.IsGuard && !e.IsBoss);
+            var sleeper = run.Enemies.First(e => e != enemy && !e.IsBoss);
+            var body = enemy.GetComponent<Rigidbody2D>();
+            body.constraints = RigidbodyConstraints2D.FreezeAll;
+            Vector2 start = (Vector2)run.Player.transform.position + Vector2.left * 6;
+            body.position = start;
+            sleeper.GetComponent<Rigidbody2D>().position = start + Vector2.up;
+            yield return new WaitForFixedUpdate();
+            enemy.Hear(start);
+            var voices = run.Noise.GetComponents<AudioSource>();
+            var step = Resources.Load<AudioClip>("CombatAudio/EnemyStep");
+            body.position += Vector2.right * run.Config.enemyStepDistance * .6f;
+            yield return new WaitForFixedUpdate();
+            Assert.IsFalse(voices.Any(v => v.clip == step));
+            body.position += Vector2.right * run.Config.enemyStepDistance * .6f;
+            yield return new WaitForFixedUpdate();
+            var voice = voices.Single(v => v.clip == step);
+            Assert.Less(voice.panStereo, 0);
+            voice.Stop();
+            voice.clip = null;
+            yield return new WaitForSeconds(.65f);
+            Assert.IsFalse(voices.Any(v => v.clip == step), "Stationary enemies stay quiet");
+            Assert.IsFalse(sleeper.Awake);
+            Assert.AreEqual(0, run.Visibility.Pulses.Count);
+        }
+
+        [UnityTest]
         public IEnumerator ShortClipsLoadAndLethalHitReplacesSameFrameImpact()
         {
             yield return SceneManager.LoadSceneAsync("Prototype");
             yield return null;
             var run = Object.FindObjectOfType<RunController>();
             foreach (string name in new[] { "Pistol", "Shotgun", "Bow", "Hit", "Pickup",
-                "Wake", "GuardReady", "BossReady", "Ambience" })
+                "Wake", "EnemyStep", "GuardReady", "BossReady", "Ambience" })
             {
                 var clip = Resources.Load<AudioClip>("CombatAudio/" + name);
                 Assert.IsNotNull(clip, name);

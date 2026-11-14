@@ -11,6 +11,8 @@ namespace Echoes
         private Rigidbody2D body;
         private SpriteRenderer sprite, marker, healthFill;
         private Vector2 destination, lastSeen;
+        private Vector2 lastStepPosition;
+        private float distanceSinceStep;
         private List<Vector2> path = new List<Vector2>();
         private int pathIndex;
         private float repath, lostSight, contactReady, wanderTimer, attackTimer, warningTimer;
@@ -45,6 +47,7 @@ namespace Echoes
                 run.Config.bossHealth * run.BossHealthScale :
                 run.Config.enemyHealth * run.EnemyHealthScale;
             enemy.destination = enemy.lastSeen = position;
+            enemy.lastStepPosition = position;
             enemy.body = renderer.gameObject.AddComponent<Rigidbody2D>();
             enemy.body.gravityScale = 0; enemy.body.freezeRotation = true;
             enemy.body.interpolation = RigidbodyInterpolation2D.Interpolate;
@@ -160,6 +163,21 @@ namespace Echoes
             }
             if (IsBoss) UpdateBossAttack(dt);
             RefreshVisual();
+        }
+
+        private void FixedUpdate()
+        {
+            if (IsBoss) return;
+            Vector2 position = body.position;
+            float distance = Vector2.Distance(position, lastStepPosition);
+            lastStepPosition = position;
+            if (!Awake || run.State != RunState.Playing) return;
+
+            distanceSinceStep += distance;
+            float stride = Mathf.Max(.1f, run.Config.enemyStepDistance);
+            if (distanceSinceStep < stride) return;
+            distanceSinceStep %= stride;
+            run.Noise.PlayEnemyStep(position);
         }
 
         private void Move()

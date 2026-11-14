@@ -35,6 +35,9 @@ namespace Echoes
         [Range(0, 1)] public float pickupVolume = .1f;
         [Range(0, 1)] public float hitVolume = .09f;
         [Range(0, 1)] public float warningVolume = .16f;
+        [Range(0, 1)] public float wakeVolume = .14f;
+        [Range(0, 1)] public float enemyStepVolume = .07f;
+        [Min(.1f)] public float enemyStepDistance = 2.4f;
         [Header("Sound — ignores walls in this prototype")]
         [Min(1)] public float gunNoiseRadius = 6;
         [Min(1)] public float pressureRadius = 5;

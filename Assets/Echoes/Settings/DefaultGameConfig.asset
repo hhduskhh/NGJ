@@ -26,6 +26,9 @@ MonoBehaviour:
   visionShrinkDuration: 0.4
   visionRingAlpha: 0.06
   gunNoiseRadius: 6
+  wakeVolume: 0.14
+  enemyStepVolume: 0.07
+  enemyStepDistance: 2.4
   pressureRadius: 5
   bonusPerEnemy: 0.08
   bonusEnemyCap: 8
