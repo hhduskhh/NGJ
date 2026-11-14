@@ -17,6 +17,16 @@ namespace Echoes
         private Vector2 lastWalkPosition;
         private float walkingTime, nextWalkPulse;
         public IReadOnlyList<VisionPulse> Pulses => echoes;
+        public const int DangerOrder = 41; // Immediately above the darkness cover (40).
+
+        public bool InCamera(Vector2 point)
+        {
+            var p = viewCamera.WorldToViewportPoint(point);
+            return p.z > 0 && p.x >= 0 && p.x <= 1 && p.y >= 0 && p.y <= 1;
+        }
+
+        public bool CanSeeDanger(Vector2 point) => InCamera(point) &&
+            run.Map.HasLineOfSight(run.Player.transform.position, point);
 
         public void Initialize(RunController controller)
         {

@@ -36,7 +36,12 @@ namespace Echoes
         [Min(1)] public int maxEnemiesPerRoom = 12;
         [Header("Finite floor population")]
         [Min(1)] public float enemyHealth = 32;
-        [Min(.1f)] public float enemySpeed = 1.7f;
+        [Min(.1f)] public float walkerSpeed = 3.8f;
+        [Min(.1f)] public float guardSpeed = 1.55f;
+        [Min(.1f)] public float guardRange = 9;
+        [Min(.1f)] public float guardWindup = .75f;
+        [Min(.1f)] public float guardShotInterval = 2.2f;
+        [Min(.1f)] public float guardBulletSpeed = 5.5f;
         [Min(1)] public float enemyDamage = 9;
         [Min(.1f)] public float enemyAttackInterval = 1;
         [Min(.1f)] public float playerInvulnerability = .65f;
@@ -50,6 +55,7 @@ namespace Echoes
         [Min(1)] public float decoyDuration = 4;
         [Min(1)] public float decoyCooldown = 12;
         [Header("Gatekeeper")]
+        [Min(.1f)] public float bossSpeed = 1.275f;
         [Min(1)] public float bossHealth = 1100;
         [Min(1)] public float bossDamage = 14;
         [Min(.1f)] public float bossAttackInterval = 2.8f;

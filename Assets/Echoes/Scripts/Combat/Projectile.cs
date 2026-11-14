@@ -10,6 +10,7 @@ namespace Echoes
         private Vector2 origin;
         private float speed, damage, life;
         private bool hostile;
+        private SpriteRenderer hostileSprite;
         private int pierces;
         private float remainingRange;
         private readonly HashSet<EnemyController> struck = new HashSet<EnemyController>();
@@ -26,6 +27,17 @@ namespace Echoes
             projectile.speed = speed; projectile.damage = damage; projectile.hostile = hostile;
             projectile.remainingRange = range; projectile.pierces = pierces;
             projectile.life = hostile ? 8 : 1.8f;
+            if (hostile)
+            {
+                projectile.hostileSprite = renderer;
+                renderer.sortingOrder = DungeonVisibility.DangerOrder;
+                renderer.enabled = run.Visibility.CanSeeDanger(position);
+            }
+        }
+
+        private void LateUpdate()
+        {
+            if (hostile) hostileSprite.enabled = run.Visibility.CanSeeDanger(transform.position);
         }
 
         private void Update()

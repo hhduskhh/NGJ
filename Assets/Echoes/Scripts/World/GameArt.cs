@@ -40,6 +40,7 @@ namespace Echoes
                 case "gold": return PresentationArt.Current.goldPickup;
                 case "bell": return Frame("Common/items", 1);
                 case "bullet": return Frame("Common/items", 2);
+                case "guardMuzzle": return Frame("Common/effects", 1);
                 case "hostileBullet": return Frame("Common/items", 3);
                 case "shadow": return Frame("Common/items", 4);
                 case "sleepMarker": return Frame("Common/items", 5);
