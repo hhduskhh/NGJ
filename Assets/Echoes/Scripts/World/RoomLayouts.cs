@@ -124,12 +124,13 @@ namespace Echoes
                     result.Add(new RoomPropSpec { Kind = "room_sconce", X = x0 + dx,
                         Y = y0 + DungeonMap.CellHeight - 1, Layer = RoomPropLayer.WallObject });
                 if (room.Role == RoomRole.Boss) continue;
-                for (int i = 0; i < 12; i++)
+                for (int i = 0; i < 16; i++)
                     result.Add(new RoomPropSpec { Kind = new[] { "room_crack", "room_moss", "room_coins" }[i % 3],
                         X = x0 + 3 + random.Next(DungeonMap.CellWidth - 6),
                         Y = y0 + 3 + random.Next(DungeonMap.CellHeight - 6),
                         Layer = RoomPropLayer.FloorDecal, Color = new Color(1, 1, 1, .55f) });
             }
+            AddInteriorWallDecor(result, room, 0, random);
             foreach (var spec in result) spec.Owner = room;
             return result;
         }
@@ -197,12 +198,13 @@ namespace Echoes
                     result.Add(new RoomPropSpec { Kind = "room_f2_wall_pipes", X = x0 + dx,
                         Y = y0 + DungeonMap.CellHeight - 1, Layer = RoomPropLayer.WallObject });
                 if (room.Role == RoomRole.Boss) continue;
-                for (int i = 0; i < 12; i++)
+                for (int i = 0; i < 16; i++)
                     result.Add(new RoomPropSpec { Kind = new[] { "room_f2_oil", "room_f2_water", "room_f2_scrap" }[i % 3],
                         X = x0 + 3 + random.Next(DungeonMap.CellWidth - 6),
                         Y = y0 + 3 + random.Next(DungeonMap.CellHeight - 6),
                         Layer = RoomPropLayer.FloorDecal, Color = new Color(1, 1, 1, .55f) });
             }
+            AddInteriorWallDecor(result, room, 1, random);
             foreach (var spec in result) spec.Owner = room;
             return result;
         }
@@ -494,6 +496,37 @@ namespace Echoes
                 Width = w, Height = h, Scale = scale,
                 Solid = true, Layer = RoomPropLayer.FloorObject
             });
+        }
+
+        // Dress the new interior partitions with the floor's wall fixtures.
+        // Sampling every few tiles keeps long screens readable without
+        // covering them end to end.
+        private static void AddInteriorWallDecor(List<RoomPropSpec> result,
+            DungeonMap.Room room, int theme, System.Random random)
+        {
+            string kind = theme == 0 ? "room_sconce" :
+                theme == 1 ? "room_f2_wall_pipes" : "room_f3_wall_shelf";
+            var taken = new HashSet<Vector2Int>();
+            int placed = 0;
+            foreach (var wall in room.Walls)
+            {
+                bool horizontal = wall.width >= wall.height;
+                int length = horizontal ? wall.width : wall.height;
+                if (length < 4) continue;
+                for (int offset = 2; offset < length - 1; offset += 7)
+                {
+                    var tile = horizontal
+                        ? new Vector2Int(wall.xMin + offset, wall.yMin + wall.height / 2)
+                        : new Vector2Int(wall.xMin + wall.width / 2, wall.yMin + offset);
+                    if (!taken.Add(tile)) continue;
+                    result.Add(new RoomPropSpec
+                    {
+                        Kind = kind, X = tile.x, Y = tile.y,
+                        Layer = RoomPropLayer.WallObject
+                    });
+                    if (++placed >= 24) return;
+                }
+            }
         }
 
         private static void AddWallDecor(List<RoomPropSpec> result, DungeonMap.Room room,

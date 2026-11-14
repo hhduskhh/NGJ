@@ -24,7 +24,7 @@ namespace Echoes.Tests
                 Physics2D.SyncTransforms();
                 foreach (var room in map.Rooms)
                 {
-                    foreach (var wall in RoomInterior.Partitions(room))
+                    foreach (var wall in room.Walls)
                     {
                         var tile = wall.min;
                         Assert.IsFalse(map.IsWalkable(tile));
@@ -32,13 +32,19 @@ namespace Echoes.Tests
                         Assert.IsNotNull(Physics2D.OverlapPoint(tile));
                     }
                     var local = traps.Where(t => map.RoomAtPosition(t.transform.position) == room).ToList();
-                    int expected = room.Role == RoomRole.Start ? 0 : room.CellCount;
-                    Assert.AreEqual(expected, local.Count(t => t.name == "FloorBomb"));
-                    Assert.AreEqual(expected, local.Count(t => t.name == "SpikePlate"));
+                    var anchors = RoomInterior.TrapAnchors(room);
+                    Assert.AreEqual(anchors.Count(a => !a.Bomb), local.Count(t => t.name == "SpikePlate"),
+                        room.Name + " spike count follows the room schematic");
+                    Assert.AreEqual(anchors.Count(a => a.Bomb), local.Count(t => t.name == "FloorBomb"),
+                        room.Name + " bomb count follows the room schematic");
                     foreach (var trap in local)
                         Assert.IsTrue(map.IsWalkable(Vector2Int.RoundToInt(trap.transform.position)));
                     if (room.Role != RoomRole.Start)
                         Assert.IsNotEmpty(map.FindPath(map.StartPosition, room.Center));
+                    foreach (var spawn in map.SpawnCells(room.Index))
+                        foreach (var zone in RoomInterior.NoSpawnZones(room))
+                            Assert.IsFalse(zone.Contains(Vector2Int.RoundToInt(spawn)),
+                                room.Name + " keeps enemies out of its safe pocket");
                 }
                 if (floor == 3) break;
                 run.ActivateBoss();

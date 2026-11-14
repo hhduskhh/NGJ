@@ -60,12 +60,13 @@ namespace Echoes
                     result.Add(new RoomPropSpec { Kind = "room_f3_wall_shelf", X = x0 + dx,
                         Y = y0 + DungeonMap.CellHeight - 1, Layer = RoomPropLayer.WallObject });
                 if (room.Role == RoomRole.Boss) continue;
-                for (int i = 0; i < 15; i++)
+                for (int i = 0; i < 20; i++)
                     result.Add(new RoomPropSpec { Kind = new[] { "room_f3_shards", "room_f3_gold", "room_f3_inlay" }[i % 3],
                         X = x0 + 3 + random.Next(DungeonMap.CellWidth - 6),
                         Y = y0 + 3 + random.Next(DungeonMap.CellHeight - 6),
                         Layer = RoomPropLayer.FloorDecal, Color = new Color(1, 1, 1, .45f) });
             }
+            AddInteriorWallDecor(result, room, 2, random);
             foreach (var spec in result) spec.Owner = room;
             return result;
         }

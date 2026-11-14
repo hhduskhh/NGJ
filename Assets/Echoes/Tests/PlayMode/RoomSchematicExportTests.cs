@@ -29,12 +29,16 @@ namespace Echoes.Tests
             public string role, shape, name;
             public List<CellData> cells = new List<CellData>();
             public List<RectData> openings = new List<RectData>();
+            public List<RectData> walls = new List<RectData>();
+            public List<TrapData> traps = new List<TrapData>();
+            public List<RectData> noSpawn = new List<RectData>();
             public List<PropData> solidsList = new List<PropData>();
             public List<PropData> decor = new List<PropData>();
         }
 
         [Serializable] private sealed class CellData { public int x, y; }
         [Serializable] private sealed class RectData { public int x, y, width, height; }
+        [Serializable] private sealed class TrapData { public int x, y; public bool bomb; }
         [Serializable] private sealed class PropData
         {
             public string kind, layer;
@@ -111,6 +115,21 @@ namespace Echoes.Tests
                     roomData.openings.Add(new RectData
                     {
                         x = opening.x, y = opening.y, width = opening.width, height = opening.height
+                    });
+                foreach (var wall in room.Walls)
+                    roomData.walls.Add(new RectData
+                    {
+                        x = wall.x, y = wall.y, width = wall.width, height = wall.height
+                    });
+                foreach (var anchor in RoomInterior.TrapAnchors(room))
+                    roomData.traps.Add(new TrapData
+                    {
+                        x = anchor.Tile.x, y = anchor.Tile.y, bomb = anchor.Bomb
+                    });
+                foreach (var zone in RoomInterior.NoSpawnZones(room))
+                    roomData.noSpawn.Add(new RectData
+                    {
+                        x = zone.x, y = zone.y, width = zone.width, height = zone.height
                     });
                 foreach (var spec in solids)
                     if (ReferenceEquals(spec.Owner, room))

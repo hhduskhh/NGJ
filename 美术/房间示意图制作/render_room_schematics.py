@@ -34,6 +34,9 @@ THEME = {
 DOOR = (237, 189, 120)
 START = (104, 190, 138)
 BOSS = (242, 104, 112)
+TRAP = (226, 76, 92)
+TRAP_BOMB = (250, 140, 80)
+NO_SPAWN = (104, 124, 78)
 TEXT = (235, 238, 244)
 MUTED = (160, 174, 192)
 KIND = {
@@ -88,7 +91,7 @@ def rect_for(room: dict[str, Any], x: int, y: int, w: int, h: int,
 
 def draw_room(room: dict[str, Any], theme: dict[str, Any], grid: int,
               cw: int, ch: int, scale: int = 4) -> Image.Image:
-    header, footer = 76, 30
+    header, footer = 76, 44
     content_w = room["width"] * scale
     canvas_w = max(content_w + 44, 420)
     mx = (canvas_w - content_w) // 2
@@ -124,6 +127,19 @@ def draw_room(room: dict[str, Any], theme: dict[str, Any], grid: int,
         y = header + ly * scale
         d.line((mx, y, mx + room["width"] * scale, y), fill=theme["grid"])
 
+    for zone in room.get("noSpawn", []):
+        left, top, right, bottom = rect_for(
+            room, zone["x"], zone["y"], zone["width"], zone["height"],
+            scale, mx, header)
+        d.rectangle((left, top, right - 1, bottom - 1), fill=NO_SPAWN)
+
+    for wall in room.get("walls", []):
+        left, top, right, bottom = rect_for(
+            room, wall["x"], wall["y"], wall["width"], wall["height"],
+            scale, mx, header)
+        d.rectangle((left, top, right - 1, bottom - 1), fill=theme["wall"],
+                    outline=theme["grid"])
+
     for spec in room["decor"]:
         layer = spec["layer"]
         lx = spec["x"] - room["x"]
@@ -148,6 +164,12 @@ def draw_room(room: dict[str, Any], theme: dict[str, Any], grid: int,
             d.text(((left + right) / 2, (top + bottom) / 2 - 5), label,
                    fill=(30, 28, 36), font=small_font, anchor="mm")
 
+    for trap in room.get("traps", []):
+        left, top, right, bottom = rect_for(
+            room, trap["x"], trap["y"], 1, 1, scale, mx, header)
+        color = TRAP_BOMB if trap.get("bomb") else TRAP
+        d.rectangle((left, top, right - 1, bottom - 1), fill=color)
+
     for opening in room["openings"]:
         left, top, right, bottom = rect_for(
             room, opening["x"], opening["y"], opening["width"], opening["height"],
@@ -160,13 +182,16 @@ def draw_room(room: dict[str, Any], theme: dict[str, Any], grid: int,
     d.rectangle((mx - 2, header - 2, mx + room["width"] * scale + 1,
                  header + room["height"] * scale + 1), outline=role_color, width=2)
 
-    legend = [("墙", theme["wall"]), ("地面", theme["floor"]), ("实心", theme["solid"]),
-              ("装饰", theme["decor"]), ("门", DOOR)]
-    x = 22
+    legend = [("墙/隔断", theme["wall"]), ("地面", theme["floor"]), ("实心", theme["solid"]),
+              ("装饰", theme["decor"]), ("门", DOOR), ("地刺", TRAP),
+              ("炸弹", TRAP_BOMB), ("禁刷", NO_SPAWN)]
+    x, y = 22, h - 36
     for text, color in legend:
-        d.rectangle((x, h - 22, x + 10, h - 12), fill=color)
-        d.text((x + 14, h - 23), text, fill=MUTED, font=tiny_font)
-        x += 64
+        if x + 62 > canvas_w - 8:
+            x, y = 22, y + 13
+        d.rectangle((x, y, x + 10, y + 10), fill=color)
+        d.text((x + 14, y - 1), text, fill=MUTED, font=tiny_font)
+        x += 62
     return image
 
 
@@ -191,12 +216,23 @@ def draw_overview(floor: dict[str, Any], theme: dict[str, Any]) -> Image.Image:
                 y = header + (mh - 1 - gy) * scale
                 d.rectangle((x, y, x + scale - 1, y + scale - 1),
                             fill=theme["floor"] if mask[ly][lx] else theme["wall"])
+        for wall in room.get("walls", []):
+            left = margin + wall["x"] * scale
+            top = header + (mh - (wall["y"] + wall["height"])) * scale
+            d.rectangle((left, top,
+                         left + wall["width"] * scale - 1,
+                         top + wall["height"] * scale - 1), fill=theme["wall"])
         for spec in room["solidsList"]:
             left = margin + spec["x"] * scale
             top = header + (mh - (spec["y"] + spec["height"])) * scale
             d.rectangle((left, top,
                          left + spec["width"] * scale - 1,
                          top + spec["height"] * scale - 1), fill=theme["solid"])
+        for trap in room.get("traps", []):
+            left = margin + trap["x"] * scale
+            top = header + (mh - (trap["y"] + 1)) * scale
+            d.rectangle((left, top, left + scale - 1, top + scale - 1),
+                        fill=TRAP_BOMB if trap.get("bomb") else TRAP)
         for opening in room["openings"]:
             left = margin + opening["x"] * scale
             top = header + (mh - (opening["y"] + opening["height"])) * scale
@@ -239,7 +275,7 @@ def main():
         "由当前实际生成数据导出的 P0 房间示意图；**不是正式美术**，只表示墙体、门、实心物、装饰和房间形状。",
         "",
         "- 数据来源：`RoomSchematicExportTests`，seed 713，第 1–3 层；JSON 保存在 `美术/房间示意图制作/room-schematics.json`。",
-        "- 图例：深色=墙，紫色/灰色=地面，橙色块=实心物（字母为道具类型），金色=门，小点=非碰撞装饰。",
+        "- 图例：深色=墙与室内隔断，紫色/灰色=地面，橙色块=实心物（字母为道具类型），金色=门，红色=地刺，橙红=炸弹，橄榄绿=禁刷区，小点=非碰撞装饰。",
         "- 类型缩写：C 箱、P 柱、S 工作台、R 武器架、B 长椅、I 直管、b 弯管、N 面板、Y 晶体、F 音叉、D 导管、s 零件。",
         "- 房间覆盖率按当前 `SolidCoverage` 计算；P0 使用现有 32×32 道具，部分大件是放大占位。",
         "",
