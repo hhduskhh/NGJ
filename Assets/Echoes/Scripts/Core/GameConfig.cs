@@ -74,7 +74,7 @@ namespace Echoes
         [Min(.1f)] public float spikeRest = 2f;
         [Min(.1f)] public float spikeWarning = .75f;
         [Min(.1f)] public float spikeActive = .65f;
-        [Min(0)] public float bombDamage = 16;
+        [Min(0)] public float bombDamage = 48;
         [Min(.1f)] public float bombRadius = 2.1f;
         [Min(.1f)] public float bombFuse = 1.1f;
         [Min(.05f)] public float bombFlashSeconds = .4f;
