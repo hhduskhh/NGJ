@@ -65,9 +65,12 @@ namespace Echoes
             if (run.State != RunState.Playing) { movement = Vector2.zero; waitForFireRelease = true; return; }
             movement = new Vector2(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical")).normalized;
             AimPoint = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+            if (Input.GetKeyDown(KeyCode.F)) run.Visibility.TryLightScreen();
             UpdateAim(AimPoint, false);
             Weapons.Tick(Time.deltaTime, AimPoint);
             if (!Input.GetMouseButton(0)) waitForFireRelease = false;
+            else if (Input.GetMouseButtonDown(0) && UnityEngine.EventSystems.EventSystem.current && UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject())
+                waitForFireRelease = true;
             if (!waitForFireRelease && Input.GetMouseButton(0)) TryFire(AimPoint);
             if (Input.GetKeyDown(KeyCode.Q) && DecoyCooldownRemaining <= 0) ThrowDecoy();
         }
@@ -87,7 +90,7 @@ namespace Echoes
             sprite.flipX = aim.x < 0;
         }
 
-        public EnemyController FindVisibleTarget(float range = float.MaxValue, Vector2? muzzle = null)
+        public EnemyController FindVisibleTarget(Vector2? muzzle = null)
         {
             EnemyController nearest = null;
             float closest = float.MaxValue;
@@ -96,12 +99,11 @@ namespace Echoes
                 if (!enemy || !enemy.Alive || (enemy.IsBoss && !run.BossActivated)) continue;
                 Vector2 position = enemy.transform.position;
                 float distance = (position - (Vector2)transform.position).sqrMagnitude;
-                if (distance > range * range) continue;
-                if (muzzle.HasValue && !run.Map.HasLineOfSight(muzzle.Value, position)) continue;
                 if (distance >= closest || !run.Visibility.IsVisible(position)) continue;
                 var viewport = Camera.main.WorldToViewportPoint(position);
                 if (viewport.z <= 0 || viewport.x < 0 || viewport.x > 1 || viewport.y < 0 || viewport.y > 1) continue;
                 if (!run.Map.HasLineOfSight(transform.position, position)) continue;
+                if (!run.Map.HasFiringLine(muzzle ?? (Vector2)transform.position, position, enemy.transform)) continue;
                 nearest = enemy; closest = distance;
             }
             return nearest;

@@ -8,14 +8,13 @@ namespace Echoes
         public const string Kind = "startStall";
         public const string ArtPath = "Room/Common/f0_start_stall_96x64";
 
-        public static RoomPropSpec Layout(DungeonMap.Room room)
+        public static RoomPropSpec Layout(DungeonMap.Room room, Vector2Int tile)
         {
-            var bounds = room.Bounds;
             return new RoomPropSpec
             {
                 Kind = Kind,
-                X = bounds.x + bounds.width / 2 + 1,
-                Y = bounds.y + bounds.height / 2 + 3,
+                X = tile.x,
+                Y = tile.y,
                 Width = 5, Height = 3,
                 Solid = true, Scale = 1,
                 Layer = RoomPropLayer.FloorObject,

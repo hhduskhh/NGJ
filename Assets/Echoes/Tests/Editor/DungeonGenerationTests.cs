@@ -6,6 +6,30 @@ namespace Echoes.Tests
 {
     public sealed class DungeonGenerationTests
     {
+        [TestCase(false)]
+        [TestCase(true)]
+        public void DiamondChambersExcludeEnemySpawnsAtTheirTipsAndSides(bool vertical)
+        {
+            var room = new DungeonMap.Room
+            {
+                Role = RoomRole.Middle, Shape = RoomShape.Line2, LayoutVariant = 3,
+                Bounds = new RectInt(36, 72, vertical ? 36 : 72, vertical ? 72 : 36)
+            };
+            var zones = RoomInterior.NoSpawnZones(room);
+            Vector2Int World(int x, int y) => vertical
+                ? new Vector2Int(room.Bounds.x + y, room.Bounds.y + 71 - x)
+                : new Vector2Int(room.Bounds.x + x, room.Bounds.y + y);
+            bool Excluded(Vector2Int p) => zones.Exists(zone => zone.Contains(p));
+            foreach (int cx in new[] { 22, 50 })
+            {
+                foreach (var offset in new[] { Vector2Int.zero, new Vector2Int(0, 7),
+                    new Vector2Int(0, -7), new Vector2Int(7, 0), new Vector2Int(-7, 0) })
+                    Assert.IsTrue(Excluded(World(cx + offset.x, 18 + offset.y)),
+                        "The whole chamber interior must exclude spawns: " + offset);
+                Assert.IsFalse(Excluded(World(cx, 6)), "The outer corridor remains available");
+            }
+        }
+
         [Test]
         public void PlansCoverEachFloorGridAndRespectLeafRooms()
         {

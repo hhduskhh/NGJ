@@ -103,7 +103,7 @@ namespace Echoes.Tests
             Assert.Greater(run.Elapsed, resumed);
         }
 
-        [UnityTest] public IEnumerator PassiveShopIconsFollowPurchaseAndPages()
+        [UnityTest] public IEnumerator BackpackShowsPurchasedItemsAttributesAndReturnsToShop()
         {
             var art = PresentationArt.Current;
             foreach (var item in run.Config.passives)
@@ -125,19 +125,57 @@ namespace Echoes.Tests
             Assert.IsFalse(icon.raycastTarget);
             Click(FindButton("BuyOffer2"));
             yield return null;
-            var owned = Object.FindObjectsOfType<UnityEngine.UI.Image>().Single(i => i.name == "OwnedPassiveIcon");
+            var owned = GameObject.Find("OwnedPassive0").transform.Find("Icon").GetComponent<UnityEngine.UI.Image>();
             Assert.AreSame(art.Passive(offer.Item.title), owned.sprite);
-            foreach (var other in run.Config.passives.Where(item => item != offer.Item).Take(4))
-                Assert.IsTrue(run.Player.Passives.Add(other));
+            foreach (var item in run.Config.passives.Where(item => item != offer.Item))
+                Assert.IsTrue(run.Player.Passives.Add(item), item.title);
+            var stacked = run.Config.passives.First(item => item.Limit > 1);
+            Assert.IsTrue(run.Player.Passives.Add(stacked));
+            for (int i = 1; i < WeaponInventory.Capacity; i++) Assert.IsTrue(run.Player.Weapons.Add(i % 3, i % 4));
             run.Hud.RefreshModal();
             yield return null;
-            Capture("07-passive-shop-icons");
-            Assert.AreEqual(4, Object.FindObjectsOfType<UnityEngine.UI.Image>().Count(i => i.name == "OwnedPassiveIcon"));
-            Click(FindButton("ItemPage"));
+            Capture("backpack-shop");
+            Click(FindButton("ShopBackpack"));
             yield return null;
-            Assert.AreEqual(1, Object.FindObjectsOfType<UnityEngine.UI.Image>().Count(i => i.name == "OwnedPassiveIcon"));
+            Assert.AreEqual(RunState.Backpack, run.State);
+            Assert.AreEqual(0, Time.timeScale);
+            Assert.IsFalse(run.Shop.Buy(0));
+            int index = WeaponInventory.Capacity;
+            foreach (var pair in run.Player.Passives.Owned)
+            {
+                var slot = FindButton("BagSlot" + index++);
+                var tile = slot.transform.Find("Face/Item");
+                Assert.AreSame(art.Passive(pair.Key.title), tile.Find("Icon").GetComponent<UnityEngine.UI.Image>().sprite);
+                if (pair.Value > 1) Assert.AreEqual("×" + pair.Value, tile.Find("Stack/Label").GetComponent<TMPro.TMP_Text>().text);
+            }
+            Click(FindButton("BagSlot" + (index - 1)));
+            yield return null;
+            Assert.IsTrue(GameObject.Find("ItemDetails").GetComponentsInChildren<TMPro.TMP_Text>()
+                .Any(label => label.text.Replace("\n", " · ") == run.Player.Passives.Owned.Last().Key.description.Replace("；", " · ")));
+            Capture("backpack-items");
+            Click(FindButton("AttributesTab"));
+            yield return null;
+            Assert.AreEqual(14, GameObject.Find("Backpack").GetComponentsInChildren<RectTransform>().Count(t => t.name.StartsWith("Stat")));
+            var readings = GameObject.Find("Stat1").GetComponentsInChildren<TMPro.TMP_Text>();
+            Assert.AreEqual((run.Player.TotalDamageScale - 1).ToString("+0%;-0%;0%"), readings[1].text);
+            Capture("backpack-attributes");
+            Click(FindButton("CloseBackpack"));
+            yield return null;
+            Assert.AreEqual(RunState.Shop, run.State);
+            Assert.IsTrue(run.Shop.Offers[2].Sold);
             Click(FindButton("ShopExit"));
             Assert.AreEqual(RunState.Playing, run.State);
+            yield return null;
+            Click(FindButton("HudBackpack"));
+            yield return null;
+            Assert.AreEqual(RunState.Backpack, run.State);
+            run.CloseBackpack();
+            Assert.AreEqual(RunState.Playing, run.State);
+            Assert.AreEqual(1, Time.timeScale);
+            run.SetState(RunState.Paused);
+            run.OpenBackpack();
+            run.CloseBackpack();
+            Assert.AreEqual(RunState.Paused, run.State);
         }
 
         [UnityTest] public IEnumerator CatalogButtonStatesAndFullLoadoutRender()

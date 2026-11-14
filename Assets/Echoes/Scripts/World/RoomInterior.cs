@@ -97,11 +97,15 @@ namespace Echoes
             var result = new List<RectInt>();
             if (room == null || room.Role != RoomRole.Middle) return result;
             if (room.Shape != RoomShape.Line2 || room.LayoutVariant % 4 != 3) return result;
-            var local = new List<RectInt>
-            {
-                new RectInt(17, 13, 10, 10),
-                new RectInt(45, 13, 10, 10)
-            };
+            // Cover the complete chamber up to its two openings, including the
+            // narrow tips missed by the former central 10x10 rectangles.
+            var local = new List<RectInt>();
+            foreach (int cx in new[] { 22, 50 })
+                for (int dy = -9; dy <= 9; dy++)
+                {
+                    int halfWidth = 10 - 7 * Mathf.Abs(dy) / 9;
+                    local.Add(new RectInt(cx - halfWidth, 18 + dy, halfWidth * 2 + 1, 1));
+                }
             bool vertical = room.Bounds.height > room.Bounds.width;
             int sourceWidth = vertical ? room.Bounds.height : room.Bounds.width;
             foreach (var rect in local)
@@ -116,17 +120,19 @@ namespace Echoes
             var used = new HashSet<Vector2Int>();
             foreach (var anchor in TrapAnchors(room))
             {
-                var tile = FindTrapTile(map, room, anchor.Tile, used);
-                if (!tile.HasValue) continue;
+                var tile = FindTrapTile(map, room, anchor.Tile, used, run.Config);
+                if (!tile.HasValue)
+                    throw new System.InvalidOperationException(
+                        "No safe trap position near " + anchor.Tile + " in " + room.Name);
                 used.Add(tile.Value);
-                RoomTrap.Create(run, map, tile.Value, anchor.Bomb, parent);
+                RoomTrap.Create(run, map, tile.Value, anchor, parent);
             }
         }
 
         private static Vector2Int? FindTrapTile(DungeonMap map, DungeonMap.Room room,
-            Vector2Int anchor, HashSet<Vector2Int> used)
+            Vector2Int anchor, HashSet<Vector2Int> used, GameConfig config)
         {
-            int max = Mathf.Max(room.Bounds.width, room.Bounds.height);
+            int max = Mathf.Max(0, config.trapAnchorSearchRadius);
             for (int radius = 0; radius <= max; radius++)
                 for (int dx = -radius; dx <= radius; dx++)
                     for (int dy = -radius; dy <= radius; dy++)
@@ -137,6 +143,13 @@ namespace Echoes
                         if (used.Contains(tile)) continue;
                         if (!map.IsWalkable(tile)) continue;
                         if (map.RoomAtPosition(new Vector2(tile.x, tile.y)) != room) continue;
+                        bool nearDoor = false;
+                        int clearance = Mathf.Max(0, config.trapDoorClearance);
+                        foreach (var door in room.DoorOpenings)
+                            if (new RectInt(door.x - clearance, door.y - clearance,
+                                door.width + clearance * 2, door.height + clearance * 2).Contains(tile))
+                            { nearDoor = true; break; }
+                        if (nearDoor) continue;
                         return tile;
                     }
             return null;

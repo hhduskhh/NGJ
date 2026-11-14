@@ -92,6 +92,45 @@ namespace Echoes.Tests
         }
 
         [UnityTest]
+        public IEnumerator MinimapTracksMovementAndDistinguishesFrontierDoors()
+        {
+            yield return Load();
+            var run = Object.FindObjectOfType<RunController>();
+            var image = GameObject.Find("GameHUD/MiniMap/RoomMap").GetComponent<UnityEngine.UI.RawImage>();
+            var marker = (RectTransform)image.transform.Find("PlayerMarker");
+            var texture = (Texture2D)image.texture;
+            var start = run.Map.Rooms[0];
+            var door = run.Map.Doors.Find(d => d.A == start || d.B == start);
+            var center = Vector2Int.FloorToInt(door.Center);
+            var direction = door.Opening.width == 2 ? Vector2Int.right : Vector2Int.up;
+            if (run.Map.RoomAtPosition(center + direction * 2) == start) direction = -direction;
+            var tip = center + direction * 6;
+            Assert.AreEqual((Color32)run.Config.minimapFrontierDoor, (Color32)texture.GetPixel(tip.x, tip.y));
+
+            Vector2 near = center - direction * 3;
+            run.Player.PlaceAt(near);
+            yield return null;
+            yield return null;
+            Vector2 before = marker.anchoredPosition;
+            run.Player.PlaceAt(near + (Vector2)direction * .5f);
+            yield return null;
+            yield return null;
+            float scale = image.rectTransform.rect.width / run.Map.Width;
+            Assert.Less(Vector2.Distance(marker.anchoredPosition - before, (Vector2)direction * (.5f * scale)), .02f);
+            Assert.Less(Vector2.Distance(marker.anchoredPosition, ((Vector2)run.Player.transform.position + Vector2.one * .5f) * scale), .02f);
+
+            run.Player.PlaceAt(center + direction * 3);
+            yield return null;
+            yield return null;
+            Assert.AreEqual((Color32)run.Config.minimapExploredDoor, (Color32)texture.GetPixel(center.x, center.y));
+            Assert.AreNotEqual((Color32)run.Config.minimapFrontierDoor, (Color32)texture.GetPixel(tip.x, tip.y));
+            run.Player.PlaceAt(near);
+            yield return null;
+            yield return null;
+            Assert.AreEqual((Color32)run.Config.minimapExploredDoor, (Color32)texture.GetPixel(center.x, center.y));
+        }
+
+        [UnityTest]
         public IEnumerator ManySeedsProduceConnectedWalkableFloors()
         {
             yield return Load();
@@ -114,6 +153,10 @@ namespace Echoes.Tests
                     Assert.IsTrue(map.IsWalkable(Vector2Int.RoundToInt(map.StartPosition)));
                     Assert.IsTrue(map.IsWalkable(Vector2Int.RoundToInt(map.BossPosition)));
                     Assert.IsTrue(map.IsWalkable(Vector2Int.RoundToInt(map.AltarPosition)));
+                    Assert.AreEqual(map.Floor == 1 ? RoomRole.Middle : RoomRole.Start,
+                        map.RoomAtPosition(map.ShopCounterPosition).Role);
+                    Assert.Greater(map.FindPath(map.StartPosition, map.ShopCounterPosition).Count, 0);
+                    Assert.AreEqual(RoomRole.Start, map.RoomAtPosition(map.SignPosition).Role);
                     foreach (var room in map.Rooms)
                     {
                         Assert.IsTrue(map.IsWalkable(Vector2Int.RoundToInt(room.Center)),
@@ -139,6 +182,30 @@ namespace Echoes.Tests
                 Object.Destroy(mapObject);
             }
             yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator BossBanksRemainingGoldAndRestartChangesSeed()
+        {
+            yield return Load();
+            var run = Object.FindObjectOfType<RunController>();
+            int seed = run.Config.randomSeed;
+            GoldPickup.Drop(run, run.Map.BossPosition, 12);
+            GoldPickup.Drop(run, run.Player.transform.position, 6);
+            yield return null;
+            run.ActivateBoss();
+            run.Boss.TakeDamage(run.Boss.Health);
+            Assert.AreEqual(18, run.Shop.Gold);
+            run.AdvanceFloor();
+            yield return null;
+            Assert.AreEqual(18, run.Shop.Gold);
+            run.Restart();
+            yield return null;
+            yield return null;
+            run = Object.FindObjectOfType<RunController>();
+            Assert.AreNotEqual(seed, run.Config.randomSeed);
+            Assert.AreEqual(1, run.Floor);
+            Assert.AreEqual(0, run.Shop.Gold);
         }
 
         [UnityTest]
@@ -174,7 +241,11 @@ namespace Echoes.Tests
             int level = run.Level;
             Projectile.Create(run, player.transform.position + Vector3.right, Vector2.right, 1, 1, false);
 
+            var bossBar = GameObject.Find("GameHUD").transform.Find("Bar").gameObject;
+            Assert.IsFalse(bossBar.activeInHierarchy);
             run.ActivateBoss();
+            yield return null;
+            Assert.IsTrue(bossBar.activeInHierarchy);
             run.Boss.TakeDamage(99999);
             Assert.AreEqual(RunState.FloorCleared, run.State);
             int roomsFloor1 = run.Map.Rooms.Count;
@@ -182,6 +253,7 @@ namespace Echoes.Tests
             yield return null;
 
             Assert.AreEqual(2, run.Floor);
+            Assert.IsFalse(bossBar.activeInHierarchy);
             Assert.AreEqual(2, run.Map.Floor);
             Assert.AreEqual("Floor2/", GameArt.Floor);
             Assert.AreEqual(FloorTheme.Title(2), run.FloorTitle);
@@ -204,11 +276,14 @@ namespace Echoes.Tests
             Assert.Greater(roomsFloor1, 0);
 
             run.ActivateBoss();
+            yield return null;
+            Assert.IsTrue(bossBar.activeInHierarchy);
             run.Boss.TakeDamage(99999);
             Assert.AreEqual(RunState.FloorCleared, run.State);
             run.AdvanceFloor();
             yield return null;
             Assert.AreEqual(3, run.Floor);
+            Assert.IsFalse(bossBar.activeInHierarchy);
             Assert.AreEqual("Floor3/", GameArt.Floor);
             Assert.AreEqual(RunState.Playing, run.State);
 

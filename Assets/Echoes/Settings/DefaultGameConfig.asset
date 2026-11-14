@@ -26,6 +26,9 @@ MonoBehaviour:
   visionShrinkDuration: 0.4
   visionRingAlpha: 0.06
   gunNoiseRadius: 6
+  wakeVolume: 0.14
+  enemyStepVolume: 0.07
+  enemyStepDistance: 2.4
   pressureRadius: 5
   bonusPerEnemy: 0.08
   bonusEnemyCap: 8
@@ -52,6 +55,8 @@ MonoBehaviour:
   - 4
   - 5
   spawnCellStride: 2
+  trapAnchorSearchRadius: 3
+  trapDoorClearance: 2
   enemyHealth: 32
   walkerSpeed: 5.0666667
   guardSpeed: 2.0666667
@@ -69,13 +74,23 @@ MonoBehaviour:
   decoyThrowRange: 6
   decoyDuration: 4
   decoyCooldown: 12
+  screenLightDuration: 5
+  screenLightCooldown: 15
   bossSpeed: 1.7
   bossHealth: 1100
   bossDamage: 14
-  bossAttackInterval: 2.8
-  bossWarningDuration: 0.9
+  bossAttackInterval: 1.2
+  bossWarningDuration: 0.6
+  bossDashInterval: 1.4
+  bossDashDuration: 0.32
+  bossDashSpeed: 11
+  finalBossAttackRate: 2
   bossBulletSpeed: 4
+  bossBulletScale: 1.35
   bossBulletCount: 12
+  bossSummonInterval: 8
+  bossSummonCount: 2
+  bossSummonLimit: 4
   floorEnemyHealth:
   - 1
   - 1.2
@@ -85,8 +100,8 @@ MonoBehaviour:
   - 1.1
   - 1.2
   floorBossHealth:
-  - 1
-  - 1.35
-  - 1.7
+  - 2
+  - 6.75
+  - 17
   floorEntryHealFraction: 0.3
   randomSeed: 713

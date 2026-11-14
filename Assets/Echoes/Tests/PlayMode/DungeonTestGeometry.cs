@@ -20,6 +20,24 @@ namespace Echoes.Tests
     {
         public static Vector2 World(Vector2Int tile) => new Vector2(tile.x, tile.y);
 
+        // Use a clear lane instead of assuming the room centre is free of the
+        // shared shop counter or native furniture.
+        public static Vector2 FindClearLane(RunController run, int length)
+        {
+            var bounds = run.Map.Rooms[0].Bounds;
+            for (int y = bounds.yMin + 3; y < bounds.yMax - 3; y++)
+                for (int x = bounds.xMin + 3; x + length < bounds.xMax - 2; x++)
+                {
+                    var start = new Vector2(x, y);
+                    var end = start + Vector2.right * length;
+                    if (run.Map.HasClearInteractionPath(start, end) &&
+                        run.Map.HasClearInteractionPath(start + Vector2.up, end + Vector2.up) &&
+                        run.Map.HasClearInteractionPath(start - Vector2.up, end - Vector2.up)) return start;
+                }
+            Assert.Fail("No clear starting-room lane of length " + length);
+            return Vector2.zero;
+        }
+
         public static DoorGeometry FindDoor(RunController run)
         {
             foreach (var door in run.Map.Doors)

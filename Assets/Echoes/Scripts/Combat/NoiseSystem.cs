@@ -10,12 +10,12 @@ namespace Echoes
         private RunController run;
         private AudioSource audioSource;
         private AudioClip bell, footstep, click, coin;
-        private AudioClip pickup, hit, wake, guardReady, ambience;
+        private AudioClip pickup, hit, wake, enemyStep, guardReady, ambience;
         private readonly AudioClip[] shots = new AudioClip[3];
         private readonly AudioSource[] shotVoices = new AudioSource[3];
         private readonly float[] shotLevels = new float[3];
         private readonly AudioSource[] worldVoices = new AudioSource[12];
-        private AudioSource pickupVoice, hurtVoice, bossVoice;
+        private AudioSource pickupVoice, hurtVoice, bossVoice, screenLightVoice;
         private int pickupFrame = -1, pickupIndex;
         private float nextAmbience, nextWake, duckUntil;
         private readonly Dictionary<EnemyController, bool> impacts = new Dictionary<EnemyController, bool>();
@@ -32,6 +32,7 @@ namespace Echoes
             pickup = Load("Pickup");
             hit = Load("Hit");
             wake = Load("Wake");
+            enemyStep = Load("EnemyStep");
             guardReady = Load("GuardReady");
             ambience = Load("Ambience");
             for (int i = 0; i < worldVoices.Length; i++) worldVoices[i] = Voice();
@@ -40,6 +41,8 @@ namespace Echoes
             hurtVoice = Voice();
             bossVoice = Voice();
             bossVoice.clip = Load("BossReady");
+            screenLightVoice = Voice();
+            screenLightVoice.clip = Load("ScreenLightLaugh");
             nextAmbience = Time.time + Random.Range(8f, 16f);
             bell = Tone("BellPlaceholder", 640, .2f);
             footstep = Tone("FootstepPlaceholder", 75, .045f);
@@ -54,6 +57,11 @@ namespace Echoes
             clip.SetData(samples, 0); return clip;
         }
         public void PlayUiPress() => audioSource.PlayOneShot(click, .36f);
+        public void PlayScreenLight()
+        {
+            screenLightVoice.volume = run.Config.screenLightVolume;
+            screenLightVoice.Play();
+        }
         public void PlayPurchase() => audioSource.PlayOneShot(coin, .65f);
         private void OnDestroy()
         {
@@ -104,11 +112,15 @@ namespace Echoes
 
         public void PlayWake(Vector2 position)
         {
-            if (Time.time >= nextWake && PlayWorld(wake, position, .055f))
+            if (Time.time >= nextWake && PlayWorld(wake, position, run.Config.wakeVolume))
                 nextWake = Time.time + .16f;
         }
 
         public void PlayGuardReady(Vector2 position) => PlayWorld(guardReady, position, run.Config.warningVolume);
+
+        // A moving crowd shares three voices so it cannot crowd out combat warnings.
+        public void PlayEnemyStep(Vector2 position) =>
+            PlayWorld(enemyStep, position, run.Config.enemyStepVolume, firstVoice: worldVoices.Length - 3);
 
         public void PlayBossReady(float duration)
         {
@@ -117,19 +129,28 @@ namespace Echoes
             bossVoice.Play();
         }
         public void StopBossReady() => bossVoice.Stop();
-        public void PauseBossReady(bool pause)
+        public void PauseActionAudio(bool pause)
         {
-            if (pause) bossVoice.Pause();
-            else bossVoice.UnPause();
+            if (pause)
+            {
+                bossVoice.Pause();
+                screenLightVoice.Pause();
+            }
+            else
+            {
+                bossVoice.UnPause();
+                screenLightVoice.UnPause();
+            }
         }
 
-        private bool PlayWorld(AudioClip clip, Vector2 position, float volume, float pitch = 1)
+        private bool PlayWorld(AudioClip clip, Vector2 position, float volume, float pitch = 1, int firstVoice = 0)
         {
             Vector2 offset = position - (Vector2)run.Player.transform.position;
             float attenuation = Mathf.Clamp01(1 - offset.magnitude / 22f);
             if (attenuation <= 0) return false;
-            foreach (var voice in worldVoices)
+            for (int i = firstVoice; i < worldVoices.Length; i++)
             {
+                var voice = worldVoices[i];
                 if (voice.isPlaying) continue;
                 voice.panStereo = Mathf.Clamp(offset.x / 8f, -.85f, .85f);
                 voice.volume = volume * attenuation;

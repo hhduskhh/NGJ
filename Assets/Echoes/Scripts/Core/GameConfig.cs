@@ -10,6 +10,13 @@ namespace Echoes
         [Min(.01f)] public float healthTrailSeconds = .4f;
         [Min(.01f)] public float floorRevealSeconds = .6f;
         [Min(.01f)] public float victoryRevealSeconds = 1.2f;
+        [Header("Minimap")]
+        [Min(80)] public float minimapSize = 200;
+        [Min(4)] public float minimapMarkerSize = 8;
+        [Range(1, 3)] public int minimapOutlineTiles = 1;
+        public Color minimapRoomOutline = new Color32(99, 226, 221, 255);
+        public Color minimapFrontierDoor = new Color32(255, 204, 84, 255);
+        public Color minimapExploredDoor = new Color32(194, 202, 205, 255);
         [Header("Player")]
         [Min(1)] public float playerHealth = 100;
         [Min(.1f)] public float moveSpeed = 6f;
@@ -35,6 +42,9 @@ namespace Echoes
         [Range(0, 1)] public float pickupVolume = .1f;
         [Range(0, 1)] public float hitVolume = .09f;
         [Range(0, 1)] public float warningVolume = .16f;
+        [Range(0, 1)] public float wakeVolume = .14f;
+        [Range(0, 1)] public float enemyStepVolume = .07f;
+        [Min(.1f)] public float enemyStepDistance = 2.4f;
         [Header("Sound — ignores walls in this prototype")]
         [Min(1)] public float gunNoiseRadius = 6;
         [Min(1)] public float pressureRadius = 5;
@@ -57,6 +67,8 @@ namespace Echoes
         [Tooltip("Tile stride used to collect enemy spawn points; lower values add more points.")]
         [Min(1)] public int spawnCellStride = 2;
         [Header("Room traps")]
+        [Min(0)] public int trapAnchorSearchRadius = 3;
+        [Min(0)] public int trapDoorClearance = 2;
         [Min(0)] public float spikeDamage = 10;
         [Min(.1f)] public float spikeRadius = .85f;
         [Min(.1f)] public float spikeRest = 2f;
@@ -82,6 +94,11 @@ namespace Echoes
         [Min(1)] public int experiencePerKill = 1;
         [Min(1)] public int firstLevelExperience = 4;
         [Min(1)] public int experienceStep = 3;
+        [Header("Full-screen light")]
+        [Min(.1f)] public float screenLightDuration = 5;
+        [Min(.1f)] public float screenLightCooldown = 15;
+        [Range(0, 1)] public float screenLightVolume = .16f;
+
         [Header("Bell decoy")]
         [Min(1)] public float decoyRadius = 9;
         [Min(1)] public float decoyThrowRange = 6;
@@ -91,14 +108,22 @@ namespace Echoes
         [Min(.1f)] public float bossSpeed = 1.7f;
         [Min(1)] public float bossHealth = 1100;
         [Min(1)] public float bossDamage = 14;
-        [Min(.1f)] public float bossAttackInterval = 2.8f;
-        [Min(.1f)] public float bossWarningDuration = .9f;
+        [Min(.1f)] public float bossAttackInterval = 1.2f;
+        [Min(.1f)] public float bossWarningDuration = .6f;
+        [Min(.1f)] public float bossDashInterval = 1.4f;
+        [Min(.1f)] public float bossDashDuration = .32f;
+        [Min(.1f)] public float bossDashSpeed = 11f;
+        [Min(1)] public float finalBossAttackRate = 2f;
         [Min(1)] public float bossBulletSpeed = 4;
+        [Min(1)] public float bossBulletScale = 1.35f;
         [Range(4, 24)] public int bossBulletCount = 12;
+        [Min(.1f)] public float bossSummonInterval = 8f;
+        [Min(1)] public int bossSummonCount = 2;
+        [Min(1)] public int bossSummonLimit = 4;
         [Header("Floor scaling")]
         public float[] floorEnemyHealth = { 1f, 1.2f, 1.4f };
         public float[] floorEnemyDamage = { 1f, 1.1f, 1.2f };
-        public float[] floorBossHealth = { 1f, 1.35f, 1.7f };
+        public float[] floorBossHealth = { 2f, 6.75f, 17f };
         [Range(0, 1)] public float floorEntryHealFraction = .3f;
         [Header("Shop and loot")]
         [Min(1)] public int goldPerKill = 6;

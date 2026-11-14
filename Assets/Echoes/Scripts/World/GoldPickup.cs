@@ -38,8 +38,14 @@ namespace Echoes
             visual.sortingOrder = GameArt.FootOrder(next.y) + 2;
             if ((target - next).sqrMagnitude > .01f) return;
 
-            run.Shop.Credit(amount);
             run.Noise.PlayPickup();
+            Collect();
+        }
+
+        public void Collect()
+        {
+            if (amount <= 0) return;
+            run.Shop.Credit(amount);
             amount = 0;
             Destroy(gameObject);
         }

@@ -32,6 +32,85 @@ namespace Echoes.Tests
             Physics2D.SyncTransforms();
         }
 
+        [UnityTest] public IEnumerator BossUsesFloorHealthAndAttackPatterns()
+        {
+            float[] expectedHealth = { 2200f, 7425f, 18700f };
+            for (int floor = 1; floor <= 3; floor++)
+            {
+                var boss = run.Boss;
+                var body = boss.GetComponent<Rigidbody2D>();
+                Assert.AreEqual(expectedHealth[floor - 1], boss.MaxHealth);
+                Vector2 player = run.Player.transform.position;
+                PlaceEnemy(boss, player + Vector2.left * 6);
+                run.ActivateBoss();
+                float started = Time.time;
+                float firstDash = -1, firstBarrage = -1;
+                bool windingUp = false;
+                while (Time.time - started < 2.1f)
+                {
+                    yield return null;
+                    if (firstDash < 0 && body.velocity.magnitude > run.Config.bossSpeed + 1f)
+                    {
+                        Assert.Greater(Vector2.Dot(body.velocity, player - body.position), 0);
+                        firstDash = Time.time - started;
+                    }
+                    if (windingUp && !boss.IsWindingUp && firstBarrage < 0)
+                    {
+                        var bullet = GameObject.Find("HostileProjectile");
+                        Assert.IsNotNull(bullet);
+                        Assert.AreEqual(Vector3.one * run.Config.bossBulletScale, bullet.transform.localScale);
+                        firstBarrage = Time.time - started;
+                    }
+                    windingUp = boss.IsWindingUp;
+                }
+                float rate = floor == 3 ? run.Config.finalBossAttackRate : 1f;
+                if (floor == 1) Assert.Less(firstDash, 0);
+                else Assert.AreEqual(run.Config.bossDashInterval / rate, firstDash, .1f);
+                if (floor == 2) Assert.Less(firstBarrage, 0);
+                else Assert.AreEqual((run.Config.bossAttackInterval + run.Config.bossWarningDuration) / rate,
+                    firstBarrage, .1f);
+                if (floor < 3)
+                {
+                    boss.TakeDamage(boss.Health);
+                    run.AdvanceFloor();
+                    yield return null;
+                }
+            }
+        }
+
+        [UnityTest] public IEnumerator BossSummonsAwakeMinionsUpToTheLimitOnEveryFloor()
+        {
+            run.Config.bossSummonInterval = .3f;
+            for (int floor = 1; floor <= 3; floor++)
+            {
+                int initialCount = run.Enemies.Count;
+                yield return new WaitForSeconds(.35f);
+                Assert.AreEqual(initialCount, run.Enemies.Count);
+                run.ActivateBoss();
+                yield return new WaitForSeconds(.35f);
+                var wave = run.Enemies.Skip(initialCount).ToArray();
+                Assert.AreEqual(run.Config.bossSummonCount, wave.Length);
+                foreach (var minion in wave)
+                {
+                    Assert.IsTrue(minion.Awake && !minion.IsBoss);
+                    Assert.AreSame(run.Map.RoomAtPosition(run.Boss.transform.position),
+                        run.Map.RoomAtPosition(minion.transform.position));
+                }
+                yield return new WaitForSeconds(.65f);
+                Assert.AreEqual(initialCount + run.Config.bossSummonLimit, run.Enemies.Count);
+                wave[0].TakeDamage(wave[0].Health);
+                yield return new WaitForSeconds(.35f);
+                Assert.AreEqual(run.Config.bossSummonLimit, run.Enemies.Skip(initialCount).Count(e => e.Alive));
+                run.Boss.TakeDamage(run.Boss.Health);
+                if (floor < 3)
+                {
+                    run.AdvanceFloor();
+                    yield return null;
+                    Assert.IsFalse(wave[1]);
+                }
+            }
+        }
+
         private Projectile Shot() => Object.FindObjectsOfType<Projectile>().SingleOrDefault();
 
         [UnityTest] public IEnumerator GuardAcquiresAtShortRangeTracksDuringWindupAndFiresStraight()
@@ -97,6 +176,10 @@ namespace Echoes.Tests
             yield return new WaitForSeconds(run.Config.guardWindup + .1f);
             Assert.IsFalse(guard.IsWindingUp);
             Assert.IsNull(Shot());
+            // Isolate wall interception from a second volley when the camera
+            // returns and the guard sees the player again.
+            guard.enabled = false;
+            guard.GetComponent<Rigidbody2D>().velocity = Vector2.zero;
             run.Player.PlaceAt(door.Around);
             camera.transform.position = (Vector3)(Vector2)door.Around + Vector3.back * 10;
             Vector2 start = door.Source, end = door.Around;
@@ -111,10 +194,18 @@ namespace Echoes.Tests
         {
             for (int floor = 1; floor <= 3; floor++)
             {
+                var roles = new[] { "walker", "guard", "boss" };
+                var sleepingSprites = roles.ToDictionary(role => role, role =>
+                    Resources.LoadAll<Sprite>($"Art/Floor{floor}/{role}").Single(s => s.name == role + "_00"));
                 foreach (var e in run.Enemies)
                 {
                     Assert.AreEqual(EnemyState.Sleeping, e.State);
-                    Assert.AreEqual(e.IsBoss ? "boss" : e.IsGuard ? "guard" : "walker", e.GetComponent<CharacterArt>().Species);
+                    string role = e.IsBoss ? "boss" : e.IsGuard ? "guard" : "walker";
+                    Assert.AreEqual(role, e.GetComponent<CharacterArt>().Species);
+                    var renderer = e.GetComponent<SpriteRenderer>();
+                    Assert.AreSame(sleepingSprites[role], renderer.sprite);
+                    e.GetComponent<ArtBinding>().Refresh();
+                    Assert.AreSame(sleepingSprites[role], renderer.sprite);
                 }
                 if (floor < 3)
                 {

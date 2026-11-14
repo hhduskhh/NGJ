@@ -93,7 +93,15 @@ namespace Echoes.Tests
             Vector2 target = DungeonTestGeometry.World(geometry.Through) +
                 (geometry.Vertical ? Vector2.right * 3 : Vector2.up * 3);
             enemy.Hear(target);
-            yield return new WaitForSeconds(6f);
+            // A slow rendered frame contains several physics steps. Movement
+            // must still reach each waypoint without oscillating across it.
+            float previousStep = Time.captureDeltaTime;
+            try
+            {
+                Time.captureDeltaTime = .12f;
+                yield return new WaitForSeconds(6f);
+            }
+            finally { Time.captureDeltaTime = previousStep; }
             if (geometry.Vertical)
                 Assert.Greater(enemy.transform.position.x, geometry.Door.Opening.x + 1,
                     "Awakened enemy crosses the open room doorway");

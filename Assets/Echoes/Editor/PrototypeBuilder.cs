@@ -12,6 +12,7 @@ namespace Echoes.Editor
     public static class PrototypeBuilder
     {
         public const string ScenePath = "Assets/Echoes/Scenes/Prototype.unity";
+        public const string OpeningPath = "Assets/Echoes/Scenes/Opening.unity";
         public const string ConfigPath = "Assets/Echoes/Settings/DefaultGameConfig.asset";
 
         [MenuItem("Echoes/Create or Update Prototype Scene")]
@@ -74,7 +75,7 @@ namespace Echoes.Editor
             PlayerSettings.runInBackground = true;
             Time.fixedDeltaTime = 1f / 60;
             EditorSceneManager.SaveScene(scene, ScenePath);
-            EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };
+            EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(OpeningPath, true), new EditorBuildSettingsScene(ScenePath, true) };
             AssetDatabase.SaveAssets();
             Debug.Log("ECHOES_SETUP_OK: " + ScenePath);
         }
@@ -123,7 +124,7 @@ namespace Echoes.Editor
             Directory.CreateDirectory("Builds/Windows");
             var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
             {
-                scenes = new[] { ScenePath },
+                scenes = new[] { OpeningPath, ScenePath },
                 locationPathName = "Builds/Windows/EchoesBelow.exe",
                 target = BuildTarget.StandaloneWindows64,
                 options = BuildOptions.Development

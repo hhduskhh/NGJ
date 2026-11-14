@@ -114,7 +114,10 @@ namespace Echoes.Tests
                 Assert.IsNull(GameObject.Find("ShopPlaceholder"));
                 Assert.IsNull(GameObject.Find("ShopAwning"));
                 Assert.IsNull(GameObject.Find("ShopSign"));
-                var spec = StartStall.Layout(run.Map.Rooms[0]);
+                var counter = Vector2Int.RoundToInt(run.Shop.Position);
+                var room = run.Map.RoomAtPosition(counter);
+                Assert.AreEqual(floor == 1 ? RoomRole.Middle : RoomRole.Start, room.Role);
+                var spec = StartStall.Layout(room, counter + new Vector2Int(-2, 1));
                 spec.MeasureBase();
                 Assert.AreEqual(spec.CollisionBounds.size, stall.GetComponent<BoxCollider2D>().size);
                 foreach (var tile in spec.NavigationBounds.allPositionsWithin)
@@ -125,6 +128,8 @@ namespace Echoes.Tests
                 foreach (var door in run.Map.Rooms[0].DoorOpenings)
                     Assert.Greater(run.Map.FindPath(run.Map.StartPosition, run.Map.NearestFloor(door.center)).Count, 0, "Main routes and doorways remain connected");
                 Assert.IsFalse(run.Shop.InRange, "Approach the shop from spawn");
+                run.Player.PlaceAt(run.Shop.Position + Vector2.down);
+                yield return null;
                 float elapsed = run.Elapsed;
                 int frame = Time.frameCount;
                 yield return Walk(run, run.Shop.Position);

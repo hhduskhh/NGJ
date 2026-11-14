@@ -4,11 +4,12 @@ using UnityEngine.SceneManagement;
 
 namespace Echoes
 {
-    public enum RunState { Playing, Upgrade, Paused, Shop, FloorCleared, Won, Lost }
+    public enum RunState { Playing, Upgrade, Paused, Shop, FloorCleared, Won, Lost, Backpack }
 
     public sealed class RunController : MonoBehaviour
     {
         [SerializeField] private GameConfig config;
+        [SerializeField, Range(0f, 1f)] private float musicVolume = 0.12f;
         public GameConfig Config => config;
         public DungeonMap Map { get; private set; }
         public PlayerController Player { get; private set; }
@@ -18,6 +19,7 @@ namespace Echoes
         public DungeonVisibility Visibility { get; private set; }
         public EnemyController Boss { get; private set; }
         public readonly List<EnemyController> Enemies = new List<EnemyController>();
+        private readonly List<EnemyController> bossMinions = new List<EnemyController>();
         public RunState State { get; private set; }
         public int Floor { get; private set; } = 1;
         public string FloorTitle { get { return FloorTheme.Title(Floor); } }
@@ -40,11 +42,16 @@ namespace Echoes
         public List<UpgradeDefinition> Choices { get; private set; }
         public System.Random Random { get; private set; }
         private int pendingUpgradeCost;
+        private static int? restartSeed;
+        private RunState backpackReturnState;
 
         private void Start()
         {
             Time.timeScale = 1;
             AudioListener.volume = 1;
+            config = Instantiate(config);
+            if (restartSeed.HasValue) config.randomSeed = restartSeed.Value;
+            restartSeed = null;
             Random = new System.Random(config.randomSeed);
             Floor = 1;
             Map = gameObject.AddComponent<DungeonMap>();
@@ -61,11 +68,17 @@ namespace Echoes
             Visibility.Initialize(this);
             Hud = gameObject.AddComponent<GameHud>();
             Hud.Initialize(this);
+            var explorationMusic = gameObject.AddComponent<AudioSource>();
+            explorationMusic.playOnAwake = false;
+            explorationMusic.clip = Resources.Load<AudioClip>("EmptyCity");
+            explorationMusic.loop = true;
+            explorationMusic.volume = musicVolume;
+            explorationMusic.Play();
         }
 
         private void SpawnFloor()
         {
-            // Spawn once. Sound, upgrades and the boss never create additional enemies.
+            // Initial room population. The activated boss summons reinforcements separately.
             var spawnAreas = new List<DungeonMap.SpawnArea>();
             for (int room = 1; room < Map.Rooms.Count - 1; room++)
                 spawnAreas.AddRange(Map.SpawnAreas(room));
@@ -124,6 +137,39 @@ namespace Echoes
             return values[Mathf.Clamp(Floor - 1, 0, values.Length - 1)];
         }
 
+        internal void SummonBossMinions()
+        {
+            int alive = 0;
+            for (int i = bossMinions.Count - 1; i >= 0; i--)
+            {
+                var minion = bossMinions[i];
+                if (minion.Alive) alive++;
+                else if (!minion.gameObject.activeSelf)
+                {
+                    Enemies.Remove(minion);
+                    bossMinions.RemoveAt(i);
+                    Destroy(minion.gameObject);
+                }
+            }
+            int remaining = Mathf.Min(config.bossSummonCount, config.bossSummonLimit - alive);
+            Vector2 origin = Boss.transform.position;
+            var room = Map.RoomAtPosition(origin);
+            if (remaining <= 0 || room == null) return;
+            var cells = Map.SpawnCells(room.Index);
+            cells.Sort((a, b) => (a - origin).sqrMagnitude.CompareTo((b - origin).sqrMagnitude));
+            Vector2 player = Player.transform.position;
+            foreach (var cell in cells)
+            {
+                if ((cell - player).sqrMagnitude < 9f ||
+                    Enemies.Exists(e => e.Alive && ((Vector2)e.transform.position - cell).sqrMagnitude < 2.25f)) continue;
+                var minion = EnemyController.Create(this, cell, false);
+                Enemies.Add(minion);
+                bossMinions.Add(minion);
+                minion.Hear(player);
+                if (--remaining == 0) break;
+            }
+        }
+
         private void Update()
         {
             if (Input.GetKeyDown(KeyCode.M))
@@ -136,6 +182,13 @@ namespace Echoes
                 Hud.ReadResultInput();
                 return;
             }
+            if (Input.GetKeyDown(KeyCode.Tab))
+            {
+                if (State == RunState.Backpack) CloseBackpack();
+                else OpenBackpack();
+                return;
+            }
+            if (State == RunState.Backpack && Input.GetKeyDown(KeyCode.Escape)) { CloseBackpack(); return; }
             if (State == RunState.Shop && Input.GetKeyDown(KeyCode.Escape)) { Shop.Close(); return; }
             if (Input.GetKeyDown(KeyCode.Escape) &&
                 (State == RunState.Playing || State == RunState.Paused))
@@ -170,6 +223,7 @@ namespace Echoes
             Kills++;
             if (enemy.IsBoss)
             {
+                foreach (var gold in FindObjectsOfType<GoldPickup>()) gold.Collect();
                 SetState(Floor >= FloorTheme.Count ? RunState.Won : RunState.FloorCleared);
                 return;
             }
@@ -184,6 +238,7 @@ namespace Echoes
         {
             if (State != RunState.FloorCleared || Floor >= FloorTheme.Count) return;
             Floor++;
+            BossActivated = false;
             ClearFloorObjects();
             Map.Generate(this, Floor - 1);
             Player.PlaceAt(Map.StartPosition);
@@ -192,7 +247,6 @@ namespace Echoes
             SpawnFloor();
             Visibility.Rebuild();
             Hud.RebuildMinimap();
-            BossActivated = false;
             SetState(RunState.Playing);
             Hud.Notify("进入第 " + Floor + " 层 · " + FloorTheme.Title(Floor), 4);
         }
@@ -201,6 +255,7 @@ namespace Echoes
         {
             foreach (var enemy in Enemies) if (enemy) Destroy(enemy.gameObject);
             Enemies.Clear();
+            bossMinions.Clear();
             Boss = null;
             foreach (var projectile in FindObjectsOfType<Projectile>())
                 if (projectile) Destroy(projectile.gameObject);
@@ -219,7 +274,7 @@ namespace Echoes
         {
             if (State != RunState.Playing || Experience < RequiredExperience) return;
             pendingUpgradeCost = RequiredExperience;
-            Choices = UpgradeDefinition.Roll(Random);
+            Choices = UpgradeDefinition.Roll(Random, Player);
             SetState(RunState.Upgrade);
         }
 
@@ -234,21 +289,40 @@ namespace Echoes
             TryLevelUp(); // Preserve overflow and queue additional levels without discarding XP.
         }
 
+        public void OpenBackpack()
+        {
+            if (State != RunState.Playing && State != RunState.Shop && State != RunState.Paused && State != RunState.Upgrade) return;
+            backpackReturnState = State;
+            SetState(RunState.Backpack);
+        }
+
+        public void CloseBackpack()
+        {
+            if (State == RunState.Backpack) SetState(backpackReturnState);
+        }
+
         public void SetState(RunState state)
         {
             if (State == RunState.Upgrade && state == RunState.Paused) return;
             State = state;
-            Noise?.PauseBossReady(state != RunState.Playing);
+            Noise?.PauseActionAudio(state != RunState.Playing);
             Time.timeScale = state == RunState.Playing ? 1 : 0;
             Hud?.RefreshModal();
         }
 
         public void Restart()
         {
+            var next = System.Guid.NewGuid().GetHashCode() & int.MaxValue;
+            restartSeed = next == config.randomSeed ? next ^ 1 : next;
             Time.timeScale = 1;
             SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
         }
 
-        private void OnDestroy() { Time.timeScale = 1; AudioListener.volume = 1; }
+        private void OnDestroy()
+        {
+            if (Random != null) Destroy(config);
+            Time.timeScale = 1;
+            AudioListener.volume = 1;
+        }
     }
 }

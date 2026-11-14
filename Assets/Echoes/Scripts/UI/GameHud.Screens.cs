@@ -8,7 +8,7 @@ namespace Echoes
         {
             RestoreCombatHud();
             ResetScreenFeedback();
-            if (run.State != RunState.Paused) settingsOpen = false;
+            if (run.State != RunState.Paused && run.State != RunState.Backpack) settingsOpen = false;
             if (modalBackdrop)
             {
                 modalBackdrop.gameObject.SetActive(false);
@@ -21,6 +21,11 @@ namespace Echoes
             modalBackdrop.anchorMax = Vector2.one;
             modalBackdrop.offsetMin = modalBackdrop.offsetMax = Vector2.zero;
             modalBackdrop.GetComponent<UnityEngine.UI.Image>().raycastTarget = true;
+            if (run.State == RunState.Backpack)
+            {
+                DrawBackpack();
+                return;
+            }
             if (run.State == RunState.Shop)
             {
                 modal = modalBackdrop;
@@ -62,7 +67,7 @@ namespace Echoes
         {
             Heading("暂停探索", FloorName);
             Label(modal, "操作", new Vector2(40, -124), new Vector2(290, 34), 23, Brass);
-            Label(modal, "WASD     移动\n左键         射击并自动瞄准\nQ              向鼠标方向投诱饵\nE              商店、祭坛或下潜\nM             开关声音", new Vector2(40, -172), new Vector2(365, 204), 21, Paper);
+            Label(modal, "WASD     移动\n左键         射击并自动瞄准\nQ              向鼠标方向投诱饵\nF              全屏点亮\nE              商店、祭坛或下潜\nM             开关声音", new Vector2(40, -172), new Vector2(365, 204), 21, Paper);
             Label(modal, run.Map.Rooms[run.Map.CurrentRoom].Name, new Vector2(446, -124), new Vector2(365, 34), 23, Brass);
             Label(modal, $"枪声半径 {run.Player.NoiseRadius:0.#}    武器 {run.Player.Weapons.Slots.Count}/6\n青色细环内的敌人提供围攻加成\n伤害加成上限 +{run.Player.PressureCap * run.Player.PressureBonus * 100:0}%\n\n金环为枪声，青色声波为诱饵\n灰线沉睡，金点警戒，红线追击", new Vector2(446, -172), new Vector2(380, 200), 19, muted);
             Button(modal, "继续探索  [Esc]", new Vector2(-284, -385), new Vector2(212, 58), () => run.SetState(RunState.Playing));
@@ -71,6 +76,7 @@ namespace Echoes
                 settingsOpen = true;
                 RefreshModal();
             }).name = "OpenSettings";
+            Button(modal, "背包 [Tab]", new Vector2(98, -385), new Vector2(194, 58), run.OpenBackpack).name = "PauseBackpack";
         }
 
         private void DrawSettings()
