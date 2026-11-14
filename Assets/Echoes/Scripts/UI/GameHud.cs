@@ -110,8 +110,8 @@ namespace Echoes
             if (drawnRoom != run.Map.CurrentRoom) DrawMinimap();
             Vector2 position = run.Player.transform.position;
             Vector2 size = mapImage.rectTransform.rect.size;
-            playerMarker.anchoredPosition = new Vector2((position.x + .5f) * size.x / DungeonMap.Width,
-                (position.y + .5f) * size.y / DungeonMap.Height);
+            playerMarker.anchoredPosition = new Vector2((position.x + .5f) * size.x / run.Map.Width,
+                (position.y + .5f) * size.y / run.Map.Height);
             bool showBoss = run.BossActivated && run.Boss && run.Boss.Alive;
             bossBar.transform.parent.gameObject.SetActive(showBoss);
             bossText.gameObject.SetActive(showBoss);
@@ -140,9 +140,6 @@ namespace Echoes
                 rect.sizeDelta = Vector2.one * run.Config.minimapSize;
                 rect.anchoredPosition = new Vector2(12, -28);
                 mapImage.raycastTarget = false;
-                mapTexture = new Texture2D(DungeonMap.Width, DungeonMap.Height, TextureFormat.RGBA32, false)
-                    { filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp };
-                mapImage.texture = mapTexture;
                 // A square rotated 45 degrees has a diagonal sqrt(2) times its side.
                 float side = run.Config.minimapMarkerSize / Mathf.Sqrt(2);
                 playerMarker = Panel("PlayerMarker", rect, Vector2.zero, Vector2.one * side, Iron, Vector2.zero);
@@ -158,7 +155,15 @@ namespace Echoes
         {
             var map = run.Map;
             drawnRoom = map.CurrentRoom;
-            var pixels = new Color32[DungeonMap.Width * DungeonMap.Height];
+            if (!mapImage) return;
+            if (!mapTexture || mapTexture.width != map.Width || mapTexture.height != map.Height)
+            {
+                if (mapTexture) Destroy(mapTexture);
+                mapTexture = new Texture2D(map.Width, map.Height, TextureFormat.RGBA32, false)
+                    { filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp };
+                mapImage.texture = mapTexture;
+            }
+            var pixels = new Color32[map.Width * map.Height];
             foreach (var room in map.Rooms)
             {
                 if (!room.Visited) continue;
@@ -166,13 +171,13 @@ namespace Echoes
                     new Color(.35f, .43f, .50f);
                 foreach (var cell in room.Cells)
                 {
-                    int left = cell.x * DungeonMap.CellWidth, bottom = DungeonMap.CellOriginY(cell.y);
+                    int left = cell.x * DungeonMap.CellWidth, bottom = map.CellOriginY(cell.y);
                     for (int y = bottom; y < bottom + DungeonMap.CellHeight; y++)
                         for (int x = left; x < left + DungeonMap.CellWidth; x++)
                         {
                             var tile = new Vector2Int(x, y);
                             if (!map.IsFloorTile(tile)) continue;
-                            pixels[y * DungeonMap.Width + x] = room.Index == drawnRoom && IsMinimapEdge(map, tile)
+                            pixels[y * map.Width + x] = room.Index == drawnRoom && IsMinimapEdge(map, tile)
                                 ? (Color32)run.Config.minimapRoomOutline : color;
                         }
                 }
@@ -184,7 +189,7 @@ namespace Echoes
                 bool frontier = door.A.Visited != door.B.Visited;
                 Color32 ink = frontier ? run.Config.minimapFrontierDoor : run.Config.minimapExploredDoor;
                 foreach (var tile in opening.allPositionsWithin)
-                    pixels[tile.y * DungeonMap.Width + tile.x] = ink;
+                    pixels[tile.y * map.Width + tile.x] = ink;
                 if (!frontier) continue;
 
                 // Probe across this doorway; an L-shaped room's centre can lie off-axis.
@@ -198,7 +203,7 @@ namespace Echoes
                     for (int offset = -halfWidth; offset <= halfWidth; offset++)
                     {
                         var tile = center + normal * (3 + row) + tangent * offset;
-                        pixels[tile.y * DungeonMap.Width + tile.x] = ink;
+                        pixels[tile.y * map.Width + tile.x] = ink;
                     }
                 }
             }

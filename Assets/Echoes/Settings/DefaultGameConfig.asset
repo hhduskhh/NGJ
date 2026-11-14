@@ -35,9 +35,26 @@ MonoBehaviour:
   generationAttempts: 100
   maxFurniturePerCell: 5
   extraDoorChance: 0.15
-  enemiesPerCell: 7
-  minEnemiesPerRoom: 6
-  maxEnemiesPerRoom: 32
+  floorGridSizes:
+  - 3
+  - 4
+  - 5
+  spawnCellDraws:
+  - 24
+  - 32
+  - 40
+  spawnCellWeights:
+  - 1
+  - 1
+  - 1
+  spawnAmountMin:
+  - 1
+  - 2
+  - 3
+  spawnAmountMax:
+  - 3
+  - 4
+  - 5
   spawnCellStride: 2
   trapAnchorSearchRadius: 3
   trapDoorClearance: 2

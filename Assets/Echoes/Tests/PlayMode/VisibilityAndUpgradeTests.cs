@@ -40,7 +40,7 @@ namespace Echoes.Tests
             yield return null;
             var run = Object.FindObjectOfType<RunController>();
             foreach (var enemy in run.Enemies)
-                enemy.GetComponent<Rigidbody2D>().position = run.Map.Rooms[4].Center;
+                enemy.GetComponent<Rigidbody2D>().position = run.Map.Rooms[1].Center;
         }
 
         [UnityTest]
@@ -107,7 +107,7 @@ namespace Echoes.Tests
             Assert.IsNull(run.Player.AimTarget, "A skill can explicitly use its supplied direction");
             Assert.Less(run.Player.AimDirection.y, -.99f);
             target.TakeDamage(99999);
-            farther.GetComponent<Rigidbody2D>().position = run.Map.Rooms[4].Center;
+            farther.GetComponent<Rigidbody2D>().position = run.Map.Rooms[1].Center;
             yield return new WaitForSeconds(run.Player.Weapons.Interval(run.Player.Weapons.Slots[0]));
             Assert.IsTrue(run.Player.TryFire(player + Vector2.left * 5));
             Assert.IsNull(run.Player.AimTarget, "No visible target falls back to the mouse direction");

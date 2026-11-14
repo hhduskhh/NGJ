@@ -7,7 +7,7 @@ namespace Echoes
     public enum RoomRole { Start, Middle, Boss }
     public enum RoomShape { Single, Line2, Line3, Square2, L }
 
-    // Pure layout data: a 5x5 cell grid fully tiled by the five requested room shapes.
+    // Pure layout data: a per-floor cell grid fully tiled by the five requested room shapes.
     // The rasterizer in DungeonMap turns this into world tiles, walls and doors.
     public sealed class PlannedRoom
     {
@@ -38,8 +38,11 @@ namespace Echoes
 
     public sealed class DungeonPlan
     {
-        public const int GridSize = 5;
-        public static readonly Vector2Int StartCell = new Vector2Int(2, 0);
+        public const int MinGridSize = 3;
+        public const int MaxGridSize = 5;
+
+        public int GridSize { get; private set; }
+        public Vector2Int StartCell { get; private set; }
 
         public PlannedRoom[,] CellRooms { get; private set; }
         public List<PlannedRoom> Rooms { get; private set; }
@@ -81,22 +84,25 @@ namespace Echoes
 
         private static readonly ShapeDef[] Shapes = BuildShapes();
 
-        public DungeonPlan()
+        private DungeonPlan(int gridSize)
         {
+            GridSize = Mathf.Clamp(gridSize, MinGridSize, MaxGridSize);
+            StartCell = new Vector2Int(GridSize / 2, 0);
             CellRooms = new PlannedRoom[GridSize, GridSize];
             Rooms = new List<PlannedRoom>();
             Doors = new List<PlannedDoor>();
         }
 
-        public static DungeonPlan Generate(int seed, int maxAttempts = 100, float extraDoorChance = .15f)
+        public static DungeonPlan Generate(int seed, int gridSize,
+            int maxAttempts = 100, float extraDoorChance = .15f)
         {
             for (int attempt = 0; attempt < Math.Max(1, maxAttempts); attempt++)
             {
-                var plan = new DungeonPlan();
+                var plan = new DungeonPlan(gridSize);
                 var random = new System.Random(seed + attempt * 7919);
                 if (plan.TryBuild(random, extraDoorChance)) return plan;
             }
-            return BuildFallback(seed);
+            return BuildFallback(seed, gridSize);
         }
 
         private bool TryBuild(System.Random random, float extraDoorChance)
@@ -172,7 +178,7 @@ namespace Echoes
             return false;
         }
 
-        private static bool Fits(PlannedRoom[,] occupancy, Vector2Int[] cells, Vector2Int origin)
+        private bool Fits(PlannedRoom[,] occupancy, Vector2Int[] cells, Vector2Int origin)
         {
             for (int i = 0; i < cells.Length; i++)
             {
@@ -420,83 +426,29 @@ namespace Echoes
             return true;
         }
 
-        // A deterministic tiling used only if every randomized attempt fails the quotas.
-        private static DungeonPlan BuildFallback(int seed)
+        // A deterministic all-single-room tiling used only if every randomized attempt fails.
+        private static DungeonPlan BuildFallback(int seed, int gridSize)
         {
-            var plan = new DungeonPlan();
-            var occupancy = new PlannedRoom[GridSize, GridSize];
-            var start = CreateRoom(RoomRole.Start, RoomShape.Single, 0, new[] { StartCell });
-            var bossCell = new Vector2Int(2, 4);
+            var plan = new DungeonPlan(gridSize);
+            var occupancy = new PlannedRoom[plan.GridSize, plan.GridSize];
+            var start = CreateRoom(RoomRole.Start, RoomShape.Single, 0, new[] { plan.StartCell });
+            var bossCell = new Vector2Int(plan.GridSize / 2, plan.GridSize - 1);
             var boss = CreateRoom(RoomRole.Boss, RoomShape.Single, 0, new[] { bossCell });
             var middles = new List<PlannedRoom>();
-            AddFallbackRoom(occupancy, middles, RoomShape.Square2, 0, new[]
-            {
-                new Vector2Int(0, 0), new Vector2Int(1, 0),
-                new Vector2Int(0, 1), new Vector2Int(1, 1)
-            });
-            AddFallbackRoom(occupancy, middles, RoomShape.Square2, 0, new[]
-            {
-                new Vector2Int(3, 0), new Vector2Int(4, 0),
-                new Vector2Int(3, 1), new Vector2Int(4, 1)
-            });
-            AddFallbackRoom(occupancy, middles, RoomShape.Line3, 1, new[]
-                { new Vector2Int(2, 1), new Vector2Int(2, 2), new Vector2Int(2, 3) });
-            AddFallbackRoom(occupancy, middles, RoomShape.Square2, 0, new[]
-            {
-                new Vector2Int(0, 2), new Vector2Int(1, 2),
-                new Vector2Int(0, 3), new Vector2Int(1, 3)
-            });
-            AddFallbackRoom(occupancy, middles, RoomShape.Square2, 0, new[]
-            {
-                new Vector2Int(3, 2), new Vector2Int(4, 2),
-                new Vector2Int(3, 3), new Vector2Int(4, 3)
-            });
-            AddFallbackRoom(occupancy, middles, RoomShape.Line2, 0, new[]
-                { new Vector2Int(0, 4), new Vector2Int(1, 4) });
-            AddFallbackRoom(occupancy, middles, RoomShape.Line2, 0, new[]
-                { new Vector2Int(3, 4), new Vector2Int(4, 4) });
-            occupancy[StartCell.x, StartCell.y] = start;
+            for (int row = 0; row < plan.GridSize; row++)
+                for (int col = 0; col < plan.GridSize; col++)
+                {
+                    var cell = new Vector2Int(col, row);
+                    if (cell == plan.StartCell || cell == bossCell) continue;
+                    var room = CreateRoom(RoomRole.Middle, RoomShape.Single, 0, new[] { cell });
+                    occupancy[col, row] = room;
+                    middles.Add(room);
+                }
+            occupancy[plan.StartCell.x, plan.StartCell.y] = start;
             occupancy[bossCell.x, bossCell.y] = boss;
             if (!plan.Assemble(occupancy, start, boss, middles)) return plan;
-            var random = new System.Random(seed);
-            if (plan.BuildDoors(random, 0)) { plan.Valid = true; return plan; }
-
-            plan.Doors.Clear();
-            for (int i = 0; i < plan.Rooms.Count; i++) plan.Rooms[i].Doors.Clear();
-            AddManualDoor(plan, new Vector2Int(2, 0), new Vector2Int(2, 1));
-            AddManualDoor(plan, new Vector2Int(2, 4), new Vector2Int(2, 3));
-            AddManualDoor(plan, new Vector2Int(1, 2), new Vector2Int(2, 2));
-            AddManualDoor(plan, new Vector2Int(3, 2), new Vector2Int(2, 2));
-            AddManualDoor(plan, new Vector2Int(0, 1), new Vector2Int(0, 2));
-            AddManualDoor(plan, new Vector2Int(3, 1), new Vector2Int(3, 2));
-            AddManualDoor(plan, new Vector2Int(1, 3), new Vector2Int(1, 4));
-            AddManualDoor(plan, new Vector2Int(3, 3), new Vector2Int(3, 4));
-            plan.Valid = true;
+            if (plan.BuildDoors(new System.Random(seed), 0)) plan.Valid = true;
             return plan;
-        }
-
-        private static void AddFallbackRoom(PlannedRoom[,] occupancy, List<PlannedRoom> middles,
-            RoomShape shape, int rotation, Vector2Int[] cells)
-        {
-            var room = CreateRoom(RoomRole.Middle, shape, rotation, cells);
-            for (int i = 0; i < cells.Length; i++) occupancy[cells[i].x, cells[i].y] = room;
-            middles.Add(room);
-        }
-
-        private static void AddManualDoor(DungeonPlan plan, Vector2Int cellA, Vector2Int cellB)
-        {
-            var roomA = plan.CellRooms[cellA.x, cellA.y];
-            var roomB = plan.CellRooms[cellB.x, cellB.y];
-            if (roomA == null || roomB == null || roomA == roomB) return;
-            if (roomA.Index > roomB.Index)
-            {
-                var room = roomA; roomA = roomB; roomB = room;
-                var cell = cellA; cellA = cellB; cellB = cell;
-            }
-            var door = new PlannedDoor { A = roomA, B = roomB, CellA = cellA, CellB = cellB };
-            roomA.Doors.Add(door);
-            roomB.Doors.Add(door);
-            plan.Doors.Add(door);
         }
     }
 }

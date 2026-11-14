@@ -101,7 +101,7 @@ namespace Echoes
                 foreach (var cell in room.Cells)
                 {
                     int x0 = cell.x * DungeonMap.CellWidth;
-                    int y0 = DungeonMap.CellOriginY(cell.y);
+                    int y0 = room.CellOriginY(cell.y);
                     var cellBounds = new RectInt(x0, y0, DungeonMap.CellWidth, DungeonMap.CellHeight);
                     // The room shape supplies the outer plan; each cell gets a
                     // different station vignette with four broad bypasses.
@@ -120,7 +120,7 @@ namespace Echoes
             foreach (var cell in room.Cells)
             {
                 int x0 = cell.x * DungeonMap.CellWidth;
-                int y0 = DungeonMap.CellOriginY(cell.y);
+                int y0 = room.CellOriginY(cell.y);
                 // Upright wall sconces mount on north-facing walls only.
                 // No sideways/flipped lighting fixtures on other walls.
                 foreach (int dx in new[] { 6, 13, 23, 30 })
@@ -168,7 +168,7 @@ namespace Echoes
                 {
                     var cell = room.Cells[i];
                     var area = new RectInt(cell.x * DungeonMap.CellWidth,
-                        DungeonMap.CellOriginY(cell.y), DungeonMap.CellWidth, DungeonMap.CellHeight);
+                        room.CellOriginY(cell.y), DungeonMap.CellWidth, DungeonMap.CellHeight);
                     if (i == focus) Native(result, "f2_boiler", area, .50f, .50f);
                     else if (vertical)
                     {
@@ -190,7 +190,7 @@ namespace Echoes
             }
             foreach (var cell in room.Cells)
             {
-                int x0 = cell.x * DungeonMap.CellWidth, y0 = DungeonMap.CellOriginY(cell.y);
+                int x0 = cell.x * DungeonMap.CellWidth, y0 = room.CellOriginY(cell.y);
                 foreach (int dx in new[] { 6, 13, 23, 30 })
                     result.Add(new RoomPropSpec { Kind = "room_f2_wall_pipes", X = x0 + dx,
                         Y = y0 + DungeonMap.CellHeight - 1, Layer = RoomPropLayer.WallObject });
@@ -460,7 +460,7 @@ namespace Echoes
             var shrine = cells[random.Next(cells.Count)];
             foreach (var cell in cells)
             {
-                var center = CellCenter(cell);
+                var center = CellCenter(room, cell);
                 if (cell == shrine) PlaceAtTile(result, hero, center.x, center.y, 8, 8, 4f);
                 else PlaceAtTile(result, crate, center.x, center.y, 5, 5, 2.5f);
                 for (int sx = -1; sx <= 1; sx += 2)
@@ -472,16 +472,16 @@ namespace Echoes
             }
             // One asymmetric collapsed cluster on a valid cell.
             var extra = cells[random.Next(cells.Count)];
-            var extraCenter = CellCenter(extra);
+            var extraCenter = CellCenter(room, extra);
             PlaceAtTile(result, crate, extraCenter.x + 6, extraCenter.y - 6, 5, 5, 2.5f);
             var extra2 = cells[random.Next(cells.Count)];
-            var extra2Center = CellCenter(extra2);
+            var extra2Center = CellCenter(room, extra2);
             PlaceAtTile(result, crate, extra2Center.x - 7, extra2Center.y + 7, 5, 5, 2.5f);
         }
 
-        private static Vector2Int CellCenter(Vector2Int cell) => new Vector2Int(
+        private static Vector2Int CellCenter(DungeonMap.Room room, Vector2Int cell) => new Vector2Int(
             cell.x * DungeonMap.CellWidth + DungeonMap.CellWidth / 2,
-            DungeonMap.CellOriginY(cell.y) + DungeonMap.CellHeight / 2);
+            room.CellOriginY(cell.y) + DungeonMap.CellHeight / 2);
 
         private static void PlaceAtTile(List<RoomPropSpec> result, string kind,
             int cx, int cy, int w, int h, float scale)
@@ -533,7 +533,7 @@ namespace Echoes
             foreach (var cell in room.Cells)
             {
                 int x0 = cell.x * DungeonMap.CellWidth;
-                int y0 = DungeonMap.CellOriginY(cell.y);
+                int y0 = room.CellOriginY(cell.y);
                 int top = y0 + DungeonMap.CellHeight - 1;
                 int right = x0 + DungeonMap.CellWidth - 1;
                 AddWall(result, pool, x0 + 5, top, random);
@@ -567,7 +567,7 @@ namespace Echoes
             {
                 var cell = room.Cells[random.Next(room.Cells.Count)];
                 int x0 = cell.x * DungeonMap.CellWidth;
-                int y0 = DungeonMap.CellOriginY(cell.y);
+                int y0 = room.CellOriginY(cell.y);
                 result.Add(new RoomPropSpec
                 {
                     Kind = random.Next(3) == 0 ? "floorDetail" : "floorAlt",
@@ -588,7 +588,7 @@ namespace Echoes
             {
                 var cell = room.Cells[random.Next(room.Cells.Count)];
                 int x0 = cell.x * DungeonMap.CellWidth;
-                int y0 = DungeonMap.CellOriginY(cell.y);
+                int y0 = room.CellOriginY(cell.y);
                 result.Add(new RoomPropSpec
                 {
                     Kind = pool[random.Next(pool.Length)],

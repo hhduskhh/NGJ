@@ -57,9 +57,9 @@ namespace Echoes.Tests
             var throughTiles = new List<Vector2Int>();
             var aroundTiles = new List<Vector2Int>();
             int minX = Mathf.Max(0, opening.x - 7);
-            int maxX = Mathf.Min(DungeonMap.Width - 1, opening.xMax + 6);
+            int maxX = Mathf.Min(run.Map.Width - 1, opening.xMax + 6);
             int minY = Mathf.Max(0, opening.y - 7);
-            int maxY = Mathf.Min(DungeonMap.Height - 1, opening.yMax + 6);
+            int maxY = Mathf.Min(run.Map.Height - 1, opening.yMax + 6);
             for (int x = minX; x <= maxX; x++)
                 for (int y = minY; y <= maxY; y++)
                 {
@@ -116,7 +116,7 @@ namespace Echoes.Tests
                 for (int y = opening.y - 3; y < opening.yMax + 3; y++)
                 {
                     var tile = new Vector2Int(x, y);
-                    if (x < 0 || y < 0 || x >= DungeonMap.Width || y >= DungeonMap.Height) continue;
+                    if (x < 0 || y < 0 || x >= run.Map.Width || y >= run.Map.Height) continue;
                     if (run.Map.IsFloorTile(tile)) continue;
                     if (!run.Map.HasLineOfSight(World(source), World(tile), true)) continue;
                     return tile;

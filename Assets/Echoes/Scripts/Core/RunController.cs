@@ -79,19 +79,56 @@ namespace Echoes
         private void SpawnFloor()
         {
             // Initial room population. The activated boss summons reinforcements separately.
+            var spawnAreas = new List<DungeonMap.SpawnArea>();
             for (int room = 1; room < Map.Rooms.Count - 1; room++)
-            {
-                var cells = Map.SpawnCells(room);
-                int perCell = Mathf.Max(1, config.enemiesPerCell);
-                int min = Mathf.Max(1, config.minEnemiesPerRoom);
-                int max = Mathf.Max(min, config.maxEnemiesPerRoom);
-                int count = Mathf.Clamp(
-                    Mathf.RoundToInt(Map.Rooms[room].CellCount * perCell), min, max);
-                for (int i = 0; i < count && i < cells.Count; i++)
-                    Enemies.Add(EnemyController.Create(this, cells[i], false));
-            }
+                spawnAreas.AddRange(Map.SpawnAreas(room));
+            SpawnSelectedCells(spawnAreas);
             Boss = EnemyController.Create(this, Map.BossPosition, true);
             Enemies.Add(Boss);
+        }
+
+        private void SpawnSelectedCells(List<DungeonMap.SpawnArea> areas)
+        {
+            int draws = Mathf.Max(0, FloorValue(config.spawnCellDraws, 24));
+            int min = Mathf.Max(1, FloorValue(config.spawnAmountMin, 1));
+            int max = Mathf.Max(min, FloorValue(config.spawnAmountMax, 3));
+            int weight = Mathf.Max(1, FloorValue(config.spawnCellWeights, 1));
+            // Spawn rolls use their own per-floor seed so combat randomness cannot
+            // shift the layout of later floors.
+            var spawnRandom = new System.Random(config.randomSeed + Floor * 1013 + 29);
+            for (int draw = 0; draw < draws; draw++)
+            {
+                int totalWeight = 0;
+                foreach (var area in areas)
+                    if (area.Points.Count > 0) totalWeight += weight;
+                if (totalWeight <= 0) break;
+
+                int roll = spawnRandom.Next(totalWeight);
+                DungeonMap.SpawnArea chosen = null;
+                foreach (var area in areas)
+                {
+                    if (area.Points.Count == 0) continue;
+                    if (roll < weight) { chosen = area; break; }
+                    roll -= weight;
+                }
+                if (chosen == null) continue;
+
+                int count = Mathf.Min(spawnRandom.Next(min, max + 1), chosen.Points.Count);
+                for (int i = 0; i < count; i++)
+                {
+                    int index = spawnRandom.Next(chosen.Points.Count);
+                    Vector2 point = chosen.Points[index];
+                    chosen.Points[index] = chosen.Points[chosen.Points.Count - 1];
+                    chosen.Points.RemoveAt(chosen.Points.Count - 1);
+                    Enemies.Add(EnemyController.Create(this, point, false));
+                }
+            }
+        }
+
+        private int FloorValue(int[] values, int fallback)
+        {
+            if (values == null || values.Length == 0) return fallback;
+            return values[Mathf.Clamp(Floor - 1, 0, values.Length - 1)];
         }
 
         private float FloorScale(float[] values)

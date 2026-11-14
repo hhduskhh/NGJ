@@ -363,7 +363,7 @@ namespace Echoes
             {
                 if (cell == elbow.Value) continue;
                 int ax = cell.x * DungeonMap.CellWidth;
-                int ay = DungeonMap.CellOriginY(cell.y);
+                int ay = room.CellOriginY(cell.y);
                 int dx = cell.x - elbow.Value.x;
                 int dy = cell.y - elbow.Value.y;
                 if (dx > 0)
@@ -398,7 +398,7 @@ namespace Echoes
             {
                 if (cell == elbow.Value) continue;
                 int ax = cell.x * DungeonMap.CellWidth - room.Bounds.x;
-                int ay = DungeonMap.CellOriginY(cell.y) - room.Bounds.y;
+                int ay = room.CellOriginY(cell.y) - room.Bounds.y;
                 int dx = cell.x - elbow.Value.x;
                 int dy = cell.y - elbow.Value.y;
                 if (dx > 0)

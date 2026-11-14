@@ -28,7 +28,7 @@ namespace Echoes
                 {
                     var cell = room.Cells[i];
                     var area = new RectInt(cell.x * DungeonMap.CellWidth,
-                        DungeonMap.CellOriginY(cell.y), DungeonMap.CellWidth, DungeonMap.CellHeight);
+                        room.CellOriginY(cell.y), DungeonMap.CellWidth, DungeonMap.CellHeight);
                     // One tall shrine per room. Other cells use hollow shells or sealed bays.
                     if (i == focus) Native(result, "f3_shrine", area, .50f, .50f);
                     else
@@ -44,7 +44,7 @@ namespace Echoes
             }
             foreach (var cell in room.Cells)
             {
-                int x0 = cell.x * DungeonMap.CellWidth, y0 = DungeonMap.CellOriginY(cell.y);
+                int x0 = cell.x * DungeonMap.CellWidth, y0 = room.CellOriginY(cell.y);
                 foreach (int dx in new[] { 6, 13, 23, 30 })
                     result.Add(new RoomPropSpec { Kind = "room_f3_wall_shelf", X = x0 + dx,
                         Y = y0 + DungeonMap.CellHeight - 1, Layer = RoomPropLayer.WallObject });
