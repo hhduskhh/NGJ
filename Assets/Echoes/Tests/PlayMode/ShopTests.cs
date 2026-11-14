@@ -177,8 +177,6 @@ namespace Echoes.Tests
         }
         [UnityTest] public IEnumerator WeaponVolleyRangeAndPiercing()
         {
-            // The formal counter correctly blocks shots aimed into the stall.
-            // Exercise weapon rules from the clear station centre instead.
             run.Player.GetComponent<Rigidbody2D>().position = run.Map.Rooms[0].Center;
             run.Player.transform.position = run.Map.Rooms[0].Center;
             Physics2D.SyncTransforms();
@@ -189,14 +187,14 @@ namespace Echoes.Tests
             Assert.AreEqual(5, Object.FindObjectsOfType<Projectile>().Length);
             Assert.AreEqual(pulses + 1, run.Visibility.Pulses.Count, "Shotgun emits one pulse");
             yield return new WaitForSeconds(.4f);
-            Assert.AreEqual(0, Object.FindObjectsOfType<Projectile>().Length, "Range expires before lifetime");
+            Assert.Greater(Object.FindObjectsOfType<Projectile>().Length, 0, "Pellets continue beyond targeting range");
             foreach (var enemy in run.Enemies) enemy.GetComponent<Rigidbody2D>().position = run.Map.Rooms[4].Center;
             Vector2 origin = run.Map.Rooms[0].Center;
             var a = run.Enemies[0]; var b = run.Enemies[1];
             a.GetComponent<Rigidbody2D>().position = origin + Vector2.right * 2;
             b.GetComponent<Rigidbody2D>().position = origin + Vector2.right * 3;
             Physics2D.SyncTransforms(); float ah = a.Health, bh = b.Health;
-            Projectile.Create(run, origin, Vector2.right, 26, 10, false, 10, 1);
+            Projectile.Create(run, origin, Vector2.right, 26, 10, false, 1);
             yield return new WaitForSeconds(.2f);
             Assert.AreEqual(ah - 10, a.Health, .001f); Assert.AreEqual(bh - 7.5f, b.Health, .001f);
         }

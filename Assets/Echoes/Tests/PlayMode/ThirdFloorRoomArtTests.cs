@@ -40,7 +40,7 @@ namespace Echoes.Tests
         }
 
         [UnityTest]
-        public IEnumerator TenNativeAssetsPhysicsConnectivityAndProjectileBlocking()
+        public IEnumerator TenNativeAssetsPhysicsConnectivityAndProjectilePassage()
         {
             var entries = RoomArt.ForFloor(3, false);
             Assert.AreEqual(10, entries.Length);
@@ -95,14 +95,14 @@ namespace Echoes.Tests
             var collider = shell.GetComponent<BoxCollider2D>();
             Vector2 front = new Vector2(collider.bounds.center.x, collider.bounds.min.y - 2);
             Assert.IsTrue(run.Map.IsWalkable(Vector2Int.RoundToInt(front)));
-            Assert.IsFalse(run.Map.HasLineOfSight(front, collider.bounds.center));
+            Assert.IsTrue(run.Map.HasLineOfSight(front, collider.bounds.center));
             Assert.AreSame(collider, Physics2D.Raycast(front, Vector2.up, 3).collider);
             Move(front);
-            Projectile.Create(run, front, Vector2.up, 20, 10, false, 10);
+            Projectile.Create(run, front, Vector2.up, 20, 10, false);
             var shot = Object.FindObjectOfType<Projectile>();
             Assert.IsNotNull(shot);
             yield return new WaitForSeconds(.2f);
-            Assert.IsTrue(!shot, "A real projectile stops at the porcelain base");
+            Assert.IsTrue(shot && shot.transform.position.y > front.y + 2, "Shots pass through furniture");
         }
 
         [UnityTest]

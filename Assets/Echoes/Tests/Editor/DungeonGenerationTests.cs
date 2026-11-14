@@ -9,6 +9,7 @@ namespace Echoes.Tests
         [Test]
         public void PlansCoverTheFiveByFiveGridAndRespectLeafRooms()
         {
+            var bossCells = new HashSet<Vector2Int>();
             var shapeCounts = new Dictionary<RoomShape, int>();
             for (int seed = 0; seed < 300; seed++)
             {
@@ -20,7 +21,7 @@ namespace Echoes.Tests
                 Assert.AreEqual(RoomRole.Start, plan.Rooms[0].Role);
                 Assert.AreEqual(RoomRole.Boss, plan.Rooms[plan.Rooms.Count - 1].Role);
                 Assert.AreEqual(DungeonPlan.StartCell, plan.Rooms[0].Cells[0]);
-                Assert.AreEqual(DungeonPlan.BossCell, plan.Rooms[plan.Rooms.Count - 1].Cells[0]);
+                bossCells.Add(plan.Boss.Cells[0]);
                 Assert.AreEqual(1, plan.Rooms[0].Cells.Count);
                 Assert.AreEqual(1, plan.Rooms[plan.Rooms.Count - 1].Cells.Count);
                 Assert.AreEqual(1, plan.Rooms[0].Doors.Count, "Start is a leaf");
@@ -57,6 +58,7 @@ namespace Echoes.Tests
                 AssertAllRoomsReachable(plan);
             }
 
+            Assert.Greater(bossCells.Count, 1);
             foreach (RoomShape shape in System.Enum.GetValues(typeof(RoomShape)))
                 Assert.Greater(shapeCounts[shape], 0, "All five layout shapes appear across seeds");
         }

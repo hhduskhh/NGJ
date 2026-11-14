@@ -46,7 +46,7 @@ namespace Echoes.Tests
             AssertOpaquePropPixelsVisible(run, selected.GetComponent<SpriteRenderer>());
             Camera.main.Render();
             var frame = DrawFootprint(selected.bounds);
-            run.Hud.Notify("青框：管风琴实体碰撞与视野遮挡共用占地", 5);
+            run.Hud.Notify("青框：管风琴阻挡移动的占地", 5);
             Directory.CreateDirectory("TestResults/PropOcclusion");
             var cover = run.transform.Find("UnseenDungeon").GetComponent<SpriteRenderer>();
             cover.enabled = false;
@@ -98,7 +98,7 @@ namespace Echoes.Tests
                 cover.enabled = false; Read(clear); cover.enabled = true;
                 Directory.CreateDirectory("TestResults/PropOcclusion");
                 File.WriteAllBytes("TestResults/PropOcclusion/tall-prop.png", shaded.EncodeToPNG());
-                int checkedPixels = 0, cutPixels = 0, hiddenGaps = 0, litGaps = 0;
+                int checkedPixels = 0, cutPixels = 0, clearGaps = 0, litGaps = 0;
                 for (int y = 1; y < art.height; y += 2)
                     for (int x = 1; x < art.width; x += 2)
                     {
@@ -118,19 +118,19 @@ namespace Echoes.Tests
                                 if (x + dx < 0 || y + dy < 0 || x + dx >= art.width || y + dy >= art.height ||
                                     art.GetPixel(x + dx, y + dy).a >= .05f) clearPatch = false;
                         if (clearPatch && run.Map.IsWalkable(Vector2Int.FloorToInt(sampleWorld + Vector2.one * .5f)) &&
-                            !run.Map.HasLineOfSight(source, sampleWorld))
+                            run.Map.HasLineOfSight(source, sampleWorld))
                         {
-                            hiddenGaps++;
+                            clearGaps++;
                             if (shaded.GetPixel(px, py).maxColorComponent > .01f) litGaps++;
                         }
                         if (alpha < .95f) continue;
                         checkedPixels++;
                         if (shaded.GetPixel(px, py).maxColorComponent < reference * .8f) cutPixels++;
                     }
-                Debug.Log("PROP_SELF_OCCLUSION checked=" + checkedPixels + " cut=" + cutPixels + " gaps=" + hiddenGaps + " lit=" + litGaps);
+                Debug.Log("PROP_SELF_OCCLUSION checked=" + checkedPixels + " cut=" + cutPixels + " gaps=" + clearGaps + " lit=" + litGaps);
                 Assert.Greater(checkedPixels, 50);
-                Assert.Greater(hiddenGaps, 0, "Exercise transparent pixels over shadowed floor");
-                Assert.AreEqual(0, litGaps, "Transparent sprite gaps must not reveal the shadowed floor");
+                Assert.Greater(clearGaps, 0, "Exercise transparent pixels over visible floor");
+                Assert.AreEqual(clearGaps, litGaps, "Floor stays visible through transparent gaps");
                 Assert.AreEqual(0, cutPixels, "Opaque upper-body pixels must not be cut by the prop's own footprint");
             }
             finally
@@ -146,7 +146,7 @@ namespace Echoes.Tests
             run.Visibility.RefreshMask();
             RuntimeSmokeTests.Capture("TestResults/PropOcclusion/tall-prop-fixed.png");
             var outline = DrawFootprint(box.bounds);
-            run.Hud.Notify("青框：实体碰撞与视野遮挡共用占地", 5);
+            run.Hud.Notify("青框：阻挡移动的占地", 5);
             RuntimeSmokeTests.Capture("TestResults/PropOcclusion/tall-prop-footprint.png");
             Object.Destroy(outline.gameObject);
         }

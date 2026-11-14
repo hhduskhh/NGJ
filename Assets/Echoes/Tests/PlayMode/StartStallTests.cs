@@ -118,7 +118,7 @@ namespace Echoes.Tests
                 Assert.AreEqual(new Vector2(5, 3), stall.GetComponent<BoxCollider2D>().size);
                 for (int x = spec.X; x < spec.X + spec.Width; x++)
                     for (int y = spec.Y; y < spec.Y + spec.Height; y++)
-                        Assert.IsFalse(run.Map.IsWalkable(new Vector2Int(x, y)), "The entire 5x3 footprint blocks movement and sight");
+                        Assert.IsFalse(run.Map.IsWalkable(new Vector2Int(x, y)), "The entire 5x3 footprint blocks movement");
                 Assert.IsTrue(run.Map.IsWalkable(Vector2Int.RoundToInt(run.Map.StartPosition)), "Spawn remains clear");
                 Assert.IsTrue(run.Map.IsWalkable(Vector2Int.RoundToInt(run.Shop.Position)), "Counter anchor is reachable floor");
                 Assert.Greater(run.Map.FindPath(run.Map.StartPosition, run.Shop.Position).Count, 0);
@@ -131,8 +131,8 @@ namespace Echoes.Tests
                 Assert.Greater(Time.frameCount, frame + 1);
                 Assert.Greater(run.Elapsed, elapsed);
                 Assert.IsTrue(run.Shop.InRange, "The existing distance and line-of-sight check permits E from outside");
-                Assert.IsFalse(run.Map.HasLineOfSight(run.Shop.Position,
-                    run.Shop.Position + Vector2.up * 5), "The kiosk still blocks sight to the ground behind it");
+                Assert.IsTrue(run.Map.HasLineOfSight(run.Shop.Position,
+                    run.Shop.Position + Vector2.up * 5), "The kiosk allows sight to the ground behind it");
                 yield return new WaitForSeconds(.2f);
                 Assert.IsTrue(run.transform.Find("UnseenDungeon").GetComponent<SpriteRenderer>().enabled);
                 run.Visibility.RefreshMask();

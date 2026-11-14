@@ -95,14 +95,14 @@ namespace Echoes
                 var definition = Definition(slot);
                 Vector2 position = Position(i), direction = Direction(slot, position, manualPoint, manual);
                 Vector2 muzzle = position + direction * .35f;
-                if (!run.Map.IsWalkable(Vector2Int.RoundToInt(muzzle)) || !run.Map.HasLineOfSight(run.Player.transform.position, muzzle)) continue;
+                if (!run.Map.HasLineOfSight(run.Player.transform.position, muzzle)) continue;
                 slot.Cooldown = Interval(slot);
                 float damage = definition.damage[slot.Tier] * run.Player.TotalDamageScale * run.DamageMultiplier;
                 if (run.Random.NextDouble() < run.Player.CriticalChance) damage *= run.Player.CriticalMultiplier;
                 for (int pellet = 0; pellet < definition.pellets; pellet++)
                 {
                     Vector2 shot = Quaternion.Euler(0, 0, (pellet - (definition.pellets - 1) / 2f) * definition.spread) * direction;
-                    Projectile.Create(run, muzzle, shot, definition.speed, damage, false, definition.range,
+                    Projectile.Create(run, muzzle, shot, definition.speed, damage, false,
                         slot.Kind == 2 ? Mathf.Max(0, slot.Tier - 1) : 0);
                 }
                 run.Noise.Emit(run.Player.transform.position, run.Player.NoiseRadius * definition.noise, NoiseKind.Gunshot);

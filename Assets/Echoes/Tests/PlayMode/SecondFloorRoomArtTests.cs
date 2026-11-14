@@ -77,13 +77,13 @@ namespace Echoes.Tests
             var tankCollider = tank.GetComponent<BoxCollider2D>();
             Vector2 front = new Vector2(tankCollider.bounds.center.x, tankCollider.bounds.min.y - 2);
             Assert.IsTrue(run.Map.IsWalkable(Vector2Int.RoundToInt(front)));
-            Assert.IsFalse(run.Map.HasLineOfSight(front, tankCollider.bounds.center));
+            Assert.IsTrue(run.Map.HasLineOfSight(front, tankCollider.bounds.center));
             Assert.AreSame(tankCollider, Physics2D.Raycast(front, Vector2.up, 3).collider);
-            Projectile.Create(run, front, Vector2.up, 20, 10, false, 10);
+            Projectile.Create(run, front, Vector2.up, 20, 10, false);
             var shot = Object.FindObjectOfType<Projectile>();
             Assert.IsNotNull(shot);
             yield return new WaitForSeconds(.2f);
-            Assert.IsTrue(!shot, "Factory receiver stops a real projectile at its solid base");
+            Assert.IsTrue(shot && shot.transform.position.y > front.y + 2, "Shots pass through furniture");
         }
 
         [UnityTest]

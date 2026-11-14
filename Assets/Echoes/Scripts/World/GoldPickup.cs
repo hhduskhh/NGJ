@@ -16,7 +16,7 @@ namespace Echoes
         {
             if (run.State != RunState.Playing || amount <= 0) return;
             if (Vector2.Distance(run.Player.transform.position, transform.position) > run.Config.goldPickupRadius ||
-                !run.Map.HasLineOfSight(run.Player.transform.position, transform.position)) return;
+                !run.Map.HasClearInteractionPath(run.Player.transform.position, transform.position)) return;
             run.Shop.Credit(amount); amount = 0; Destroy(gameObject);
         }
     }

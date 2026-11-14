@@ -129,7 +129,7 @@ namespace Echoes
             var delta = Vector2.ClampMagnitude(AimPoint - (Vector2)transform.position, run.Config.decoyThrowRange);
             var point = run.Map.NearestFloor((Vector2)transform.position + delta);
             // Do not throw through walls, even though the resulting sound ignores walls.
-            if (!run.Map.HasLineOfSight(transform.position, point))
+            if (!run.Map.HasClearInteractionPath(transform.position, point))
             { run.Hud.Notify("诱饵投掷路径被墙壁挡住", 2); return; }
             BellDecoy.Create(run, point);
             decoyReadyAt = Time.time + Mathf.Max(5, run.Config.decoyCooldown * Mathf.Max(.1f, DecoyCooldownScale + Passives.DecoyCooldown));

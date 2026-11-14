@@ -10,6 +10,27 @@ namespace Echoes.Tests
     public sealed class RuntimeSmokeTests
     {
         [UnityTest]
+        public IEnumerator SlowShotLightsItsPathUntilWallImpactAndDarknessReturns()
+        {
+            yield return SceneManager.LoadSceneAsync("Prototype");
+            yield return null;
+            var run = Object.FindObjectOfType<RunController>();
+            var room = run.Map.Rooms[0];
+            Vector2 origin = new Vector2(room.Bounds.xMin + 6, room.Bounds.yMin + 7);
+            Vector2 sample = origin + Vector2.left * 3;
+            Assert.IsFalse(run.Visibility.IsVisible(sample));
+            Projectile.Create(run, origin, Vector2.left, 2, 1, false);
+            var shot = Object.FindObjectOfType<Projectile>();
+            yield return new WaitForSeconds(1.6f);
+            Assert.IsTrue(run.Visibility.IsVisible(sample), "A traversed point is illuminated");
+            yield return new WaitForSeconds(.45f);
+            Assert.IsTrue(shot, "An unobstructed shot outlives the former timeout");
+            yield return new WaitForSeconds(1.4f);
+            Assert.IsFalse(shot, "The boundary wall stops the shot");
+            Assert.IsFalse(run.Visibility.IsVisible(sample), "The path returns to darkness");
+        }
+
+        [UnityTest]
         public IEnumerator DoorTraversalAndProjectileCollision()
         {
             yield return SceneManager.LoadSceneAsync("Prototype");
@@ -45,7 +66,7 @@ namespace Echoes.Tests
             float health = enemy.Health;
             Vector2 direction = (DungeonTestGeometry.World(geometry.Through) -
                 DungeonTestGeometry.World(geometry.Source)).normalized;
-            Projectile.Create(run, DungeonTestGeometry.World(geometry.Source), direction, 30, 5, false, 20);
+            Projectile.Create(run, DungeonTestGeometry.World(geometry.Source), direction, 30, 5, false);
             yield return new WaitForSeconds(.3f);
             Assert.AreEqual(health - 5, enemy.Health, .001f, "Actual projectile damages an enemy through the doorway");
 
@@ -54,7 +75,7 @@ namespace Echoes.Tests
             health = enemy.Health;
             direction = (DungeonTestGeometry.World(geometry.Around) -
                 DungeonTestGeometry.World(geometry.Source)).normalized;
-            Projectile.Create(run, DungeonTestGeometry.World(geometry.Source), direction, 30, 5, false, 20);
+            Projectile.Create(run, DungeonTestGeometry.World(geometry.Source), direction, 30, 5, false);
             yield return new WaitForSeconds(.3f);
             Assert.AreEqual(health, enemy.Health, "Wall blocks a projectile between rooms");
         }

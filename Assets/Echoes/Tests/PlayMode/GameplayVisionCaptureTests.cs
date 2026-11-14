@@ -32,7 +32,7 @@ namespace Echoes.Tests
         }
 
         [UnityTest]
-        public IEnumerator ActualDoorCornerAndObstacleShadowScreenshots()
+        public IEnumerator DoorCornerAndSightThroughFurniture()
         {
             yield return SceneManager.LoadSceneAsync("Prototype");
             yield return null;
@@ -66,14 +66,14 @@ namespace Echoes.Tests
                     Vector2 to = run.Map.NearestFloor(center - Vector2.Scale(direction, offset));
                     float distance = Vector2.Distance(from, to);
                     if (distance > run.Player.NoiseRadius + run.Config.gradientVisionRange - .5f || distance < 3) continue;
-                    if (run.Map.HasLineOfSight(from, to)) continue;
+                    if (!box.bounds.IntersectRay(new Ray(from, to - from)) || !run.Map.HasLineOfSight(from, to)) continue;
                     obstacleSource = from; hidden = to; found = true; break;
                 }
                 if (found) break;
             }
-            Assert.IsTrue(found, "Find an actual obstacle with floor in its shadow");
-            yield return CaptureAt(obstacleSource, hidden, "03-obstacle-shadow");
-            Assert.IsFalse(run.Visibility.IsVisible(hidden), "The real obstacle still hides floor behind it");
+            Assert.IsTrue(found, "Find visible floor across furniture");
+            yield return CaptureAt(obstacleSource, hidden, "03-through-furniture");
+            Assert.IsTrue(run.Visibility.IsVisible(hidden), "Floor behind furniture stays visible");
             Assert.IsFalse(run.FeelDebugMode);
         }
     }

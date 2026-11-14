@@ -13,7 +13,7 @@ namespace Echoes.Tests
         public void SetUp()
         {
             map = new GameObject("SightTestMap").AddComponent<DungeonMap>();
-            cells = (bool[,])typeof(DungeonMap).GetField("walkable", BindingFlags.Instance | BindingFlags.NonPublic)
+            cells = (bool[,])typeof(DungeonMap).GetField("floor", BindingFlags.Instance | BindingFlags.NonPublic)
                 .GetValue(map);
             for (int x = 1; x < DungeonMap.Width - 1; x++)
                 for (int y = 1; y < DungeonMap.Height - 1; y++) cells[x, y] = true;

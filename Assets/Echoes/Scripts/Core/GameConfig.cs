@@ -16,6 +16,8 @@ namespace Echoes
         [Min(1)] public float bulletDamage = 10;
         [Min(.05f)] public float shotInterval = .28f;
         [Min(1)] public float bulletSpeed = 22;
+        [Min(.01f)] public float bulletTrailSeconds = .35f;
+        [Min(.1f)] public float bulletTrailRadius = 1.15f;
         [Header("Visibility")]
         [Tooltip("Walking pulse main radius. The stationary main radius is always zero.")]
         [Min(1)] public float playerVisionRadius = 3;
@@ -34,6 +36,7 @@ namespace Echoes
         [Min(0)] public float bonusPerEnemy = .08f;
         [Min(1)] public int bonusEnemyCap = 8;
         [Header("Dungeon generation")]
+        [Min(1)] public float altarEntranceDistance = 3;
         [Min(1)] public int generationAttempts = 100;
         [Range(0, 1)] public float extraDoorChance = .15f;
         [Min(1)] public int enemiesPerCell = 6;
