@@ -52,7 +52,7 @@ namespace Echoes
         private readonly List<RoomPropSpec> decorSpecs = new List<RoomPropSpec>();
         private readonly Dictionary<string, TileBase> floorTiles = new Dictionary<string, TileBase>();
         private Transform generatedRoot, wallRoot;
-        public bool IsWall(Collider2D collider) => collider.transform.parent == wallRoot;
+        public bool BlocksProjectile(Collider2D collider) => !collider.isTrigger && collider.transform.IsChildOf(generatedRoot);
         private Tilemap floorMap;
         private TilemapRenderer floorRenderer;
         private RunController run;

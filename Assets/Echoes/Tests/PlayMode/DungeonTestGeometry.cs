@@ -68,7 +68,7 @@ namespace Echoes.Tests
                 {
                     float throughDistance = Vector2.Distance(World(source), World(through));
                     if (throughDistance < 2.5f || throughDistance > 7f) continue;
-                    if (!run.Map.HasLineOfSight(World(source), World(through))) continue;
+                    if (!run.Map.HasClearInteractionPath(World(source), World(through))) continue;
                     foreach (var around in aroundTiles)
                     {
                         float aroundDistance = Vector2.Distance(World(source), World(around));

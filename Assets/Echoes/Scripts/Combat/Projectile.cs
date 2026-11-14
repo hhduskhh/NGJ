@@ -7,7 +7,6 @@ namespace Echoes
     {
         private RunController run;
         private Vector2 direction;
-        private Vector2 origin;
         private float speed, damage;
         private bool hostile;
         private SpriteRenderer hostileSprite;
@@ -23,7 +22,6 @@ namespace Echoes
                 hostile ? "hostileBullet" : "bullet", position, 30);
             var projectile = renderer.gameObject.AddComponent<Projectile>();
             projectile.run = run; projectile.direction = direction.normalized;
-            projectile.origin = position;
             projectile.speed = speed; projectile.damage = damage; projectile.hostile = hostile;
             projectile.pierces = pierces;
             projectile.trail = run.Visibility.BeginTrail(position, projectile.direction, speed);
@@ -55,8 +53,10 @@ namespace Echoes
                 var enemy = hit.collider.GetComponent<EnemyController>();
                 var player = hit.collider.GetComponent<PlayerController>();
                 if (enemy && (!enemy.Alive || struck.Contains(enemy))) continue;
-                if (!(hostile ? (bool)player : (bool)enemy) && !run.Map.IsWall(hit.collider)) continue;
-                if (hit.distance >= nearestDistance) continue;
+                bool blocksShot = run.Map.BlocksProjectile(hit.collider);
+                bool isTarget = hostile ? player != null : enemy != null;
+                if (!isTarget && !blocksShot) continue;
+                if (hit.distance > nearestDistance || (hit.distance == nearestDistance && !blocksShot)) continue;
                 nearestDistance = hit.distance; nearest = hit.collider;
             }
             transform.position += (Vector3)(direction * (nearest ? nearestDistance : distance));
@@ -71,7 +71,7 @@ namespace Echoes
                     var enemy = nearest.GetComponent<EnemyController>();
                     if (enemy)
                     {
-                        struck.Add(enemy); enemy.TakeDamage(damage, origin);
+                        struck.Add(enemy); enemy.TakeDamage(damage);
                         if (pierces-- > 0)
                         {
                             damage *= .75f;

@@ -132,6 +132,7 @@ namespace Echoes
                     enemy.IsWindingUp || enemy.IsContactTelegraph || pulse > 0 ? 4 : moving ? 2 + (int)(clock * 8) % 2 : 1;
             }
             renderer2D.sprite = GameArt.Frame(player ? "Common/hero" : GameArt.Floor + Species, CurrentFrame);
+            if (enemy) enemy.UpdateDamageShape(renderer2D.sprite, renderer2D.flipX);
             renderer2D.sortingOrder = GameArt.FootOrder(transform.position.y);
             var tint = hurt > 0 && (int)(hurt * 40) % 2 == 0 ? new Color(1, .6f, .6f) : Color.white;
             if (corpseConfig)

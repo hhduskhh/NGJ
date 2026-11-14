@@ -83,7 +83,7 @@ namespace Echoes.Tests
             var shot = Object.FindObjectOfType<Projectile>();
             Assert.IsNotNull(shot);
             yield return new WaitForSeconds(.2f);
-            Assert.IsTrue(shot && shot.transform.position.y > front.y + 2, "Shots pass through furniture");
+            Assert.IsFalse(shot, "Solid furniture absorbs the shot");
         }
 
         [UnityTest]

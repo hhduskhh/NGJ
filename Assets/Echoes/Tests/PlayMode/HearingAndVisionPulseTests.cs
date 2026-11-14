@@ -59,10 +59,6 @@ namespace Echoes.Tests
             yield return new WaitForSeconds(.1f);
             Assert.AreEqual(EnemyState.Investigating, enemy.State);
             Assert.AreEqual(run.Map.NearestFloor(source), enemy.InvestigationTarget);
-            Vector2 attackSource = new Vector2(13, 10);
-            enemy.TakeDamage(1, attackSource);
-            Assert.AreEqual(EnemyState.Investigating, enemy.State);
-            Assert.AreEqual(run.Map.NearestFloor(attackSource), enemy.InvestigationTarget);
             enemy.GetComponent<Rigidbody2D>().position = player + Vector2.right * (run.Config.WalkingDetectionRadius - .5f);
             yield return new WaitForSeconds(.08f);
             Assert.AreEqual(EnemyState.Chasing, enemy.State);

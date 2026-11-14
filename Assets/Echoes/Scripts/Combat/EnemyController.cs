@@ -17,6 +17,10 @@ namespace Echoes
         private LineRenderer warning;
         private CharacterArt art;
         private SpriteRenderer muzzleWarning;
+        private PolygonCollider2D damageShape;
+        private readonly List<Vector2> outline = new List<Vector2>();
+        private Sprite lastDamageSprite;
+        private bool lastFlip, trackingHit;
         public bool IsGuard { get; private set; }
         public EnemyState State { get; private set; } = EnemyState.Sleeping;
         public bool IsBoss { get; private set; }
@@ -47,6 +51,8 @@ namespace Echoes
             var hitbox = renderer.gameObject.AddComponent<CircleCollider2D>();
             hitbox.radius = boss ? .64f : .32f;
             hitbox.offset = Vector2.zero;
+            enemy.damageShape = renderer.gameObject.AddComponent<PolygonCollider2D>();
+            enemy.damageShape.isTrigger = true;
             enemy.art = renderer.gameObject.AddComponent<CharacterArt>();
             enemy.IsGuard = !boss && run.Enemies.Count % 2 == 1;
             enemy.art.Initialize(boss ? "boss" : enemy.IsGuard ? "guard" : "walker");
@@ -69,10 +75,26 @@ namespace Echoes
             return enemy;
         }
 
+        internal void UpdateDamageShape(Sprite frame, bool flip)
+        {
+            if (!Alive || (frame == lastDamageSprite && flip == lastFlip)) return;
+            lastDamageSprite = frame;
+            lastFlip = flip;
+            damageShape.pathCount = frame.GetPhysicsShapeCount();
+            for (int i = 0; i < damageShape.pathCount; i++)
+            {
+                frame.GetPhysicsShape(i, outline);
+                if (flip)
+                    for (int p = 0; p < outline.Count; p++)
+                        outline[p] = new Vector2(-outline[p].x, outline[p].y);
+                damageShape.SetPath(i, outline);
+            }
+        }
+
         public void Hear(Vector2 source)
         {
             // Gatekeeper is a deliberate opt-in challenge, activated at its altar.
-            if (!Alive || IsBoss || (State == EnemyState.Chasing && CanDetectPlayer())) return;
+            if (!Alive || IsBoss || trackingHit || (State == EnemyState.Chasing && CanDetectPlayer())) return;
             State = EnemyState.Investigating;
             destination = run.Map.NearestFloor(source);
             repath = 0; RefreshVisual();
@@ -95,7 +117,8 @@ namespace Echoes
             float dt = Time.deltaTime;
             Vector2 player = run.Player.transform.position;
             bool seesPlayer = CanDetectPlayer();
-            if (seesPlayer)
+            if (seesPlayer) trackingHit = false;
+            if (seesPlayer || trackingHit)
             { State = EnemyState.Chasing; lastSeen = player; lostSight = 0; }
             else if (State == EnemyState.Chasing)
             {
@@ -216,19 +239,21 @@ namespace Echoes
             }
         }
 
-        public void TakeDamage(float amount, Vector2? attackOrigin = null)
+        public void TakeDamage(float amount)
         {
             if (!Alive || (IsBoss && !run.BossActivated)) return;
-            if (CanDetectPlayer())
-            { State = EnemyState.Chasing; lastSeen = run.Player.transform.position; lostSight = 0; }
-            else if (!IsBoss) Hear(attackOrigin ?? (Vector2)run.Player.transform.position);
+            trackingHit = true;
+            State = EnemyState.Chasing;
+            lastSeen = run.Player.transform.position;
+            lostSight = repath = 0;
             Health = Mathf.Max(0, Health - amount);
             art.Hurt();
             if (Health > 0) { RefreshVisual(); return; }
             State = EnemyState.Dead;
             art.BeginCorpseFade(run.Config);
             body.velocity = Vector2.zero;
-            GetComponent<Collider2D>().enabled = false;
+            GetComponent<CircleCollider2D>().enabled = false;
+            damageShape.enabled = false;
             marker.enabled = healthFill.enabled = false;
             if (warning) Destroy(warning.gameObject);
             run.EnemyKilled(this);

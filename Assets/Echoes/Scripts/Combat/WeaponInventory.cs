@@ -95,7 +95,7 @@ namespace Echoes
                 var definition = Definition(slot);
                 Vector2 position = Position(i), direction = Direction(slot, position, manualPoint, manual);
                 Vector2 muzzle = position + direction * .35f;
-                if (!run.Map.HasLineOfSight(run.Player.transform.position, muzzle)) continue;
+                if (!run.Map.HasClearInteractionPath(run.Player.transform.position, muzzle)) continue;
                 slot.Cooldown = Interval(slot);
                 float damage = definition.damage[slot.Tier] * run.Player.TotalDamageScale * run.DamageMultiplier;
                 if (run.Random.NextDouble() < run.Player.CriticalChance) damage *= run.Player.CriticalMultiplier;
