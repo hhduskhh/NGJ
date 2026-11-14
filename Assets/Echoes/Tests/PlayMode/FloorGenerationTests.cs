@@ -157,8 +157,7 @@ namespace Echoes.Tests
                     Assert.IsTrue(map.IsWalkable(Vector2Int.RoundToInt(map.StartPosition)));
                     Assert.IsTrue(map.IsWalkable(Vector2Int.RoundToInt(map.BossPosition)));
                     Assert.IsTrue(map.IsWalkable(Vector2Int.RoundToInt(map.AltarPosition)));
-                    Assert.AreEqual(map.Floor == 1 ? RoomRole.Middle : RoomRole.Start,
-                        map.RoomAtPosition(map.ShopCounterPosition).Role);
+                    Assert.AreSame(map.RoomAtPosition(map.StartPosition), map.RoomAtPosition(map.ShopCounterPosition));
                     Assert.Greater(map.FindPath(map.StartPosition, map.ShopCounterPosition).Count, 0);
                     Assert.AreEqual(RoomRole.Start, map.RoomAtPosition(map.SignPosition).Role);
                     foreach (var room in map.Rooms)
