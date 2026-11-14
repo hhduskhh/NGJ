@@ -22,10 +22,10 @@ namespace Echoes
 
         public static void Create(RunController run, Vector2 position, Vector2 direction,
             float speed, float damage, bool hostile, int pierces = 0, HashSet<EnemyController> impactTargets = null,
-            float sizeScale = DefaultSizeScale)
+            float sizeScale = DefaultSizeScale, float visualMultiplier = 1f)
         {
             var renderer = PixelArt.Create(hostile ? "HostileProjectile" : "PlayerProjectile",
-                hostile ? "hostileBullet" : "bullet", position, 30, scale: sizeScale);
+                hostile ? "hostileBullet" : "bullet", position, 30, scale: sizeScale * visualMultiplier);
             var projectile = renderer.gameObject.AddComponent<Projectile>();
             projectile.run = run; projectile.direction = direction.normalized;
             projectile.speed = speed; projectile.damage = damage; projectile.hostile = hostile;

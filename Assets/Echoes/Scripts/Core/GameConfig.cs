@@ -40,6 +40,8 @@ namespace Echoes
         public float WalkingDetectionRadius => playerVisionRadius + gradientVisionRange;
         [Header("Combat audio")]
         [Range(0, 1)] public float weaponVolume = .15f;
+        [Range(0, 5)] public float shotSemitonesPerTier = 3f;
+        [Range(0, .5f)] public float bulletVisualGrowthPerTier = .25f;
         [Range(0, 1)] public float pickupVolume = .1f;
         [Range(0, 1)] public float hitVolume = .09f;
         [Range(0, 1)] public float warningVolume = .16f;
@@ -127,6 +129,7 @@ namespace Echoes
         [Min(.1f)] public float bossAttackInterval = .8f;
         [Min(.1f)] public float bossWarningDuration = .4f;
         [Min(.1f)] public float bossDashInterval = 1.4f;
+        [Min(.05f)] public float finalDashWarningSeconds = .32f;
         [Min(.1f)] public float bossDashDuration = .32f;
         [Min(.1f)] public float bossDashSpeed = 11f;
         [Min(1)] public float finalBossAttackRate = 2f;

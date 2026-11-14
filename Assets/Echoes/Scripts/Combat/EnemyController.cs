@@ -18,6 +18,7 @@ namespace Echoes
         private float repath, lostSight, contactReady, wanderTimer, attackTimer, warningTimer;
         private LineRenderer warning;
         private float dashCooldown, dashRemaining;
+        private LineRenderer dashArrow;
         private float summonTimer;
         private Vector2 dashDirection;
         private bool dashStep, dashHitPlayer;
@@ -260,6 +261,11 @@ namespace Echoes
                 repath = 0;
                 return;
             }
+            if (dashArrow && dashArrow.enabled)
+            {
+                body.velocity = Vector2.zero;
+                return;
+            }
             Move();
             if (IsBoss) return;
             distanceSinceStep += distance;
@@ -378,13 +384,49 @@ namespace Echoes
         private void UpdateBossDash(float dt, Vector2 player)
         {
             dashCooldown -= dt;
-            if (dashCooldown > 0 || dashRemaining > 0) return;
-            dashDirection = (player - body.position).normalized;
+            if (dashRemaining > 0) return;
+            if (run.Floor == 3)
+            {
+                float lead = run.Config.finalDashWarningSeconds * run.Config.finalBossAttackRate;
+                if (dashCooldown <= lead && (!dashArrow || !dashArrow.enabled))
+                {
+                    dashDirection = (player - body.position).normalized;
+                    if (dashDirection == Vector2.zero) dashDirection = sprite.flipX ? Vector2.left : Vector2.right;
+                    ShowDashArrow();
+                    dashCooldown = lead;
+                    return;
+                }
+            }
+            if (dashCooldown > 0) return;
+            if (dashArrow) dashArrow.enabled = false;
+            else dashDirection = (player - body.position).normalized;
             dashRemaining = run.Config.bossDashDuration;
             dashCooldown = run.Config.bossDashInterval;
             dashHitPlayer = false;
             if (dashDirection.x != 0) sprite.flipX = dashDirection.x < 0;
             art.Attack();
+        }
+
+        private void ShowDashArrow()
+        {
+            if (!dashArrow)
+            {
+                dashArrow = new GameObject("DashDirection").AddComponent<LineRenderer>();
+                dashArrow.transform.SetParent(transform, false);
+                dashArrow.sharedMaterial = PixelArt.LineMaterial;
+                dashArrow.sortingOrder = DungeonVisibility.DangerOrder;
+                dashArrow.useWorldSpace = false;
+                dashArrow.startWidth = dashArrow.endWidth = .11f;
+                dashArrow.startColor = dashArrow.endColor = PixelArt.Gold;
+                float length = run.Config.bossDashSpeed * run.Config.bossDashDuration;
+                float head = Mathf.Min(.55f, length * .35f);
+                var tip = Vector3.right * length;
+                dashArrow.positionCount = 5;
+                dashArrow.SetPositions(new[] { Vector3.zero, tip, tip + new Vector3(-head, head * .65f),
+                    tip, tip + new Vector3(-head, -head * .65f) });
+            }
+            dashArrow.transform.right = dashDirection;
+            dashArrow.enabled = true;
         }
 
         private void OnCollisionEnter2D(Collision2D collision) => HitDuringDash(collision);
@@ -443,6 +485,7 @@ namespace Echoes
             art.Hurt();
             if (Health > 0) { RefreshVisual(); return; }
             State = EnemyState.Dead;
+            if (dashArrow) dashArrow.enabled = false;
             art.BeginCorpseFade(run.Config);
             body.velocity = Vector2.zero;
             GetComponent<CircleCollider2D>().enabled = false;

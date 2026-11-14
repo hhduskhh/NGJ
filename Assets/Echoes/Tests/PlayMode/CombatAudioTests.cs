@@ -10,6 +10,28 @@ namespace Echoes.Tests
     public sealed class CombatAudioTests
     {
         [UnityTest]
+        public IEnumerator PistolUpgradesDeepenTheShotAndEnlargeTheBullet()
+        {
+            yield return SceneManager.LoadSceneAsync("Prototype");
+            yield return null;
+            var run = Object.FindObjectOfType<RunController>();
+            var player = run.Player;
+            for (int tier = 0; tier < 4; tier++)
+            {
+                if (tier > 0) Assert.IsTrue(player.Weapons.MergePurchase(0, tier - 1));
+                player.Weapons.Tick(2, player.transform.position + Vector3.right);
+                Assert.IsTrue(player.TryFire(player.transform.position + Vector3.right * 5, true));
+                var bullet = Object.FindObjectsOfType<Projectile>().Single();
+                Assert.AreEqual(1.2f * (1 + tier * run.Config.bulletVisualGrowthPerTier),
+                    bullet.transform.localScale.x, .001f);
+                var voice = run.Noise.GetComponents<AudioSource>().Single(s => s.clip && s.clip.name == "Pistol");
+                Assert.AreEqual(Mathf.Pow(2f, -tier * run.Config.shotSemitonesPerTier / 12f), voice.pitch, .001f);
+                Object.Destroy(bullet.gameObject);
+                yield return null;
+            }
+        }
+
+        [UnityTest]
         public IEnumerator EmptyCityLoopsAcrossAllFloors()
         {
             yield return SceneManager.LoadSceneAsync("Prototype");

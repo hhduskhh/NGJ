@@ -12,6 +12,7 @@ namespace Echoes
             public Transform Visual;
         }
         private readonly RunController run;
+        private readonly int[] firedTiers = new int[3];
         private readonly List<Slot> slots = new List<Slot>();
         public IReadOnlyList<Slot> Slots => slots;
         public const int Capacity = 6;
@@ -109,7 +110,8 @@ namespace Echoes
         }
         public bool Fire(Vector2 manualPoint, bool manual)
         {
-            int weaponMask = 0;
+            for (int i = 0; i < firedTiers.Length; i++) firedTiers[i] = -1;
+            bool fired = false;
             run.RefreshPressure();
             for (int i = 0; i < slots.Count; i++)
             {
@@ -127,14 +129,16 @@ namespace Echoes
                 {
                     Vector2 shot = Quaternion.Euler(0, 0, (pellet - (definition.pellets - 1) / 2f) * definition.spread) * direction;
                     Projectile.Create(run, muzzle, shot, definition.speed, damage, false,
-                        slot.Kind == 2 ? Mathf.Max(0, slot.Tier - 1) : 0, impactTargets);
+                        slot.Kind == 2 ? Mathf.Max(0, slot.Tier - 1) : 0, impactTargets,
+                        visualMultiplier: 1f + slot.Tier * run.Config.bulletVisualGrowthPerTier);
                 }
                 run.Noise.Emit(run.Player.transform.position, GunshotRadius(slot), NoiseKind.Gunshot);
                 ArtEffect.Play(muzzle, false, PixelArt.Gold);
-                weaponMask |= 1 << slot.Kind;
+                firedTiers[slot.Kind] = Mathf.Max(firedTiers[slot.Kind], slot.Tier);
+                fired = true;
             }
-            if (weaponMask != 0) run.Noise.PlayShot(weaponMask);
-            return weaponMask != 0;
+            if (fired) run.Noise.PlayShot(firedTiers);
+            return fired;
         }
     }
 }

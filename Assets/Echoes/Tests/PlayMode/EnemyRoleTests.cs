@@ -45,14 +45,32 @@ namespace Echoes.Tests
                 run.ActivateBoss();
                 float started = Time.time;
                 float firstDash = -1, firstBarrage = -1;
+                float arrowStarted = -1;
+                Vector2 lockedDirection = Vector2.zero;
                 bool windingUp = false;
                 while (Time.time - started < 2.1f)
                 {
                     yield return null;
+                    var arrowObject = boss.transform.Find("DashDirection");
+                    var arrow = arrowObject ? arrowObject.GetComponent<LineRenderer>() : null;
+                    if (arrow && arrow.enabled && arrowStarted < 0)
+                    {
+                        Assert.AreEqual(3, floor);
+                        arrowStarted = Time.time - started;
+                        lockedDirection = arrow.transform.right;
+                        run.Player.PlaceAt(player + Vector2.up * 4);
+                    }
                     if (firstDash < 0 && body.velocity.magnitude > run.Config.bossSpeed + 1f)
                     {
                         Assert.Greater(Vector2.Dot(body.velocity, player - body.position), 0);
                         firstDash = Time.time - started;
+                        if (floor == 3)
+                        {
+                            Assert.GreaterOrEqual(arrowStarted, 0);
+                            Assert.IsFalse(arrow.enabled);
+                            Assert.AreEqual(run.Config.finalDashWarningSeconds, firstDash - arrowStarted, .05f);
+                            Assert.Greater(Vector2.Dot(body.velocity.normalized, lockedDirection), .99f);
+                        }
                     }
                     if (windingUp && !boss.IsWindingUp && firstBarrage < 0)
                     {

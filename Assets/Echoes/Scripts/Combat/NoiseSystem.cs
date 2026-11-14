@@ -77,15 +77,16 @@ namespace Echoes
             return voice;
         }
 
-        public void PlayShot(int weaponMask = 1)
+        public void PlayShot(int[] firedTiers)
         {
             int count = 0;
             for (int i = 0; i < shots.Length; i++)
-                if ((weaponMask & (1 << i)) != 0) count++;
+                if (firedTiers[i] >= 0) count++;
             for (int i = 0; i < shots.Length; i++)
             {
-                if ((weaponMask & (1 << i)) == 0) continue;
+                if (firedTiers[i] < 0) continue;
                 var voice = shotVoices[i];
+                voice.pitch = Mathf.Pow(2f, -firedTiers[i] * run.Config.shotSemitonesPerTier / 12f);
                 shotLevels[i] = run.Config.weaponVolume / Mathf.Max(1, count);
                 voice.volume = shotLevels[i];
                 if (Time.time < duckUntil) voice.volume *= .5f;
