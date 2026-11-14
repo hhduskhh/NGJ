@@ -51,9 +51,10 @@ namespace Echoes.Tests
             Assert.AreEqual(4, player.DecoyCooldown);
             Assert.AreEqual(1, player.DoubleLootChance);
             var enemy = run.Enemies[0];
-            enemy.GetComponent<Rigidbody2D>().position = player.transform.position;
-            Physics2D.SyncTransforms();
             enemy.TakeDamage(99999);
+            var coin = Object.FindObjectOfType<GoldPickup>();
+            Assert.IsNotNull(coin);
+            player.PlaceAt(coin.transform.position);
             yield return new WaitForSeconds(.1f);
             Assert.AreEqual(2 * run.Config.goldPerKill, run.Shop.Gold);
             Assert.AreEqual(run.Config.experiencePerKill, run.Experience);
