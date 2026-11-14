@@ -200,7 +200,8 @@ namespace Echoes
             attackTimer -= dt;
             Vector2 origin = transform.position;
             if (!seesPlayer || State != EnemyState.Chasing || !run.Visibility.InCamera(origin) ||
-                Vector2.Distance(player, origin) > run.Config.guardRange)
+                Vector2.Distance(player, origin) > run.Config.guardRange ||
+                !run.Map.HasFiringLine(origin, player, run.Player.transform))
             {
                 warningTimer = 0;
                 return false;

@@ -112,6 +112,9 @@ namespace Echoes.Tests
                     Assert.IsTrue(map.IsWalkable(Vector2Int.RoundToInt(map.StartPosition)));
                     Assert.IsTrue(map.IsWalkable(Vector2Int.RoundToInt(map.BossPosition)));
                     Assert.IsTrue(map.IsWalkable(Vector2Int.RoundToInt(map.AltarPosition)));
+                    Assert.AreEqual(RoomRole.Middle, map.RoomAtPosition(map.ShopCounterPosition).Role);
+                    Assert.Greater(map.FindPath(map.StartPosition, map.ShopCounterPosition).Count, 0);
+                    Assert.AreEqual(RoomRole.Start, map.RoomAtPosition(map.SignPosition).Role);
                     foreach (var room in map.Rooms)
                     {
                         Assert.IsTrue(map.IsWalkable(Vector2Int.RoundToInt(room.Center)),
@@ -137,6 +140,30 @@ namespace Echoes.Tests
                 Object.Destroy(mapObject);
             }
             yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator BossBanksRemainingGoldAndRestartChangesSeed()
+        {
+            yield return Load();
+            var run = Object.FindObjectOfType<RunController>();
+            int seed = run.Config.randomSeed;
+            GoldPickup.Drop(run, run.Map.BossPosition, 12);
+            GoldPickup.Drop(run, run.Player.transform.position, 6);
+            yield return null;
+            run.ActivateBoss();
+            run.Boss.TakeDamage(run.Boss.Health);
+            Assert.AreEqual(18, run.Shop.Gold);
+            run.AdvanceFloor();
+            yield return null;
+            Assert.AreEqual(18, run.Shop.Gold);
+            run.Restart();
+            yield return null;
+            yield return null;
+            run = Object.FindObjectOfType<RunController>();
+            Assert.AreNotEqual(seed, run.Config.randomSeed);
+            Assert.AreEqual(1, run.Floor);
+            Assert.AreEqual(0, run.Shop.Gold);
         }
 
         [UnityTest]

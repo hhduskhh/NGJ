@@ -60,7 +60,7 @@ namespace Echoes
                 if (Input.GetKeyUp(key)) ReleaseUpgradeKey(heldChoice);
                 return;
             }
-            for (int i = 0; i < upgradeButtons.Length; i++)
+            for (int i = 0; i < run.Choices.Count; i++)
             {
                 if (!Input.GetKeyDown((KeyCode)((int)KeyCode.Alpha1 + i))) continue;
                 PressUpgradeKey(i);
@@ -70,7 +70,7 @@ namespace Echoes
 
         public void PressUpgradeKey(int index)
         {
-            if (run.State != RunState.Upgrade || heldChoice >= 0 || index < 0 || index >= upgradeButtons.Length) return;
+            if (run.State != RunState.Upgrade || heldChoice >= 0 || index < 0 || index >= run.Choices.Count) return;
             heldChoice = index;
             upgradeButtons[index].HoldKey(true);
         }

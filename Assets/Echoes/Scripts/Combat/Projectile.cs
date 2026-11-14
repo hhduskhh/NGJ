@@ -5,6 +5,7 @@ namespace Echoes
 {
     public sealed class Projectile : MonoBehaviour
     {
+        public const float Radius = .085f;
         private RunController run;
         private Vector2 direction;
         private float speed, damage;
@@ -45,7 +46,7 @@ namespace Echoes
             if (run.State != RunState.Playing) return;
             float distance = speed * Time.deltaTime;
             // Cast the entire movement segment, so fast shots cannot tunnel through walls/enemies.
-            int count = Physics2D.CircleCast(transform.position, .085f, direction,
+            int count = Physics2D.CircleCast(transform.position, Radius, direction,
                 new ContactFilter2D().NoFilter(), hits, distance);
             Collider2D nearest = null;
             float nearestDistance = float.MaxValue;

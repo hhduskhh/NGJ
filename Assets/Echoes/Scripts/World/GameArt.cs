@@ -30,6 +30,8 @@ namespace Echoes
             switch (kind)
             {
                 case StartStall.Kind: return Frame(StartStall.ArtPath, 0);
+                case "signpost":
+                case "signArrow":
                 case "spikePlate":
                 case "raisedSpikes":
                 case "floorBomb": return Frame("Common/" + kind, 0);

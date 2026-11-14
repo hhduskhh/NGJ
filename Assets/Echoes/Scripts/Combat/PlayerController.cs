@@ -98,11 +98,11 @@ namespace Echoes
                 if (!enemy || !enemy.Alive || (enemy.IsBoss && !run.BossActivated)) continue;
                 Vector2 position = enemy.transform.position;
                 float distance = (position - (Vector2)transform.position).sqrMagnitude;
-                if (muzzle.HasValue && !run.Map.HasLineOfSight(muzzle.Value, position)) continue;
                 if (distance >= closest || !run.Visibility.IsVisible(position)) continue;
                 var viewport = Camera.main.WorldToViewportPoint(position);
                 if (viewport.z <= 0 || viewport.x < 0 || viewport.x > 1 || viewport.y < 0 || viewport.y > 1) continue;
                 if (!run.Map.HasLineOfSight(transform.position, position)) continue;
+                if (!run.Map.HasFiringLine(muzzle ?? (Vector2)transform.position, position, enemy.transform)) continue;
                 nearest = enemy; closest = distance;
             }
             return nearest;

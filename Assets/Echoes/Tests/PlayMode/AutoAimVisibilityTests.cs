@@ -48,6 +48,29 @@ namespace Echoes.Tests
         public void RestoreClock() => Time.captureDeltaTime = previousStep;
 
         [UnityTest]
+        public IEnumerator FurnitureBlocksTheCloserTargetButNotTheShotToTheOtherEnemy()
+        {
+            var near = run.Enemies.First(e => !e.IsBoss && e != target);
+            origin += Vector2.right * 8;
+            run.Player.PlaceAt(origin);
+            EnemyRoleTests.PlaceEnemy(near, origin + Vector2.right * 4);
+            EnemyRoleTests.PlaceEnemy(target, origin + Vector2.left * 5);
+            // Block the shot from both the player's feet and the elevated muzzle.
+            var cover = new GameObject("Cover");
+            cover.transform.SetParent(run.Map.GetComponentsInChildren<BoxCollider2D>()[0].transform, true);
+            cover.transform.position = origin + Vector2.right * 2;
+            cover.AddComponent<BoxCollider2D>().size = new Vector2(.5f, 2);
+            Physics2D.SyncTransforms();
+            run.Visibility.Reveal(origin, 9);
+            yield return new WaitForSeconds(.4f);
+            Assert.AreSame(target, run.Player.FindVisibleTarget());
+            Assert.IsTrue(run.Player.TryFire(near.transform.position));
+            yield return new WaitForSeconds(.4f);
+            Assert.Less(target.Health, target.MaxHealth);
+            Assert.AreEqual(near.MaxHealth, near.Health);
+        }
+
+        [UnityTest]
         public IEnumerator PistolHitsLitEnemyBeyondItsFormerTargetingRange() => VerifyLongShot(0);
 
         [UnityTest]

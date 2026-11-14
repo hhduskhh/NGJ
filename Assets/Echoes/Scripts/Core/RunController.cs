@@ -41,12 +41,16 @@ namespace Echoes
         public List<UpgradeDefinition> Choices { get; private set; }
         public System.Random Random { get; private set; }
         private int pendingUpgradeCost;
+        private static int? restartSeed;
         private RunState backpackReturnState;
 
         private void Start()
         {
             Time.timeScale = 1;
             AudioListener.volume = 1;
+            config = Instantiate(config);
+            if (restartSeed.HasValue) config.randomSeed = restartSeed.Value;
+            restartSeed = null;
             Random = new System.Random(config.randomSeed);
             Floor = 1;
             Map = gameObject.AddComponent<DungeonMap>();
@@ -148,6 +152,7 @@ namespace Echoes
             Kills++;
             if (enemy.IsBoss)
             {
+                foreach (var gold in FindObjectsOfType<GoldPickup>()) gold.Collect();
                 SetState(Floor >= FloorTheme.Count ? RunState.Won : RunState.FloorCleared);
                 return;
             }
@@ -197,7 +202,7 @@ namespace Echoes
         {
             if (State != RunState.Playing || Experience < RequiredExperience) return;
             pendingUpgradeCost = RequiredExperience;
-            Choices = UpgradeDefinition.Roll(Random);
+            Choices = UpgradeDefinition.Roll(Random, Player);
             SetState(RunState.Upgrade);
         }
 
@@ -235,10 +240,17 @@ namespace Echoes
 
         public void Restart()
         {
+            var next = System.Guid.NewGuid().GetHashCode() & int.MaxValue;
+            restartSeed = next == config.randomSeed ? next ^ 1 : next;
             Time.timeScale = 1;
             SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
         }
 
-        private void OnDestroy() { Time.timeScale = 1; AudioListener.volume = 1; }
+        private void OnDestroy()
+        {
+            if (Random != null) Destroy(config);
+            Time.timeScale = 1;
+            AudioListener.volume = 1;
+        }
     }
 }

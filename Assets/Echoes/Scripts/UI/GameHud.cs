@@ -111,6 +111,8 @@ namespace Echoes
             }
             else if (run.State == RunState.Playing && Vector2.Distance(run.Player.transform.position, run.Map.AltarPosition) < 3)
                 Notify("[E] 唤醒守关者", .2f);
+            if (run.State == RunState.Playing && Vector2.Distance(run.Player.transform.position, run.Map.SignPosition) < 3)
+                Notify("WASD 移动 · 左键射击 · 沿箭头探索，到祭坛唤醒守关者", .2f);
             if (run.State == RunState.Playing && run.Shop.InRange) Notify("[E] 打开补给商店", .2f);
             if (run.State == RunState.Upgrade) ReadUpgradeKeys();
         }

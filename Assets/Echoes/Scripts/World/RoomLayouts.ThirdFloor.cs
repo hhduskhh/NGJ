@@ -11,7 +11,6 @@ namespace Echoes
             var bounds = room.Bounds;
             if (room.Role == RoomRole.Start)
             {
-                result.Add(StartStall.Layout(room));
                 Native(result, "f3_reliquary", bounds, .23f, .80f);
                 Native(result, "f3_crystal", bounds, .80f, .80f);
             }

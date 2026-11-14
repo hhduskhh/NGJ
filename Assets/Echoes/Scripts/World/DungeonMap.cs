@@ -55,6 +55,22 @@ namespace Echoes
         private readonly Dictionary<string, TileBase> floorTiles = new Dictionary<string, TileBase>();
         private Transform generatedRoot, wallRoot;
         public bool BlocksProjectile(Collider2D collider) => !collider.isTrigger && collider.transform.IsChildOf(generatedRoot);
+        private readonly List<RaycastHit2D> aimHits = new List<RaycastHit2D>(16);
+
+        public bool HasFiringLine(Vector2 from, Vector2 to, Transform target)
+        {
+            Vector2 delta = to - from;
+            float targetDistance = delta.magnitude;
+            float blockerDistance = float.PositiveInfinity;
+            Physics2D.CircleCast(from, Projectile.Radius, delta.normalized,
+                new ContactFilter2D().NoFilter(), aimHits, targetDistance);
+            foreach (var hit in aimHits)
+            {
+                if (hit.transform == target) targetDistance = Mathf.Min(targetDistance, hit.distance);
+                else if (BlocksProjectile(hit.collider)) blockerDistance = Mathf.Min(blockerDistance, hit.distance);
+            }
+            return targetDistance < blockerDistance;
+        }
         private Tilemap floorMap;
         private TilemapRenderer floorRenderer;
         private RunController run;
@@ -68,15 +84,8 @@ namespace Echoes
         public int MapHeight { get { return Height; } }
         internal Transform GeometryRoot => generatedRoot;
 
-        public Vector2 ShopCounterPosition
-        {
-            get
-            {
-                var stall = obstacleSpecs.Find(spec => spec.Kind == StartStall.Kind);
-                if (stall == null) throw new System.InvalidOperationException("Start room stall was not placed.");
-                return StartStall.CounterPosition(stall);
-            }
-        }
+        public Vector2 ShopCounterPosition { get; private set; }
+        public Vector2 SignPosition { get; private set; }
 
         public Vector2 BossPosition
         {
@@ -121,6 +130,7 @@ namespace Echoes
             CarveDoors(plan);
             ApplyRoomWalls();
             ApplyTerrain(plan);
+            PlaceShop(new System.Random(config.randomSeed + Floor * 3253));
             ComputeCenters();
             var bossRoom = Rooms[Rooms.Count - 1];
             Vector2 entrance = bossRoom.DoorOpenings[0].center;
@@ -377,6 +387,41 @@ namespace Echoes
                 if (!spec.Solid) decorSpecs.Add(spec);
         }
 
+        private void PlaceShop(System.Random random)
+        {
+            var candidates = Rooms.FindAll(room => room.Role == RoomRole.Middle);
+            Shuffle(candidates, random);
+            foreach (var room in candidates)
+            {
+                var traps = RoomInterior.TrapAnchors(room);
+                var tiles = new List<Vector2Int>();
+                foreach (var cell in room.Cells)
+                {
+                    for (int x = 4; x < CellWidth - 6; x += 2)
+                        for (int y = 4; y < CellHeight - 4; y += 2)
+                            tiles.Add(new Vector2Int(cell.x * CellWidth + x, CellOriginY(cell.y) + y));
+                }
+                Shuffle(tiles, random);
+                foreach (var tile in tiles)
+                {
+                    var spec = StartStall.Layout(room, tile);
+                    var counter = Vector2Int.RoundToInt(StartStall.CounterPosition(spec));
+                    if (!IsWalkable(counter) || !IsWalkable(counter + Vector2Int.down)) continue;
+                    if (traps.Exists(t => Vector2Int.Distance(t.Tile, counter) <= run.Config.trapAnchorSearchRadius + 6)) continue;
+                    var blocked = new List<Vector2Int>();
+                    if (!TryBlockObstacle(spec, room, blocked)) continue;
+                    if (RoomConnected(room))
+                    {
+                        obstacleSpecs.Add(spec);
+                        ShopCounterPosition = counter;
+                        return;
+                    }
+                    foreach (var p in blocked) walkable[p.x, p.y] = true;
+                }
+            }
+            throw new System.InvalidOperationException("No reachable shop site on this floor.");
+        }
+
         // Dense flow walls reject some planned furniture. Top the room back up
         // with a few native props so cover stays useful without overfilling.
         private void EnsureRoomCover(Room room, int theme, List<RoomPropSpec> accepted)
@@ -613,6 +658,12 @@ namespace Echoes
             RenderNativeDoorDetails();
             RenderObstacles();
             RenderDecorations();
+            Vector2 exit = Rooms[0].DoorOpenings[0].center - StartPosition;
+            SignPosition = FindWalkableInRoom(StartPosition + new Vector2(1, 1), Rooms[0]);
+            int order = GameArt.FootOrder(SignPosition.y);
+            var sign = PixelArt.Create("ExitSign", "signpost", SignPosition, order, generatedRoot);
+            var arrow = PixelArt.Create("ExitArrow", "signArrow", SignPosition + Vector2.up * .94f, order + 1, sign.transform);
+            arrow.transform.rotation = Quaternion.Euler(0, 0, Mathf.Round(Mathf.Atan2(exit.y, exit.x) / (Mathf.PI / 2)) * 90);
             foreach (var room in Rooms)
                 RoomInterior.PlaceTraps(this, room, run, generatedRoot);
             PixelArt.Create("ChallengeAltar", "altar", AltarPosition, -120, generatedRoot);

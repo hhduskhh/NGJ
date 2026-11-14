@@ -63,15 +63,10 @@ namespace Echoes
         {
             theme = Mathf.Clamp(theme, 0, 2);
             if (theme == 0)
-            {
-                var firstFloor = BuildFirstFloor(room, random);
-                if (room.Role == RoomRole.Start) firstFloor.Insert(0, StartStall.Layout(room));
-                return firstFloor;
-            }
+                return BuildFirstFloor(room, random);
             if (theme == 1) return BuildSecondFloor(room, random);
             if (theme == 2) return BuildThirdFloor(room, random);
             var result = new List<RoomPropSpec>();
-            if (room.Role == RoomRole.Start) result.Add(StartStall.Layout(room));
             if (room.Role == RoomRole.Boss) BuildBoss(result, room, theme, random);
             else if (room.Role == RoomRole.Middle) BuildMiddle(result, room, theme, random);
             AddWallDecor(result, room, theme, random);
@@ -166,7 +161,6 @@ namespace Echoes
             var b = room.Bounds;
             if (room.Role == RoomRole.Start)
             {
-                result.Add(StartStall.Layout(room));
                 Native(result, "f2_tank", b, .22f, .80f);
                 Native(result, "f2_pipes", b, .80f, .80f);
             }

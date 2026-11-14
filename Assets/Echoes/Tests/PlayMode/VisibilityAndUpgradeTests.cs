@@ -10,6 +10,30 @@ namespace Echoes.Tests
 {
     public sealed class VisibilityAndUpgradeTests
     {
+        [UnityTest]
+        public IEnumerator ExhaustedUpgradesLeaveOnlyUsefulCards()
+        {
+            yield return SceneManager.LoadSceneAsync("Prototype");
+            yield return null;
+            var run = Object.FindObjectOfType<RunController>();
+            var p = run.Player;
+            p.MoveScale = 2;
+            p.ShotIntervalScale = .01f;
+            p.DoubleLootChance = 1;
+            p.DecoyCooldownReduction = 20;
+            p.NoiseRadiusBonus = 12;
+            p.CriticalDamageBonus = 5;
+            var choices = UpgradeDefinition.Roll(run.Random, p);
+            Assert.AreEqual(3, choices.Count);
+            Assert.IsTrue(choices.Exists(c => c.IncreasesNoise), "Pressure can still increase");
+            p.PressureBonusPerEnemy = .2f;
+            for (int i = 0; i < run.RequiredExperience; i++) run.Enemies[i].TakeDamage(99999);
+            Assert.AreEqual(2, run.Choices.Count);
+            run.Hud.PressUpgradeKey(2);
+            run.ChooseUpgrade(0);
+            Assert.AreEqual(RunState.Playing, run.State);
+        }
+
         private IEnumerator LoadFloor()
         {
             yield return SceneManager.LoadSceneAsync("Prototype");
