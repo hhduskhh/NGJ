@@ -33,11 +33,23 @@ Unity 2D 俯视角像素风肉鸽射击原型。以可视声波惊醒有限敌�
 初始渐变宽度为 3。脚步会在每次步行圈生成时发出实际声音，惊醒步行主圈内的敌人；渐变带只提供视野。修改与验证记录见 `Docs/019`、`Docs/020`。房间生成基线见 `Docs/032-房间生成与三层地牢.md`；三层原生美术清单见 `Docs/034-房间生成美术需求清单.md`；当前房间示意图见 `Docs/062-当前房间示意图.md`；世界观与 UI 氛围基调见 `Docs/063-世界观故事与UI氛围基调.md`；图纸动线规则见 `Docs/064-房间动线重制.md`；合并后的 P0 修复与最新验收见 `Docs/065-合并P0稳定性收口.md`。
 
 - `Assets/Echoes/Settings/DefaultGameConfig.asset`：集中配置战斗、成长、房间生成、每层敌人数量和楼层强度。
-- `Assets/Echoes/Scripts/Core/`：整局流程、纯规则、升级定义、商店。
-- `Assets/Echoes/Scripts/Combat/`：玩家、敌人状态、子弹、声波、诱饵。
-- `Assets/Echoes/Scripts/World/`：房间布局生成、`RoomLayouts` 布局原型、Tilemap 地图、寻路、主题美术、相机。
-- `Assets/Echoes/Scripts/UI/`：HUD、随层缩放的小地图、三选一、商店、暂停与层间结算。
 - `Docs/001-…` 起：逐项功能记录，包含编辑器设置与验证方法。
+
+### 运行时脚本
+
+在 `Assets/Echoes/Scripts/` 下按职责查找或添加脚本。各目录共用 `Echoes.Runtime` 程序集。
+
+| 目录 | 要修改的内容 | 入口示例 |
+| --- | --- | --- |
+| Core | 整局状态、楼层切换、配置结构 | `RunController`、`GameConfig` |
+| Combat | 玩家、敌人、射击、噪声惊醒与战斗规则 | `PlayerController`、`NoiseSystem`、`CombatRules` |
+| Progression | 金币拾取、商店交易、装备库存与升级效果 | `GoldPickup`、`ShopController`、`WeaponInventory`、`UpgradeDefinition` |
+| World | 地图生成、房间布局、寻路、陷阱与起点摊位占地 | `DungeonMap`、`RoomLayouts`、`StartStall` |
+| Visibility | 视野圈、遮挡计算与物件遮罩 | `VisionPulse`、`DungeonVisibility`、`PropSurfaceMap` |
+| Presentation | 精灵绑定、房间美术数据、相机、世界特效与片头 | `GameArt`、`RoomArt`、`OpeningCinematic` |
+| UI | 标题菜单、HUD、小地图、商店与结算界面 | `TitleMenu`、`GameHud` 及其分文件 |
+
+例如，调整商店商品池从 `Progression/ShopCatalog.cs` 入手，修改商店画面从 `UI/GameHud.Shop.cs` 入手，调整摊位碰撞从 `World/StartStall.cs` 入手。
 
 ## 测试
 
