@@ -43,7 +43,15 @@ namespace Echoes
         public static List<RoomPropSpec> Build(DungeonMap.Room room, int theme, System.Random random)
         {
             theme = Mathf.Clamp(theme, 0, 2);
+            if (theme == 0)
+            {
+                var firstFloor = BuildFirstFloor(room, random);
+                if (room.Role == RoomRole.Start) firstFloor.Insert(0, StartStall.Layout(room));
+                return firstFloor;
+            }
+            if (theme == 1) return BuildSecondFloor(room, random);
             var result = new List<RoomPropSpec>();
+            if (room.Role == RoomRole.Start) result.Add(StartStall.Layout(room));
             if (room.Role == RoomRole.Boss) BuildBoss(result, room, theme, random);
             else if (room.Role == RoomRole.Middle) BuildMiddle(result, room, theme, random);
             AddWallDecor(result, room, theme, random);
@@ -53,6 +61,147 @@ namespace Echoes
                 (room.Role == RoomRole.Middle ? 12 : 6);
             AddFloorDecals(result, room, theme, random, decalCount);
             AddClutter(result, room, theme, random, clutterCount);
+            foreach (var spec in result) spec.Owner = room;
+            return result;
+        }
+
+        private static List<RoomPropSpec> BuildFirstFloor(DungeonMap.Room room, System.Random random)
+        {
+            var result = new List<RoomPropSpec>();
+            var b = room.Bounds;
+            if (room.Role == RoomRole.Boss)
+            {
+                foreach (float x in new[] { .17f, .83f })
+                    foreach (float y in new[] { .17f, .83f })
+                        Native(result, "boss_pillar", b, x, y);
+            }
+            else if (room.Role == RoomRole.Start)
+            {
+                Native(result, "pew", b, .25f, .80f);
+                Native(result, "crate", b, .80f, .80f);
+            }
+            else
+            {
+                int variant = random.Next(3);
+                foreach (var cell in room.Cells)
+                {
+                    int x0 = cell.x * DungeonMap.CellWidth;
+                    int y0 = DungeonMap.CellOriginY(cell.y);
+                    var cellBounds = new RectInt(x0, y0, DungeonMap.CellWidth, DungeonMap.CellHeight);
+                    // The room shape supplies the outer plan; each cell gets a
+                    // different station vignette with four broad bypasses.
+                    // Three different silhouettes: bell-ring courtyard, staggered
+                    // cargo lane, and broken-column court. Do not repeat a bell
+                    // in every station room or rotate vertical architecture.
+                    Native(result, variant == 0 ? "bell" : variant == 1 ? "crate" : "rubble",
+                        cellBounds, .50f, .50f);
+                    Native(result, "crate", cellBounds, .22f, .22f);
+                    Native(result, "rubble", cellBounds, .78f, .78f);
+                    Native(result, variant == 2 ? "rubble" : "crate", cellBounds, .22f, .78f);
+                    Native(result, "crate", cellBounds, .78f, .22f);
+                    bool vertical = room.Bounds.height > room.Bounds.width;
+                    Native(result, vertical ? "pew_ns" : "pew", cellBounds, .28f, variant == 1 ? .36f : .40f);
+                    Native(result, vertical ? "pew_ns" : "pew", cellBounds, .72f, variant == 1 ? .64f : .60f);
+                    Native(result, "column", cellBounds, .16f, .50f);
+                    Native(result, "column", cellBounds, .84f, .50f);
+                    Native(result, "rubble", cellBounds, .50f, .20f);
+                    Native(result, "crate", cellBounds, .50f, .80f);
+                    if (variant == 2)
+                    {
+                        Native(result, "column", cellBounds, .36f, .36f);
+                        Native(result, "column", cellBounds, .64f, .64f);
+                    }
+                }
+            }
+            foreach (var cell in room.Cells)
+            {
+                int x0 = cell.x * DungeonMap.CellWidth;
+                int y0 = DungeonMap.CellOriginY(cell.y);
+                // Upright wall sconces mount on north-facing walls only.
+                // No sideways/flipped lighting fixtures on other walls.
+                foreach (int dx in new[] { 6, 13, 23, 30 })
+                    result.Add(new RoomPropSpec { Kind = "room_sconce", X = x0 + dx,
+                        Y = y0 + DungeonMap.CellHeight - 1, Layer = RoomPropLayer.WallObject });
+                if (room.Role == RoomRole.Boss) continue;
+                for (int i = 0; i < 12; i++)
+                    result.Add(new RoomPropSpec { Kind = new[] { "room_crack", "room_moss", "room_coins" }[i % 3],
+                        X = x0 + 3 + random.Next(DungeonMap.CellWidth - 6),
+                        Y = y0 + 3 + random.Next(DungeonMap.CellHeight - 6),
+                        Layer = RoomPropLayer.FloorDecal, Color = new Color(1, 1, 1, .55f) });
+            }
+            foreach (var spec in result) spec.Owner = room;
+            return result;
+        }
+
+        private static void Native(List<RoomPropSpec> result, string kind, RectInt bounds, float x, float y)
+        {
+            var art = RoomArt.Definition("room_" + kind);
+            Place(result, art.Kind, bounds, x, y, art.Footprint.x, art.Footprint.y, 1);
+        }
+
+        private static List<RoomPropSpec> BuildSecondFloor(DungeonMap.Room room, System.Random random)
+        {
+            var result = new List<RoomPropSpec>();
+            var b = room.Bounds;
+            if (room.Role == RoomRole.Start)
+            {
+                result.Add(StartStall.Layout(room));
+                Native(result, "f2_tank", b, .22f, .80f);
+                Native(result, "f2_pipes", b, .80f, .80f);
+            }
+            else if (room.Role == RoomRole.Boss)
+            {
+                foreach (float x in new[] { .17f, .83f })
+                    foreach (float y in new[] { .17f, .83f })
+                        Native(result, "f2_boss_pillar", b, x, y);
+            }
+            else
+            {
+                bool vertical = b.height > b.width;
+                int focus = random.Next(room.Cells.Count);
+                int variant = random.Next(3);
+                for (int i = 0; i < room.Cells.Count; i++)
+                {
+                    var cell = room.Cells[i];
+                    var area = new RectInt(cell.x * DungeonMap.CellWidth,
+                        DungeonMap.CellOriginY(cell.y), DungeonMap.CellWidth, DungeonMap.CellHeight);
+                    if (i == focus) Native(result, "f2_boiler", area, .50f, .50f);
+                    else if (vertical)
+                    {
+                        Native(result, "f2_tank", area, .38f, .50f);
+                        Native(result, "f2_tank", area, .62f, .50f);
+                    }
+                    else
+                    {
+                        Native(result, "f2_tank", area, .50f, .38f);
+                        Native(result, "f2_tank", area, .50f, .62f);
+                    }
+                    // Boiler islands, double receiver bays and broken drive
+                    // assemblies share clear side routes, but different outlines.
+                    foreach (float x in new[] { .22f, .78f })
+                        foreach (float y in new[] { .22f, .78f })
+                            Native(result, (variant == 2 && x == y) ? "f2_gears" : "f2_tank", area, x, y);
+                    Native(result, vertical ? "f2_conveyor_ns" : "f2_conveyor", area, .15f, .50f);
+                    Native(result, vertical ? "f2_pipes_ns" : "f2_pipes", area, .85f, .50f);
+                    Native(result, "f2_gears", area, .50f, .20f);
+                    Native(result, "f2_gears", area, .50f, .80f);
+                    if (room.Shape == RoomShape.L && i != focus)
+                        Native(result, "f2_pipes", area, .28f, .62f);
+                }
+            }
+            foreach (var cell in room.Cells)
+            {
+                int x0 = cell.x * DungeonMap.CellWidth, y0 = DungeonMap.CellOriginY(cell.y);
+                foreach (int dx in new[] { 6, 13, 23, 30 })
+                    result.Add(new RoomPropSpec { Kind = "room_f2_wall_pipes", X = x0 + dx,
+                        Y = y0 + DungeonMap.CellHeight - 1, Layer = RoomPropLayer.WallObject });
+                if (room.Role == RoomRole.Boss) continue;
+                for (int i = 0; i < 12; i++)
+                    result.Add(new RoomPropSpec { Kind = new[] { "room_f2_oil", "room_f2_water", "room_f2_scrap" }[i % 3],
+                        X = x0 + 3 + random.Next(DungeonMap.CellWidth - 6),
+                        Y = y0 + 3 + random.Next(DungeonMap.CellHeight - 6),
+                        Layer = RoomPropLayer.FloorDecal, Color = new Color(1, 1, 1, .55f) });
+            }
             foreach (var spec in result) spec.Owner = room;
             return result;
         }

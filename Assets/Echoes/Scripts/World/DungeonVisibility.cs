@@ -127,6 +127,13 @@ namespace Echoes
             walkableTexture.Apply(false, true);
             darkness.SetTexture("_Walkable", walkableTexture);
             darkness.SetVector("_MapSize", new Vector4(width, height, 1f / width, 1f / height));
+            var stall = StartStall.Layout(run.Map.Rooms[0]);
+            var sprite = GameArt.Get(StartStall.Kind);
+            darkness.SetTexture("_StallSprite", sprite.texture);
+            darkness.SetVector("_StallBounds", new Vector4(stall.X + (stall.Width - 1) * .5f - 3,
+                stall.Y - .5f, 6, 4));
+            Vector2 front = run.Map.ShopCounterPosition;
+            darkness.SetVector("_StallFront", new Vector4(front.x, front.y, 0, 0));
         }
 
         private bool Expired(VisionPulse echo) => Time.time - echo.StartedAt >= run.Config.VisionPulseDuration;

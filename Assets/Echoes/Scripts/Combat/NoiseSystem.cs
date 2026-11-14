@@ -9,12 +9,14 @@ namespace Echoes
     {
         private RunController run;
         private AudioSource audioSource;
-        private AudioClip shot, bell, footstep;
+        private AudioClip shot, bell, footstep, click, coin;
         public void Initialize(RunController controller)
         {
             run = controller;
             audioSource = gameObject.AddComponent<AudioSource>();
             audioSource.volume = .12f;
+            click = Tone("UI press", 180, .025f);
+            coin = Tone("UI coin", 1240, .12f);
             shot = Tone("ShotPlaceholder", 100, .06f);
             bell = Tone("BellPlaceholder", 640, .2f);
             footstep = Tone("FootstepPlaceholder", 75, .045f);
@@ -27,6 +29,13 @@ namespace Echoes
                 samples[i] = Mathf.Sin(i * frequency * 2 * Mathf.PI / sampleRate) * (1 - (float)i / samples.Length);
             var clip = AudioClip.Create(name, samples.Length, 1, sampleRate, false);
             clip.SetData(samples, 0); return clip;
+        }
+        public void PlayUiPress() => audioSource.PlayOneShot(click, .36f);
+        public void PlayPurchase() => audioSource.PlayOneShot(coin, .65f);
+        private void OnDestroy()
+        {
+            Destroy(click); Destroy(coin);
+            Destroy(shot); Destroy(bell); Destroy(footstep);
         }
         public void PlayShot() => audioSource.PlayOneShot(shot);
         public void Emit(Vector2 origin, float radius, NoiseKind kind)

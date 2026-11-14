@@ -103,6 +103,43 @@ namespace Echoes.Tests
             Assert.Greater(run.Elapsed, resumed);
         }
 
+        [UnityTest] public IEnumerator PassiveShopIconsFollowPurchaseAndPages()
+        {
+            var art = PresentationArt.Current;
+            foreach (var item in run.Config.passives)
+            {
+                var sprite = art.Passive(item.title);
+                Assert.IsNotNull(sprite, item.title);
+                Assert.AreEqual(new Vector2(32, 32), sprite.rect.size);
+                Assert.AreEqual(FilterMode.Point, sprite.texture.filterMode);
+            }
+            run.Player.GetComponent<Rigidbody2D>().position = run.Shop.Position;
+            yield return new WaitForFixedUpdate();
+            run.Shop.Credit(500);
+            Assert.IsTrue(run.Shop.Open());
+            yield return null;
+            var offer = run.Shop.Offers[2];
+            var icon = GameObject.Find("Offer2").transform.Find("PassiveIcon").GetComponent<UnityEngine.UI.Image>();
+            Assert.AreSame(art.Passive(offer.Item.title), icon.sprite);
+            Assert.IsTrue(icon.preserveAspect);
+            Assert.IsFalse(icon.raycastTarget);
+            Click(FindButton("BuyOffer2"));
+            yield return null;
+            var owned = Object.FindObjectsOfType<UnityEngine.UI.Image>().Single(i => i.name == "OwnedPassiveIcon");
+            Assert.AreSame(art.Passive(offer.Item.title), owned.sprite);
+            foreach (var other in run.Config.passives.Where(item => item != offer.Item).Take(4))
+                Assert.IsTrue(run.Player.Passives.Add(other));
+            run.Hud.RefreshModal();
+            yield return null;
+            Capture("07-passive-shop-icons");
+            Assert.AreEqual(4, Object.FindObjectsOfType<UnityEngine.UI.Image>().Count(i => i.name == "OwnedPassiveIcon"));
+            Click(FindButton("ItemPage"));
+            yield return null;
+            Assert.AreEqual(1, Object.FindObjectsOfType<UnityEngine.UI.Image>().Count(i => i.name == "OwnedPassiveIcon"));
+            Click(FindButton("ShopExit"));
+            Assert.AreEqual(RunState.Playing, run.State);
+        }
+
         [UnityTest] public IEnumerator CatalogButtonStatesAndFullLoadoutRender()
         {
             var art = PresentationArt.Current;
@@ -116,6 +153,7 @@ namespace Echoes.Tests
             Assert.AreSame(art.goldPickup, Object.FindObjectOfType<GoldPickup>().GetComponent<SpriteRenderer>().sprite);
 
             foreach (int kind in new[] { 1, 2, 0, 1, 2 }) Assert.IsTrue(run.Player.Weapons.Add(kind, 0));
+            run.Player.PlaceAt(run.Shop.Position);
             run.Shop.Credit(500);
             Assert.IsTrue(run.Shop.Open());
             yield return null;

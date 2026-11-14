@@ -16,6 +16,8 @@ namespace Echoes
         public IReadOnlyList<Offer> Offers => offers;
         private readonly List<Offer> offers = new List<Offer>();
         public int Gold { get; private set; }
+        public string GoldText => run.FeelDebugMode ? "无限" : Gold.ToString();
+        public bool CanAfford(int price) => run.FeelDebugMode || Gold >= price;
         public int Refreshes { get; private set; }
         public float[] QualityWeights => ShopQualityRules.Weights(run.Config, run.Level);
         public Vector2 Position { get; private set; }
@@ -31,16 +33,9 @@ namespace Echoes
         public void BeginFloor(Vector2 spawn)
         {
             foreach (Transform child in transform) Destroy(child.gameObject);
-            Position = run.Map.NearestFloor(spawn + Vector2.right * 2.5f);
-            if (Vector2.Distance(Position, spawn) > run.Config.shopInteractRadius)
-                Position = run.Map.NearestFloor(spawn + Vector2.right * 1.5f);
-            var stand = PixelArt.Create("ShopPlaceholder", "solid", Position, 5, transform);
-            stand.color = new Color(.25f, .14f, .07f);
-            stand.transform.localScale = new Vector3(1.4f, 1, 1);
-            var roof = PixelArt.Create("ShopAwning", "solid", Position + Vector2.up * .65f, 6, transform);
-            roof.color = PixelArt.Gold; roof.transform.localScale = new Vector3(1.7f, .25f, 1);
-            var sign = PixelArt.Create("ShopSign", "solid", Position + Vector2.up * .2f, 7, transform);
-            sign.color = PixelArt.Gold; sign.transform.localScale = Vector3.one * .3f;
+            // DungeonMap owns the single formal sprite and its 5x3 solid footprint.
+            // Interact with a reachable floor tile in front, never a blocked counter tile.
+            Position = run.Map.ShopCounterPosition;
             Refreshes = 0;
             Roll();
         }
@@ -64,7 +59,7 @@ namespace Echoes
                 if (merge && (offer.Tier >= 3 || run.Player.Weapons.Match(offer.Weapon, offer.Tier) < 0)) return "无可合成同款";
                 if (!merge && run.Player.Weapons.Slots.Count >= WeaponInventory.Capacity) return "武器槽已满";
             }
-            return Gold < Price(offer) ? $"还差 {Price(offer) - Gold} 金币" : null;
+            return !CanAfford(Price(offer)) ? $"还差 {Price(offer) - Gold} 金币" : null;
         }
         public bool Buy(int index, bool merge = false)
         {
@@ -74,13 +69,15 @@ namespace Echoes
             bool applied = offer.Item != null ? run.Player.Passives.Add(offer.Item) : merge ?
                 run.Player.Weapons.Merge(run.Player.Weapons.Match(offer.Weapon, offer.Tier)) : run.Player.Weapons.Add(offer.Weapon, offer.Tier);
             if (!applied) return false;
-            Gold -= Price(offer); offer.Sold = true;
+            if (!run.FeelDebugMode) Gold -= Price(offer);
+            offer.Sold = true;
             run.Hud.RefreshModal(); return true;
         }
         public bool RefreshStock()
         {
-            if (run.State != RunState.Shop || Gold < RefreshPrice) return false;
-            Gold -= RefreshPrice; Refreshes++; Roll(); run.Hud.RefreshModal(); return true;
+            if (run.State != RunState.Shop || !CanAfford(RefreshPrice)) return false;
+            if (!run.FeelDebugMode) Gold -= RefreshPrice;
+            Refreshes++; Roll(); run.Hud.RefreshModal(); return true;
         }
         public bool Sell(int slot)
         {

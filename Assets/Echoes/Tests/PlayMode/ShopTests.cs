@@ -21,6 +21,12 @@ namespace Echoes.Tests
         {
             yield return SceneManager.LoadSceneAsync("Prototype"); yield return null;
             run = Object.FindObjectOfType<RunController>();
+            // Test setup moves to the real counter without granting the
+            // floor-transition invulnerability of PlayerController.PlaceAt.
+            run.Player.GetComponent<Rigidbody2D>().position = run.Shop.Position;
+            run.Player.transform.position = run.Shop.Position;
+            Physics2D.SyncTransforms();
+            yield return null;
         }
         [UnityTest] public IEnumerator LootPausePurchaseRefreshAndReopen()
         {
@@ -33,7 +39,7 @@ namespace Echoes.Tests
             yield return new WaitForSeconds(.05f);
             Assert.AreEqual(run.Config.goldPerKill, run.Shop.Gold);
             Assert.IsFalse(run.Shop.Open(), "Remote shopping is blocked");
-            run.Player.GetComponent<Rigidbody2D>().position = run.Map.Rooms[0].Center;
+            run.Player.GetComponent<Rigidbody2D>().position = run.Shop.Position;
             yield return new WaitForSeconds(.05f);
             Assert.IsTrue(run.Shop.Open());
             float elapsed = run.Elapsed;
@@ -96,9 +102,11 @@ namespace Echoes.Tests
             Assert.IsFalse(run.Shop.Sell(0));
             run.Shop.Credit(1000); run.Shop.RefreshStock();
             int gold = run.Shop.Gold;
-            run.Shop.BeginFloor(run.Map.Rooms[1].Center);
+            run.Shop.Close();
+            run.SetState(RunState.FloorCleared);
+            run.AdvanceFloor();
             Assert.AreEqual(0, run.Shop.Refreshes); Assert.AreEqual(gold, run.Shop.Gold);
-            Assert.Less(Vector2.Distance(run.Shop.Position, run.Map.Rooms[1].Center), 3);
+            Assert.AreEqual(run.Map.ShopCounterPosition, run.Shop.Position);
             yield return null;
         }
         [Test] public void RuntimePassiveCatalogMatchesEachTier()
@@ -169,6 +177,11 @@ namespace Echoes.Tests
         }
         [UnityTest] public IEnumerator WeaponVolleyRangeAndPiercing()
         {
+            // The formal counter correctly blocks shots aimed into the stall.
+            // Exercise weapon rules from the clear station centre instead.
+            run.Player.GetComponent<Rigidbody2D>().position = run.Map.Rooms[0].Center;
+            run.Player.transform.position = run.Map.Rooms[0].Center;
+            Physics2D.SyncTransforms();
             var weapons = run.Player.Weapons;
             weapons.Remove(0); weapons.Add(1, 0); weapons.Slots[0].Cooldown = 0;
             int pulses = run.Visibility.Pulses.Count;

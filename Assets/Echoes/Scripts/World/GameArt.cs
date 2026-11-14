@@ -24,10 +24,12 @@ namespace Echoes
         public static string Floor => "Floor" + (Theme + 1) + "/";
         public static Sprite Get(string kind)
         {
+            if (kind.StartsWith("room_")) return RoomArt.Sprite(kind);
             if (kind.StartsWith("weapon_") && int.TryParse(kind.Substring(7), out int weapon))
                 return PresentationArt.Current.weapons[weapon];
             switch (kind)
             {
+                case StartStall.Kind: return Frame(StartStall.ArtPath, 0);
                 case "player": return Frame("Common/hero", 0);
                 case "enemy": return Frame(Floor + "walker", 0);
                 case "boss": return Frame(Floor + "boss", 0);

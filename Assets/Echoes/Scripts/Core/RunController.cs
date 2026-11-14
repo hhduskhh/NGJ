@@ -35,6 +35,8 @@ namespace Echoes
             config.firstLevelExperience, config.experienceStep);
         public bool BossActivated { get; private set; }
         public bool Muted { get; private set; }
+        public bool FeelDebugMode { get; private set; }
+        public void SetFeelDebugMode(bool enabled) => FeelDebugMode = enabled;
         public List<UpgradeDefinition> Choices { get; private set; }
         public System.Random Random { get; private set; }
         private int pendingUpgradeCost;
@@ -92,7 +94,11 @@ namespace Echoes
                 Muted = !Muted;
                 AudioListener.volume = Muted ? 0 : 1;
             }
-            if (State == RunState.FloorCleared && Input.GetKeyDown(KeyCode.E)) { AdvanceFloor(); return; }
+            if (State == RunState.FloorCleared || State == RunState.Won)
+            {
+                Hud.ReadResultInput();
+                return;
+            }
             if (State == RunState.Shop && Input.GetKeyDown(KeyCode.Escape)) { Shop.Close(); return; }
             if (Input.GetKeyDown(KeyCode.Escape) &&
                 (State == RunState.Playing || State == RunState.Paused))

@@ -20,7 +20,7 @@ namespace Echoes
         private void SkinButton(RectTransform rect)
         {
             var art = PresentationArt.Current;
-            var image = rect.GetComponent<UnityEngine.UI.Image>();
+            var image = (UnityEngine.UI.Image)rect.GetComponent<HudButton>().targetGraphic;
             image.sprite = art.buttonStates[0];
             image.type = UnityEngine.UI.Image.Type.Sliced;
             image.color = Color.white;

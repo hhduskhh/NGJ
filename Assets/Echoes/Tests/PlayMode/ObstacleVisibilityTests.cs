@@ -124,6 +124,15 @@ namespace Echoes.Tests
         {
             yield return LoadFloor();
             var room = run.Map.Rooms[0];
+            // This is an empty-rectangle wall-face fixture. The formal start
+            // room now contains solid furniture, which correctly casts shadows
+            // and must not be mistaken for triangular wall shader gaps.
+            var open = (bool[,])typeof(DungeonMap).GetField("walkable",
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).GetValue(run.Map);
+            for (int x = room.Bounds.x; x < room.Bounds.xMax; x++)
+                for (int y = room.Bounds.y; y < room.Bounds.yMax; y++)
+                    if (run.Map.IsFloorTile(new Vector2Int(x, y))) open[x, y] = true;
+            run.Visibility.Rebuild();
             Vector2 source = room.Center;
             PlacePlayer(source);
             run.Visibility.Reveal(source, 30);
@@ -197,6 +206,100 @@ namespace Echoes.Tests
                 camera.targetTexture = null;
                 Object.Destroy(camera.gameObject); Object.Destroy(backing.gameObject);
                 Object.Destroy(target); Object.Destroy(image); Object.Destroy(sprite);
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator PartiallyOccludedWallsFollowTheFaceShadowAcrossTileSeams()
+        {
+            yield return LoadFloor();
+            const int size = 16;
+            var shader = Resources.Load<Shader>("DungeonDarkness");
+            var sprite = Sprite.Create(Texture2D.whiteTexture, new Rect(0, 0, 1, 1), Vector2.one * .5f, 1);
+            var material = new Material(shader);
+            var cells = new Texture2D(size, size, TextureFormat.RGBA32, false, true)
+                { filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp };
+            var objects = new List<GameObject>();
+            SpriteRenderer Quad(string name, int order, Material surface)
+            {
+                var go = new GameObject(name) { layer = 31 };
+                objects.Add(go);
+                go.transform.position = new Vector2(7.5f, 7.5f);
+                go.transform.localScale = new Vector3(size, size, 1);
+                var renderer = go.AddComponent<SpriteRenderer>();
+                renderer.sprite = sprite; renderer.sharedMaterial = surface; renderer.sortingOrder = order;
+                return renderer;
+            }
+            Quad("ShadowProbeBacking", 39, PixelArt.LineMaterial);
+            Quad("ShadowProbeDarkness", 40, material);
+            var camera = new GameObject("ShadowProbeCamera").AddComponent<Camera>();
+            camera.cullingMask = 1 << 31;
+            camera.transform.position = new Vector3(7.5f, 7.5f, -10);
+            camera.orthographic = true; camera.orthographicSize = 8;
+            var target = new RenderTexture(640, 640, 24);
+            var image = new Texture2D(640, 640, TextureFormat.RGB24, false);
+            var previousActive = RenderTexture.active;
+            var failures = new List<string>();
+            try
+            {
+                camera.targetTexture = target;
+                material.SetTexture("_Walkable", cells);
+                material.SetVector("_MapSize", new Vector4(size, size, 1f / size, 1f / size));
+                material.SetInt("_EchoCount", 0);
+                Directory.CreateDirectory("TestResults");
+                for (int rotation = 0; rotation < 4; rotation++)
+                {
+                    Vector2 Rotate(Vector2 p)
+                    {
+                        for (int turn = 0; turn < rotation; turn++) p = new Vector2(15 - p.y, p.x);
+                        return p;
+                    }
+                    var pixels = new Color32[size * size];
+                    for (int y = 0; y < size; y++)
+                        for (int x = 0; x < size; x++)
+                        {
+                            var p = Vector2Int.RoundToInt(Rotate(new Vector2(x, y)));
+                            bool open = y != 10 && !(x == 6 && y == 6);
+                            pixels[p.y * size + p.x] = open ? new Color32(255, 0, 0, 255) : new Color32(0, 0, 0, 255);
+                        }
+                    cells.SetPixels32(pixels); cells.Apply();
+                    Vector2 origin = Rotate(new Vector2(3, 3));
+                    material.SetVector("_PlayerVision", new Vector4(origin.x, origin.y, 30, 1.5f));
+                    camera.Render();
+                    RenderTexture.active = target;
+                    image.ReadPixels(new Rect(0, 0, 640, 640), 0, 0); image.Apply();
+                    File.WriteAllBytes("TestResults/wall-shadow-" + rotation + ".png", image.EncodeToPNG());
+                    float Brightness(Vector2 point)
+                    {
+                        Vector3 pixel = camera.WorldToScreenPoint(Rotate(point));
+                        return image.GetPixel(Mathf.FloorToInt(pixel.x), Mathf.FloorToInt(pixel.y)).maxColorComponent;
+                    }
+                    // The (6,6) block casts its left shadow edge from corner (5.5,6.5)
+                    // onto the wall's exposed plane y=9.5, at x=7.642857. It lies inside tile 8.
+                    for (int sample = 0; sample < 40; sample++)
+                    {
+                        float x = 6.625f + sample * .1f;
+                        bool lit = x < 7.642857f;
+                        foreach (float y in new[] { 9.65f, 10, 10.35f })
+                        {
+                            float brightness = Brightness(new Vector2(x, y));
+                            if (lit ? brightness < .95f : brightness > .01f)
+                                failures.Add("rotation=" + rotation + " point=" + new Vector2(x, y) + " lit=" + lit);
+                        }
+                    }
+                    Assert.Less(Brightness(new Vector2(8, 12)), .01f, "Floor behind the wall stays dark");
+                    Assert.Greater(Brightness(new Vector2(4, 8)), .95f, "Unoccluded floor stays visible");
+                    Assert.Less(Brightness(new Vector2(8, 8)), .01f, "The block still occludes floor");
+                }
+                Assert.IsEmpty(failures, "Wall shadows must not snap to tile centers or diagonal neighbours: " +
+                    string.Join("; ", failures.GetRange(0, Mathf.Min(8, failures.Count))));
+            }
+            finally
+            {
+                RenderTexture.active = previousActive; camera.targetTexture = null;
+                foreach (var go in objects) Object.Destroy(go);
+                Object.Destroy(camera.gameObject); Object.Destroy(target); Object.Destroy(image);
+                Object.Destroy(sprite); Object.Destroy(material); Object.Destroy(cells);
             }
         }
 

@@ -23,9 +23,12 @@ Shader "Echoes/DungeonDarkness"
                 float4 _MapSize;
                 float4 _PlayerVision;
                 float4 _Echoes[32];
+                float4 _StallBounds;
+                float4 _StallFront;
                 int _EchoCount;
             CBUFFER_END
             sampler2D _Walkable;
+            sampler2D _StallSprite;
 
             Varyings Vert(Attributes input)
             {
@@ -76,10 +79,15 @@ Shader "Echoes/DungeonDarkness"
                 return false;
             }
 
-            bool WallFaceVisible(float2 origin, int2 cell, int2 normal)
+            bool WallFaceVisible(float2 origin, int2 cell, int2 normal, float2 worldPosition)
             {
                 if (!IsWalkable(cell + normal)) return false;
-                return HasLineOfSight(origin, float2(cell) + float2(normal) * .501);
+                float2 surface = float2(cell) + float2(normal) * .501;
+                // Keep the fragment's tangent coordinate on the exposed plane. A single
+                // midpoint makes partial wall shadows snap to a staircase of whole tiles.
+                if (normal.x == 0) surface.x = worldPosition.x;
+                if (normal.y == 0) surface.y = worldPosition.y;
+                return HasLineOfSight(origin, surface);
             }
 
             bool SurfaceVisible(float2 origin, float2 worldPosition)
@@ -87,18 +95,20 @@ Shader "Echoes/DungeonDarkness"
                 int2 cell = int2(floor(worldPosition + .5));
                 if (!InBounds(cell)) return false;
                 if (IsWalkable(cell)) return HasLineOfSight(origin, worldPosition);
-                // Resolve the whole wall tile from its exposed faces. Fragment rays can
-                // hit an adjacent wall tile and cut triangular gaps into a flat wall.
-                if (WallFaceVisible(origin, cell, int2(1, 0))) return true;
-                if (WallFaceVisible(origin, cell, int2(-1, 0))) return true;
-                if (WallFaceVisible(origin, cell, int2(0, 1))) return true;
-                if (WallFaceVisible(origin, cell, int2(0, -1))) return true;
+                // Trace to the exposed surface, rather than through the wall thickness.
+                if (WallFaceVisible(origin, cell, int2(1, 0), worldPosition)) return true;
+                if (WallFaceVisible(origin, cell, int2(-1, 0), worldPosition)) return true;
+                if (WallFaceVisible(origin, cell, int2(0, 1), worldPosition)) return true;
+                if (WallFaceVisible(origin, cell, int2(0, -1), worldPosition)) return true;
+                // A hidden face cannot borrow light from a diagonal floor neighbour.
+                if (IsWalkable(cell + int2(1, 0)) || IsWalkable(cell + int2(-1, 0)) ||
+                    IsWalkable(cell + int2(0, 1)) || IsWalkable(cell + int2(0, -1))) return false;
                 // Corner blocks have no cardinal floor neighbour; reveal them through
                 // the diagonal floor tile so the inner corner does not become a dark step.
-                if (WallFaceVisible(origin, cell, int2(1, 1))) return true;
-                if (WallFaceVisible(origin, cell, int2(-1, 1))) return true;
-                if (WallFaceVisible(origin, cell, int2(1, -1))) return true;
-                return WallFaceVisible(origin, cell, int2(-1, -1));
+                if (WallFaceVisible(origin, cell, int2(1, 1), worldPosition)) return true;
+                if (WallFaceVisible(origin, cell, int2(-1, 1), worldPosition)) return true;
+                if (WallFaceVisible(origin, cell, int2(1, -1), worldPosition)) return true;
+                return WallFaceVisible(origin, cell, int2(-1, -1), worldPosition);
             }
 
             float InCircle(float2 worldPosition, float4 circle, float alreadyVisible)
@@ -112,11 +122,19 @@ Shader "Echoes/DungeonDarkness"
 
             half4 Frag(Varyings input) : SV_Target
             {
-                float visible = InCircle(input.world, _PlayerVision, 0);
+                // A tall prop's canopy/sign are above its solid ground footprint.
+                // Only its opaque sprite pixels borrow visibility from the reachable front.
+                // Transparent gaps and the floor behind still use the original occlusion.
+                float2 visibilityPoint = input.world;
+                float2 stallUV = (input.world - _StallBounds.xy) / max(_StallBounds.zw, .001);
+                [branch] if (all(stallUV >= 0) && all(stallUV <= 1) &&
+                    tex2D(_StallSprite, stallUV).a > .5)
+                    visibilityPoint = _StallFront.xy;
+                float visible = InCircle(visibilityPoint, _PlayerVision, 0);
                 [loop] for (int i = 0; i < _EchoCount; i++)
                 {
                     if (visible >= 1) break;
-                    visible = max(visible, InCircle(input.world, _Echoes[i], visible));
+                    visible = max(visible, InCircle(visibilityPoint, _Echoes[i], visible));
                 }
                 return half4(0, 0, 0, 1 - visible);
             }

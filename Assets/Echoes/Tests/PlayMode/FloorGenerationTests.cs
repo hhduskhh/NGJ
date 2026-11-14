@@ -138,6 +138,7 @@ namespace Echoes.Tests
             player.TakeDamage(20);
             float health = player.Health;
             run.Shop.Credit(50);
+            run.Player.PlaceAt(run.Shop.Position);
             Assert.IsTrue(run.Shop.Open());
             Assert.IsTrue(run.Shop.RefreshStock());
             int gold = run.Shop.Gold;
