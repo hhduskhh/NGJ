@@ -10,7 +10,10 @@ namespace Echoes
         private RectTransform canvas, modal;
         private TMP_Text healthText, xpText, roomText, pressureText, statusText, clockText, goldText, noticeText, bossText;
         private UnityEngine.UI.Image healthBar, xpBar, bossBar;
+        private RectTransform mapPanel;
+        private TMP_Text mapTitle;
         private UnityEngine.UI.Image[] roomIcons;
+        private TMP_Text[] roomCellLabels;
         private float noticeUntil;
         private static TMP_FontAsset font;
         private readonly Color panel = new Color32(15, 23, 35, 246);
@@ -46,17 +49,9 @@ namespace Echoes
             pressureText = Label(info, "", new Vector2(18, -45), new Vector2(285, 40), 27, PixelArt.Gold);
             Label(info, "青色细环 = 围攻加成计数范围", new Vector2(18, -99), new Vector2(290, 22), 15, muted);
 
-            var map = Panel("MiniMap", canvas, new Vector2(-24, -24), new Vector2(244, 208), panel, new Vector2(1, 1));
-            Label(map, "地 下 一 层", new Vector2(16, -10), new Vector2(215, 25), 17, muted);
-            roomIcons = new UnityEngine.UI.Image[run.Map.Rooms.Count];
-            for (int i = 0; i < roomIcons.Length; i++)
-            {
-                var b = run.Map.Rooms[i].Bounds;
-                roomIcons[i] = Panel("Room" + i, map, new Vector2(19 + b.x / 18 * 70, -151 + b.y / 14 * 46),
-                    new Vector2(58, 34), muted).GetComponent<UnityEngine.UI.Image>();
-                Label(roomIcons[i].rectTransform, i == 0 ? "起点" : i == roomIcons.Length - 1 ? "守关" : "0" + (i + 1),
-                    new Vector2(5, -3), new Vector2(50, 26), 14, Color.white);
-            }
+            mapPanel = Panel("MiniMap", canvas, new Vector2(-24, -24), new Vector2(244, 208), panel, new Vector2(1, 1));
+            mapTitle = Label(mapPanel, "", new Vector2(14, -10), new Vector2(218, 25), 15, muted);
+            RebuildMinimap();
             roomText = Label(canvas, "", new Vector2(-24, -246), new Vector2(300, 30), 18, Color.white, new Vector2(1, 1));
             roomText.alignment = TextAlignmentOptions.Right;
             clockText = Label(canvas, "", new Vector2(-24, -283), new Vector2(300, 30), 17, muted, new Vector2(1, 1));
@@ -67,7 +62,7 @@ namespace Echoes
             var footer = Panel("Footer", canvas, new Vector2(24, 24), new Vector2(-48, 92), panel, Vector2.zero);
             footer.anchorMax = new Vector2(1, 0);
             statusText = Label(footer, "", new Vector2(18, -10), new Vector2(1450, 28), 19, PixelArt.Cyan);
-            Label(footer, "WASD 移动   /   左键射击 · 自动瞄准可见敌人   /   Q 鼠标方向诱饵   /   E 商店 / 挑战守关者   /   Esc 暂停   /   M 静音",
+            Label(footer, "WASD 移动   /   左键射击 · 自动瞄准可见敌人   /   Q 鼠标方向诱饵   /   E 商店 / 祭坛 / 下潜   /   Esc 暂停   /   M 静音",
                 new Vector2(18, -49), new Vector2(1450, 28), 17, muted);
             noticeText = Label(canvas, "", new Vector2(0, -52), new Vector2(690, 45), 23, PixelArt.Gold, new Vector2(.5f, 1));
             noticeText.alignment = TextAlignmentOptions.Center;
@@ -94,8 +89,15 @@ namespace Echoes
                 $"围攻上限 +{run.Player.PressureCap * run.Player.PressureBonus * 100:0}%   ·   {(run.Muted ? "声音已关闭 [M]" : "声音开启 [M]")}";
             if (Time.unscaledTime >= noticeUntil) noticeText.text = "";
             for (int i = 0; i < roomIcons.Length; i++)
-                roomIcons[i].color = i == run.Map.CurrentRoom ? new Color(.16f, .52f, .53f) :
-                    run.Map.Rooms[i].Visited ? new Color(.27f, .34f, .43f) : new Color(.12f, .17f, .25f);
+            {
+                if (!roomIcons[i]) continue;
+                int col = i % DungeonMap.GridSize;
+                int row = i / DungeonMap.GridSize;
+                var room = run.Map.RoomAtCell(col, row);
+                roomIcons[i].color = room == null ? new Color(.08f, .11f, .16f) :
+                    room.Index == run.Map.CurrentRoom ? new Color(.16f, .52f, .53f) :
+                    room.Visited ? new Color(.27f, .34f, .43f) : new Color(.12f, .17f, .25f);
+            }
             if (run.BossActivated)
             {
                 bossBar.transform.parent.gameObject.SetActive(true);
@@ -113,6 +115,38 @@ namespace Echoes
             }
         }
 
+        public void RebuildMinimap()
+        {
+            if (!mapPanel) return;
+            if (roomIcons != null)
+                for (int i = 0; i < roomIcons.Length; i++)
+                    if (roomIcons[i]) Destroy(roomIcons[i].gameObject);
+            roomIcons = new UnityEngine.UI.Image[DungeonMap.GridSize * DungeonMap.GridSize];
+            roomCellLabels = new TMP_Text[roomIcons.Length];
+            for (int row = 0; row < DungeonMap.GridSize; row++)
+                for (int col = 0; col < DungeonMap.GridSize; col++)
+                {
+                    var room = run.Map.RoomAtCell(col, row);
+                    if (room == null) continue;
+                    int index = row * DungeonMap.GridSize + col;
+                    var icon = Panel("RoomCell" + index, mapPanel,
+                        new Vector2(18 + col * 42, -40 - row * 32),
+                        new Vector2(38, 28), new Color(.12f, .17f, .25f));
+                    roomIcons[index] = icon.GetComponent<UnityEngine.UI.Image>();
+                    if (room.Role == RoomRole.Start || room.Role == RoomRole.Boss)
+                    {
+                        var label = Label(icon,
+                            room.Role == RoomRole.Start ? "起" : "终",
+                            Vector2.zero, new Vector2(38, 28), 14,
+                            room.Role == RoomRole.Start ? PixelArt.Gold : PixelArt.Red,
+                            new Vector2(.5f, .5f));
+                        label.alignment = TextAlignmentOptions.Center;
+                        roomCellLabels[index] = label;
+                    }
+                }
+            mapTitle.text = "第 " + run.Floor + " 层 · " + run.FloorTitle;
+        }
+
         public void Notify(string text, float seconds)
         { noticeText.text = text; noticeUntil = Time.unscaledTime + seconds; }
 
@@ -125,11 +159,14 @@ namespace Echoes
             modal.offsetMin = modal.offsetMax = Vector2.zero;
             modal.GetComponent<UnityEngine.UI.Image>().raycastTarget = true;
             if (run.State == RunState.Shop) { DrawShop(); return; }
-            string title = run.State == RunState.Upgrade ? "共 振 升 级" : run.State == RunState.Won ? "遗 迹 重 归 寂 静" :
+            string title = run.State == RunState.Upgrade ? "共 振 升 级" :
+                run.State == RunState.FloorCleared ? "本 层 已 净 化" :
+                run.State == RunState.Won ? "遗 迹 重 归 寂 静" :
                 run.State == RunState.Lost ? "探 险 暂 止" : "暂 停 探 索";
             var heading = Label(modal, title, new Vector2(0, -185), new Vector2(1000, 70), 44, PixelArt.Cyan, new Vector2(.5f, 1));
             heading.alignment = TextAlignmentOptions.Center;
             var sub = Label(modal, run.State == RunState.Upgrade ? $"已暂停 · 升至等级 {run.Level + 1} · 点击卡片或按 1 / 2 / 3" :
+                run.State == RunState.FloorCleared ? $"第 {run.Floor} 层完成 · 生命恢复 30% · 武器、被动与金币保留" :
                 $"探索 {(int)run.Elapsed / 60:00}:{(int)run.Elapsed % 60:00}   ·   击杀 {run.Kills}   ·   等级 {run.Level}",
                 new Vector2(0, -274), new Vector2(1000, 35), 22, muted, new Vector2(.5f, 1));
             sub.alignment = TextAlignmentOptions.Center;
@@ -150,12 +187,19 @@ namespace Echoes
             else
             {
                 string explanation = run.State == RunState.Paused ?
-                    "金色声波：枪声范围   /   青色声波：诱饵范围\n灰色横线：沉睡   /   金色方块：调查与警戒   /   红色竖线：追击\n普通房间始终开放，敌人会跨房间追击。\n前往右上方守关者圣所，靠近祭坛按 E 开战。" :
+                    "金色声波：枪声范围   /   青色声波：诱饵范围\n灰色横线：沉睡   /   金色方块：调查与警戒   /   红色竖线：追击\n普通房间始终开放，敌人会跨房间追击。\n前往本层 Boss 房，靠近祭坛按 E 开战。" :
+                    run.State == RunState.FloorCleared ? "按 E 或点击按钮下潜。下一层会随机生成新的房间布局。\n敌人、Boss 与商店库存重置；生命恢复 30%，成长与金币保留。" :
                     run.State == RunState.Won ? "守关者已被击败。你无需清空所有普通怪物。" : "试着控制枪声，借助诱饵调动敌群，再选择战斗位置。";
                 var description = Label(modal, explanation, new Vector2(0, -350), new Vector2(1100, 175), 23, muted, new Vector2(.5f, 1));
                 description.alignment = TextAlignmentOptions.Center;
-                Button(modal, run.State == RunState.Paused ? "继续探索" : "重新开始", new Vector2(0, -580),
-                    new Vector2(320, 65), () => { if (run.State == RunState.Paused) run.SetState(RunState.Playing); else run.Restart(); });
+                Button(modal, run.State == RunState.Paused ? "继续探索" :
+                    run.State == RunState.FloorCleared ? "进入下一层 [E]" : "重新开始", new Vector2(0, -580),
+                    new Vector2(320, 65), () =>
+                    {
+                        if (run.State == RunState.Paused) run.SetState(RunState.Playing);
+                        else if (run.State == RunState.FloorCleared) run.AdvanceFloor();
+                        else run.Restart();
+                    });
             }
         }
 

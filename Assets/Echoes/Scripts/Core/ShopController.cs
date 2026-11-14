@@ -31,7 +31,9 @@ namespace Echoes
         public void BeginFloor(Vector2 spawn)
         {
             foreach (Transform child in transform) Destroy(child.gameObject);
-            Position = run.Map.NearestFloor(spawn + Vector2.right * 2);
+            Position = run.Map.NearestFloor(spawn + Vector2.right * 1.5f);
+            if (Vector2.Distance(Position, spawn) > run.Config.shopInteractRadius)
+                Position = run.Map.NearestFloor(spawn + Vector2.right);
             var stand = PixelArt.Create("ShopPlaceholder", "solid", Position, 5, transform);
             stand.color = new Color(.25f, .14f, .07f);
             stand.transform.localScale = new Vector3(1.4f, 1, 1);

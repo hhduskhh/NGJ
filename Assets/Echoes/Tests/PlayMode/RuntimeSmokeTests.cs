@@ -15,25 +15,46 @@ namespace Echoes.Tests
             yield return SceneManager.LoadSceneAsync("Prototype");
             yield return null;
             var run = Object.FindObjectOfType<RunController>();
+            var geometry = DungeonTestGeometry.FindDoor(run);
             var enemy = run.Enemies[0];
+            var park = run.Map.Rooms[run.Map.Rooms.Count - 1].Center;
             // Isolate one existing monster; never spawn test-only gameplay actors.
             foreach (var other in run.Enemies)
-                if (other != enemy) other.GetComponent<Rigidbody2D>().position = run.Map.Rooms[4].Center;
-            enemy.GetComponent<Rigidbody2D>().position = new Vector2(16, 6);
+                if (other != enemy)
+                {
+                    other.enabled = false;
+                    other.GetComponent<Rigidbody2D>().position = park;
+                }
+            enemy.enabled = true;
+            enemy.GetComponent<Rigidbody2D>().position = DungeonTestGeometry.World(geometry.Source);
             Physics2D.SyncTransforms();
-            enemy.Hear(new Vector2(20, 6));
-            yield return new WaitForSeconds(3.2f);
-            Assert.Greater(enemy.transform.position.x, 18, "Awakened enemy crosses the open room doorway");
-            enemy.GetComponent<Rigidbody2D>().position = new Vector2(26, 6);
+            Vector2 target = DungeonTestGeometry.World(geometry.Through) +
+                (geometry.Vertical ? Vector2.right * 3 : Vector2.up * 3);
+            enemy.Hear(target);
+            yield return new WaitForSeconds(6f);
+            if (geometry.Vertical)
+                Assert.Greater(enemy.transform.position.x, geometry.Door.Opening.x + 1,
+                    "Awakened enemy crosses the open room doorway");
+            else
+                Assert.Greater(enemy.transform.position.y, geometry.Door.Opening.y + 2,
+                    "Awakened enemy crosses the open room doorway");
+
+            enemy.enabled = false;
+            enemy.GetComponent<Rigidbody2D>().position = DungeonTestGeometry.World(geometry.Through);
             Physics2D.SyncTransforms();
             float health = enemy.Health;
-            Projectile.Create(run, new Vector2(24, 6), Vector2.right, 22, 5, false);
-            yield return new WaitForSeconds(.2f);
-            Assert.AreEqual(health - 5, enemy.Health, .001f, "Actual projectile damages an enemy");
-            enemy.GetComponent<Rigidbody2D>().position = new Vector2(19, 3);
+            Vector2 direction = (DungeonTestGeometry.World(geometry.Through) -
+                DungeonTestGeometry.World(geometry.Source)).normalized;
+            Projectile.Create(run, DungeonTestGeometry.World(geometry.Source), direction, 30, 5, false, 20);
+            yield return new WaitForSeconds(.3f);
+            Assert.AreEqual(health - 5, enemy.Health, .001f, "Actual projectile damages an enemy through the doorway");
+
+            enemy.GetComponent<Rigidbody2D>().position = DungeonTestGeometry.World(geometry.Around);
             Physics2D.SyncTransforms();
             health = enemy.Health;
-            Projectile.Create(run, new Vector2(15, 3), Vector2.right, 22, 5, false);
+            direction = (DungeonTestGeometry.World(geometry.Around) -
+                DungeonTestGeometry.World(geometry.Source)).normalized;
+            Projectile.Create(run, DungeonTestGeometry.World(geometry.Source), direction, 30, 5, false, 20);
             yield return new WaitForSeconds(.3f);
             Assert.AreEqual(health, enemy.Health, "Wall blocks a projectile between rooms");
         }
@@ -45,9 +66,10 @@ namespace Echoes.Tests
             yield return null;
             var run = Object.FindObjectOfType<RunController>();
             Assert.IsNotNull(run.Player);
-            Assert.AreEqual(7, run.Map.Rooms.Count);
+            Assert.GreaterOrEqual(run.Map.Rooms.Count, 10);
+            Assert.LessOrEqual(run.Map.Rooms.Count, 25);
             int initialCount = run.Enemies.Count;
-            Assert.AreEqual(run.Config.enemiesPerRoom * 5 + 1, initialCount);
+            Assert.Greater(initialCount, 1);
             foreach (var room in run.Map.Rooms)
                 Assert.Greater(run.Map.FindPath(run.Player.transform.position, room.Center).Count +
                     (room == run.Map.Rooms[0] ? 1 : 0), 0, "Every room must be reachable");
@@ -91,8 +113,8 @@ namespace Echoes.Tests
             Assert.IsTrue(run.Boss.Awake);
             Assert.AreEqual(initialCount, run.Enemies.Count);
             run.Boss.TakeDamage(99999);
-            Assert.AreEqual(RunState.Won, run.State);
-            Assert.IsTrue(run.Enemies.Exists(e => e.Alive && !e.IsBoss), "Winning does not require clearing the floor");
+            Assert.AreEqual(RunState.FloorCleared, run.State, "Floor 1 opens the descent instead of ending the run");
+            Assert.IsTrue(run.Enemies.Exists(e => e.Alive && !e.IsBoss), "Clearing a floor does not require killing every normal enemy");
             yield return null;
         }
 

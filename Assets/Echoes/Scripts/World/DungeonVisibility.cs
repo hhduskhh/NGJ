@@ -32,6 +32,21 @@ namespace Echoes
             RefreshMask();
         }
 
+        // Called after a floor transition: the layout and its walkable texture are rebuilt.
+        public void Rebuild()
+        {
+            ClearPulses();
+            CreateObstacleMask();
+            lastWalkPosition = run.Player.GetComponent<Rigidbody2D>().position;
+            nextWalkPulse = run.Config.walkFirstPulseDelay;
+            RefreshMask();
+        }
+
+        public void ClearPulses()
+        {
+            for (int i = echoes.Count - 1; i >= 0; i--) RemoveEcho(i);
+        }
+
         public void Reveal(Vector2 origin, float range, Color? tint = null)
         {
             RemoveExpiredEchoes();
@@ -87,19 +102,21 @@ namespace Echoes
 
         private void CreateObstacleMask()
         {
-            // The floor is static. Upload its collision grid once, with one texel per cell.
-            walkableTexture = new Texture2D(DungeonMap.Width, DungeonMap.Height, TextureFormat.RGBA32, false, true)
+            // The floor is static per floor. Upload its collision grid with one texel per cell.
+            int width = run.Map.MapWidth;
+            int height = run.Map.MapHeight;
+            if (walkableTexture) Destroy(walkableTexture);
+            walkableTexture = new Texture2D(width, height, TextureFormat.RGBA32, false, true)
                 { name = "VisionWalkableCells", filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp };
-            var pixels = new Color32[DungeonMap.Width * DungeonMap.Height];
-            for (int y = 0; y < DungeonMap.Height; y++)
-                for (int x = 0; x < DungeonMap.Width; x++)
-                    pixels[y * DungeonMap.Width + x] = new Color32(
+            var pixels = new Color32[width * height];
+            for (int y = 0; y < height; y++)
+                for (int x = 0; x < width; x++)
+                    pixels[y * width + x] = new Color32(
                         run.Map.IsWalkable(new Vector2Int(x, y)) ? (byte)255 : (byte)0, 0, 0, 255);
             walkableTexture.SetPixels32(pixels);
             walkableTexture.Apply(false, true);
             darkness.SetTexture("_Walkable", walkableTexture);
-            darkness.SetVector("_MapSize", new Vector4(DungeonMap.Width, DungeonMap.Height,
-                1f / DungeonMap.Width, 1f / DungeonMap.Height));
+            darkness.SetVector("_MapSize", new Vector4(width, height, 1f / width, 1f / height));
         }
 
         private bool Expired(VisionPulse echo) => Time.time - echo.StartedAt >= run.Config.VisionPulseDuration;
@@ -135,8 +152,8 @@ namespace Echoes
             cover.position = new Vector3(viewCamera.transform.position.x, viewCamera.transform.position.y, 0);
             // PixelPerfectCamera can adjust the projection immediately before rendering.
             // Cover the whole floor as well as the current viewport to prevent exposed edge strips.
-            cover.localScale = new Vector3(Mathf.Max(DungeonMap.Width * 2, viewCamera.orthographicSize * viewCamera.aspect * 2 + 2),
-                Mathf.Max(DungeonMap.Height * 2, viewCamera.orthographicSize * 2 + 2), 1);
+            cover.localScale = new Vector3(Mathf.Max(run.Map.MapWidth * 2, viewCamera.orthographicSize * viewCamera.aspect * 2 + 2),
+                Mathf.Max(run.Map.MapHeight * 2, viewCamera.orthographicSize * 2 + 2), 1);
         }
 
         private void OnDestroy()

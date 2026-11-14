@@ -59,7 +59,7 @@ Shader "Echoes/DungeonDarkness"
                     direction.y == 0 ? 1e20 : abs(1 / direction.y));
                 float2 next = float2(direction.x == 0 ? 1e20 : (cell.x + step.x * .5 - origin.x) / direction.x,
                     direction.y == 0 ? 1e20 : (cell.y + step.y * .5 - origin.y) / direction.y);
-                [loop] for (int i = 0; i < 96; i++) // DungeonMap.Width + DungeonMap.Height
+                [loop] for (int i = 0; i < 256; i++) // Covers the 90x70 floor with margin
                 {
                     if (all(cell == goal)) return true;
                     if (abs(next.x - next.y) <= .000001)
@@ -92,7 +92,13 @@ Shader "Echoes/DungeonDarkness"
                 if (WallFaceVisible(origin, cell, int2(1, 0))) return true;
                 if (WallFaceVisible(origin, cell, int2(-1, 0))) return true;
                 if (WallFaceVisible(origin, cell, int2(0, 1))) return true;
-                return WallFaceVisible(origin, cell, int2(0, -1));
+                if (WallFaceVisible(origin, cell, int2(0, -1))) return true;
+                // Corner blocks have no cardinal floor neighbour; reveal them through
+                // the diagonal floor tile so the inner corner does not become a dark step.
+                if (WallFaceVisible(origin, cell, int2(1, 1))) return true;
+                if (WallFaceVisible(origin, cell, int2(-1, 1))) return true;
+                if (WallFaceVisible(origin, cell, int2(1, -1))) return true;
+                return WallFaceVisible(origin, cell, int2(-1, -1));
             }
 
             float InCircle(float2 worldPosition, float4 circle, float alreadyVisible)

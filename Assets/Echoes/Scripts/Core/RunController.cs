@@ -4,7 +4,7 @@ using UnityEngine.SceneManagement;
 
 namespace Echoes
 {
-    public enum RunState { Playing, Upgrade, Paused, Shop, Won, Lost }
+    public enum RunState { Playing, Upgrade, Paused, Shop, FloorCleared, Won, Lost }
 
     public sealed class RunController : MonoBehaviour
     {
@@ -19,6 +19,11 @@ namespace Echoes
         public EnemyController Boss { get; private set; }
         public readonly List<EnemyController> Enemies = new List<EnemyController>();
         public RunState State { get; private set; }
+        public int Floor { get; private set; } = 1;
+        public string FloorTitle { get { return FloorTheme.Title(Floor); } }
+        public float EnemyHealthScale { get { return FloorScale(config.floorEnemyHealth); } }
+        public float EnemyDamageScale { get { return FloorScale(config.floorEnemyDamage); } }
+        public float BossHealthScale { get { return FloorScale(config.floorBossHealth); } }
         public float Elapsed { get; private set; }
         public int Kills { get; private set; }
         public int Experience { get; private set; }
@@ -36,15 +41,15 @@ namespace Echoes
 
         private void Start()
         {
-            GameArt.SetTheme(0);
             Time.timeScale = 1;
             AudioListener.volume = 1;
             Random = new System.Random(config.randomSeed);
+            Floor = 1;
             Map = gameObject.AddComponent<DungeonMap>();
-            Map.Generate(this);
+            Map.Generate(this, Floor - 1);
             Noise = gameObject.AddComponent<NoiseSystem>();
             Noise.Initialize(this);
-            Player = PlayerController.Create(this, Map.Rooms[0].Center);
+            Player = PlayerController.Create(this, Map.StartPosition);
             Player.InitializeWeapons();
             Camera.main.gameObject.AddComponent<CameraFollow>().Target = Player.transform;
             Shop = new GameObject("FloorShop").AddComponent<ShopController>();
@@ -62,11 +67,22 @@ namespace Echoes
             for (int room = 1; room < Map.Rooms.Count - 1; room++)
             {
                 var cells = Map.SpawnCells(room);
-                for (int i = 0; i < config.enemiesPerRoom && i < cells.Count; i++)
+                int perCell = Mathf.Max(1, config.enemiesPerCell);
+                int min = Mathf.Max(1, config.minEnemiesPerRoom);
+                int max = Mathf.Max(min, config.maxEnemiesPerRoom);
+                int count = Mathf.Clamp(
+                    Mathf.RoundToInt(Map.Rooms[room].CellCount * perCell), min, max);
+                for (int i = 0; i < count && i < cells.Count; i++)
                     Enemies.Add(EnemyController.Create(this, cells[i], false));
             }
             Boss = EnemyController.Create(this, Map.BossPosition, true);
             Enemies.Add(Boss);
+        }
+
+        private float FloorScale(float[] values)
+        {
+            if (values == null || values.Length == 0) return 1;
+            return values[Mathf.Clamp(Floor - 1, 0, values.Length - 1)];
         }
 
         private void Update()
@@ -76,6 +92,7 @@ namespace Echoes
                 Muted = !Muted;
                 AudioListener.volume = Muted ? 0 : 1;
             }
+            if (State == RunState.FloorCleared && Input.GetKeyDown(KeyCode.E)) { AdvanceFloor(); return; }
             if (State == RunState.Shop && Input.GetKeyDown(KeyCode.Escape)) { Shop.Close(); return; }
             if (Input.GetKeyDown(KeyCode.Escape) &&
                 (State == RunState.Playing || State == RunState.Paused))
@@ -108,11 +125,50 @@ namespace Echoes
         public void EnemyKilled(EnemyController enemy)
         {
             Kills++;
-            if (enemy.IsBoss) { SetState(RunState.Won); return; }
+            if (enemy.IsBoss)
+            {
+                SetState(Floor >= FloorTheme.Count ? RunState.Won : RunState.FloorCleared);
+                return;
+            }
             GoldPickup.Drop(this, enemy.transform.position, config.goldPerKill);
             Player.Passives.OnKill();
             Experience += config.experiencePerKill;
             TryLevelUp();
+        }
+
+        public void AdvanceFloor()
+        {
+            if (State != RunState.FloorCleared || Floor >= FloorTheme.Count) return;
+            Floor++;
+            ClearFloorObjects();
+            Map.Generate(this, Floor - 1);
+            Player.PlaceAt(Map.StartPosition);
+            Player.Heal(Player.MaxHealth * config.floorEntryHealFraction);
+            Shop.BeginFloor(Map.StartPosition);
+            SpawnFloor();
+            Visibility.Rebuild();
+            Hud.RebuildMinimap();
+            BossActivated = false;
+            SetState(RunState.Playing);
+            Hud.Notify("进入第 " + Floor + " 层 · " + FloorTheme.Title(Floor), 4);
+        }
+
+        private void ClearFloorObjects()
+        {
+            foreach (var enemy in Enemies) if (enemy) Destroy(enemy.gameObject);
+            Enemies.Clear();
+            Boss = null;
+            foreach (var projectile in FindObjectsOfType<Projectile>())
+                if (projectile) Destroy(projectile.gameObject);
+            foreach (var decoy in FindObjectsOfType<BellDecoy>())
+                if (decoy) Destroy(decoy.gameObject);
+            foreach (var wave in FindObjectsOfType<NoiseWave>())
+                if (wave) Destroy(wave.gameObject);
+            foreach (var effect in FindObjectsOfType<ArtEffect>())
+                if (effect) Destroy(effect.gameObject);
+            foreach (var gold in FindObjectsOfType<GoldPickup>())
+                if (gold) Destroy(gold.gameObject);
+            Visibility?.ClearPulses();
         }
 
         private void TryLevelUp()
