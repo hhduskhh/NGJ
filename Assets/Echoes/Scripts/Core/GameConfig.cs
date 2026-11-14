@@ -30,6 +30,11 @@ namespace Echoes
         [Range(0, .2f)] public float visionRingAlpha = .06f;
         public float VisionPulseDuration => visionExpandDuration + visionHoldDuration + visionShrinkDuration;
         public float WalkingDetectionRadius => playerVisionRadius + gradientVisionRange;
+        [Header("Combat audio")]
+        [Range(0, 1)] public float weaponVolume = .15f;
+        [Range(0, 1)] public float pickupVolume = .1f;
+        [Range(0, 1)] public float hitVolume = .09f;
+        [Range(0, 1)] public float warningVolume = .16f;
         [Header("Sound — ignores walls in this prototype")]
         [Min(1)] public float gunNoiseRadius = 6;
         [Min(1)] public float pressureRadius = 5;

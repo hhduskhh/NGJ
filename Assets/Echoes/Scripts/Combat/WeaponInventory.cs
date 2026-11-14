@@ -99,7 +99,7 @@ namespace Echoes
         }
         public bool Fire(Vector2 manualPoint, bool manual)
         {
-            bool fired = false;
+            int weaponMask = 0;
             run.RefreshPressure();
             for (int i = 0; i < slots.Count; i++)
             {
@@ -112,18 +112,19 @@ namespace Echoes
                 slot.Cooldown = Interval(slot);
                 float damage = definition.damage[slot.Tier] * run.Player.TotalDamageScale * run.DamageMultiplier;
                 if (run.Random.NextDouble() < run.Player.CriticalChance) damage *= run.Player.CriticalMultiplier;
+                var impactTargets = definition.pellets > 1 ? new HashSet<EnemyController>() : null;
                 for (int pellet = 0; pellet < definition.pellets; pellet++)
                 {
                     Vector2 shot = Quaternion.Euler(0, 0, (pellet - (definition.pellets - 1) / 2f) * definition.spread) * direction;
                     Projectile.Create(run, muzzle, shot, definition.speed, damage, false,
-                        slot.Kind == 2 ? Mathf.Max(0, slot.Tier - 1) : 0);
+                        slot.Kind == 2 ? Mathf.Max(0, slot.Tier - 1) : 0, impactTargets);
                 }
                 run.Noise.Emit(run.Player.transform.position, run.Player.NoiseRadius * definition.noise, NoiseKind.Gunshot);
                 ArtEffect.Play(muzzle, false, PixelArt.Gold);
-                fired = true;
+                weaponMask |= 1 << slot.Kind;
             }
-            if (fired) run.Noise.PlayShot();
-            return fired;
+            if (weaponMask != 0) run.Noise.PlayShot(weaponMask);
+            return weaponMask != 0;
         }
     }
 }

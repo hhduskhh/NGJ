@@ -95,6 +95,7 @@ namespace Echoes
         {
             // Gatekeeper is a deliberate opt-in challenge, activated at its altar.
             if (!Alive || IsBoss || trackingHit || (State == EnemyState.Chasing && CanDetectPlayer())) return;
+            if (State == EnemyState.Sleeping) run.Noise.PlayWake(transform.position);
             State = EnemyState.Investigating;
             destination = run.Map.NearestFloor(source);
             repath = 0; RefreshVisual();
@@ -193,7 +194,11 @@ namespace Echoes
                     art.Attack();
                 }
             }
-            else if (attackTimer <= 0) warningTimer = run.Config.guardWindup;
+            else if (attackTimer <= 0)
+            {
+                warningTimer = run.Config.guardWindup;
+                run.Noise.PlayGuardReady(origin);
+            }
             return true;
         }
 
@@ -217,6 +222,7 @@ namespace Echoes
                 if (warningTimer <= 0)
                 {
                     Destroy(warning.gameObject);
+                    run.Noise.StopBossReady();
                     for (int i = 0; i < run.Config.bossBulletCount; i++)
                     {
                         float angle = i * Mathf.PI * 2 / run.Config.bossBulletCount;
@@ -233,13 +239,14 @@ namespace Echoes
             if (attackTimer <= 0)
             {
                 warningTimer = run.Config.bossWarningDuration;
+                run.Noise.PlayBossReady(warningTimer);
                 warning = PixelArt.Circle("BossAttackTelegraph", transform, PixelArt.Red, .08f);
                 PixelArt.SetRadius(warning, 1);
                 run.Hud.Notify("守关者蓄力 · 红色环形弹幕即将发射", run.Config.bossWarningDuration);
             }
         }
 
-        public void TakeDamage(float amount)
+        public void TakeDamage(float amount, bool playImpact = true)
         {
             if (!Alive || (IsBoss && !run.BossActivated)) return;
             trackingHit = true;
@@ -247,6 +254,8 @@ namespace Echoes
             lastSeen = run.Player.transform.position;
             lostSight = repath = 0;
             Health = Mathf.Max(0, Health - amount);
+            if (amount > 0 && (playImpact || Health <= 0))
+                run.Noise.QueueImpact(this, Health <= 0);
             art.Hurt();
             if (Health > 0) { RefreshVisual(); return; }
             State = EnemyState.Dead;
@@ -255,7 +264,11 @@ namespace Echoes
             GetComponent<CircleCollider2D>().enabled = false;
             damageShape.enabled = false;
             marker.enabled = healthFill.enabled = false;
-            if (warning) Destroy(warning.gameObject);
+            if (warning)
+            {
+                run.Noise.StopBossReady();
+                Destroy(warning.gameObject);
+            }
             run.EnemyKilled(this);
         }
 

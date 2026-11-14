@@ -39,6 +39,7 @@ namespace Echoes
             if ((target - next).sqrMagnitude > .01f) return;
 
             run.Shop.Credit(amount);
+            run.Noise.PlayPickup();
             amount = 0;
             Destroy(gameObject);
         }

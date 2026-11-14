@@ -141,6 +141,7 @@ namespace Echoes
             if (run.Random.NextDouble() < Mathf.Clamp(Passives.Dodge, 0, .5f))
             { invulnerableUntil = Time.time + .15f; return; }
             Health = Mathf.Max(0, Health - amount);
+            if (amount > 0) run.Noise.PlayHurt();
             art.Hurt(run.Config.playerInvulnerability);
             invulnerableUntil = Time.time + run.Config.playerInvulnerability;
             if (Health <= 0) { run.SetState(RunState.Lost); }

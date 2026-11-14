@@ -11,12 +11,13 @@ namespace Echoes
         private bool hostile;
         private SpriteRenderer hostileSprite;
         private int pierces;
+        private HashSet<EnemyController> impactTargets;
         private DungeonVisibility.ShotTrail trail;
         private readonly HashSet<EnemyController> struck = new HashSet<EnemyController>();
         private readonly List<RaycastHit2D> hits = new List<RaycastHit2D>(16);
 
         public static void Create(RunController run, Vector2 position, Vector2 direction,
-            float speed, float damage, bool hostile, int pierces = 0)
+            float speed, float damage, bool hostile, int pierces = 0, HashSet<EnemyController> impactTargets = null)
         {
             var renderer = PixelArt.Create(hostile ? "HostileProjectile" : "PlayerProjectile",
                 hostile ? "hostileBullet" : "bullet", position, 30);
@@ -24,6 +25,7 @@ namespace Echoes
             projectile.run = run; projectile.direction = direction.normalized;
             projectile.speed = speed; projectile.damage = damage; projectile.hostile = hostile;
             projectile.pierces = pierces;
+            projectile.impactTargets = impactTargets;
             projectile.trail = run.Visibility.BeginTrail(position, projectile.direction, speed);
             if (hostile)
             {
@@ -71,7 +73,8 @@ namespace Echoes
                     var enemy = nearest.GetComponent<EnemyController>();
                     if (enemy)
                     {
-                        struck.Add(enemy); enemy.TakeDamage(damage);
+                        struck.Add(enemy);
+                        enemy.TakeDamage(damage, impactTargets == null || impactTargets.Add(enemy));
                         if (pierces-- > 0)
                         {
                             damage *= .75f;
