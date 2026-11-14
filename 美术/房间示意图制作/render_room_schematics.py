@@ -263,21 +263,21 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--json", default=str(Path(__file__).parent / "room-schematics.json"))
     parser.add_argument("--out", default=str(ROOT / "Docs/Images/房间示意图-20261114"))
-    parser.add_argument("--doc", default=str(ROOT / "Docs/035-当前房间示意图.md"))
+    parser.add_argument("--doc", default=str(ROOT / "Docs/062-当前房间示意图.md"))
     args = parser.parse_args()
 
     data = json.loads(Path(args.json).read_text(encoding="utf-8"))
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     lines = [
-        "# 035-当前房间示意图",
+        "# 062-当前房间示意图",
         "",
         "由当前实际生成数据导出的 P0 房间示意图；**不是正式美术**，只表示墙体、门、实心物、装饰和房间形状。",
         "",
         "- 数据来源：`RoomSchematicExportTests`，seed 713，第 1–3 层；JSON 保存在 `美术/房间示意图制作/room-schematics.json`。",
         "- 图例：深色=墙与室内隔断，紫色/灰色=地面，橙色块=实心物（字母为道具类型），金色=门，红色=地刺，橙红=炸弹，橄榄绿=禁刷区，小点=非碰撞装饰。",
         "- 类型缩写：C 箱、P 柱、S 工作台、R 武器架、B 长椅、I 直管、b 弯管、N 面板、Y 晶体、F 音叉、D 导管、s 零件。",
-        "- 房间覆盖率按当前 `SolidCoverage` 计算；P0 使用现有 32×32 道具，部分大件是放大占位。",
+        "- 房间使用三层 P1 原生美术；实心覆盖率按 `NavigationBounds` 统计。陷阱标记来自运行时实例的真实位置，禁刷区包含完整菱形内侧。",
         "",
     ]
     for floor in data["floors"]:

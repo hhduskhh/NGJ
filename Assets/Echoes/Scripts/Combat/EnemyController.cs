@@ -22,7 +22,7 @@ namespace Echoes
         private PolygonCollider2D damageShape;
         private readonly List<Vector2> outline = new List<Vector2>();
         private Sprite lastDamageSprite;
-        private bool lastFlip, trackingHit;
+        private bool lastFlip, trackingHit, holdingPosition;
         public bool IsGuard { get; private set; }
         public EnemyState State { get; private set; } = EnemyState.Sleeping;
         public bool IsBoss { get; private set; }
@@ -130,7 +130,8 @@ namespace Echoes
                 if (lostSight > 2.5f) { State = EnemyState.Alert; destination = lastSeen; wanderTimer = 2; }
             }
             if (State == EnemyState.Chasing) destination = lastSeen;
-            if (IsGuard && UpdateGuardAttack(dt, seesPlayer, player))
+            holdingPosition = IsGuard && UpdateGuardAttack(dt, seesPlayer, player);
+            if (holdingPosition)
             {
                 body.velocity = Vector2.zero;
                 repath = 0;
@@ -152,8 +153,7 @@ namespace Echoes
             }
             repath -= dt;
             if (repath <= 0)
-            { repath = .55f; path = run.Map.FindPath(transform.position, destination); pathIndex = 0; }
-            Move();
+            { repath = .55f; path = run.Map.FindPath(body.position, destination); pathIndex = 0; }
             if (!IsGuard && Vector2.Distance(transform.position, player) < (IsBoss ? 1.15f : .8f) && Time.time >= contactReady)
             {
                 contactReady = Time.time + run.Config.enemyAttackInterval;
@@ -167,12 +167,14 @@ namespace Echoes
 
         private void FixedUpdate()
         {
-            if (IsBoss) return;
+            // Track teleports while sleeping too; they are not walking steps.
             Vector2 position = body.position;
             float distance = Vector2.Distance(position, lastStepPosition);
             lastStepPosition = position;
-            if (!Awake || run.State != RunState.Playing) return;
-
+            if (run.State != RunState.Playing || !Alive || !Awake || holdingPosition)
+            { body.velocity = Vector2.zero; return; }
+            Move();
+            if (IsBoss) return;
             distanceSinceStep += distance;
             float stride = Mathf.Max(.1f, run.Config.enemyStepDistance);
             if (distanceSinceStep < stride) return;
@@ -182,10 +184,14 @@ namespace Echoes
 
         private void Move()
         {
-            while (pathIndex < path.Count && Vector2.Distance(transform.position, path[pathIndex]) < .22f) pathIndex++;
-            Vector2 direction = pathIndex < path.Count ? (path[pathIndex] - (Vector2)transform.position).normalized : Vector2.zero;
+            Vector2 position = body.position;
+            while (pathIndex < path.Count && Vector2.Distance(position, path[pathIndex]) < .22f) pathIndex++;
+            Vector2 delta = pathIndex < path.Count ? path[pathIndex] - position : Vector2.zero;
+            Vector2 direction = delta.normalized;
             float speed = IsBoss ? run.Config.bossSpeed : IsGuard ? run.Config.guardSpeed : run.Config.walkerSpeed;
-            body.velocity = direction * speed;
+            // Advance at the physics cadence and stop at the waypoint, even
+            // when a slow render frame contains several physics steps.
+            body.velocity = direction * Mathf.Min(speed, delta.magnitude / Time.fixedDeltaTime);
             if (direction.x != 0) sprite.flipX = direction.x < 0;
         }
 

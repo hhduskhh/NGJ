@@ -38,6 +38,8 @@ MonoBehaviour:
   minEnemiesPerRoom: 6
   maxEnemiesPerRoom: 32
   spawnCellStride: 2
+  trapAnchorSearchRadius: 3
+  trapDoorClearance: 2
   enemyHealth: 32
   walkerSpeed: 5.0666667
   guardSpeed: 2.0666667

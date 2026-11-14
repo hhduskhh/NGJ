@@ -254,22 +254,29 @@ namespace Echoes.Tests
         }
         [UnityTest] public IEnumerator WeaponVolleyRangeAndPiercing()
         {
-            run.Player.GetComponent<Rigidbody2D>().position = run.Map.Rooms[0].Center;
-            run.Player.transform.position = run.Map.Rooms[0].Center;
+            Vector2 origin = DungeonTestGeometry.FindClearLane(run, 20);
+            run.Player.PlaceAt(origin);
+            foreach (var enemy in run.Enemies) enemy.gameObject.SetActive(false);
             Physics2D.SyncTransforms();
             var weapons = run.Player.Weapons;
             weapons.Remove(0); weapons.Add(1, 0); weapons.Slots[0].Cooldown = 0;
             int pulses = run.Visibility.Pulses.Count;
-            Assert.IsTrue(run.Player.TryFire((Vector2)run.Player.transform.position + Vector2.up * 10, true));
+            Assert.IsTrue(run.Player.TryFire(origin + Vector2.right * 10, true));
             Assert.AreEqual(5, Object.FindObjectsOfType<Projectile>().Length);
             Assert.AreEqual(pulses + 1, run.Visibility.Pulses.Count, "Shotgun emits one pulse");
             yield return new WaitForSeconds(.4f);
             Assert.Greater(Object.FindObjectsOfType<Projectile>().Length, 0, "Pellets continue beyond targeting range");
-            foreach (var enemy in run.Enemies) enemy.GetComponent<Rigidbody2D>().position = run.Map.Rooms[4].Center;
-            Vector2 origin = run.Map.Rooms[0].Center;
+            foreach (var shot in Object.FindObjectsOfType<Projectile>()) Object.Destroy(shot.gameObject);
+            yield return null;
             var a = run.Enemies[0]; var b = run.Enemies[1];
-            a.GetComponent<Rigidbody2D>().position = origin + Vector2.right * 2;
-            b.GetComponent<Rigidbody2D>().position = origin + Vector2.right * 3;
+            foreach (var enemy in new[] { a, b })
+            {
+                enemy.gameObject.SetActive(true);
+                enemy.enabled = false;
+                enemy.GetComponent<Rigidbody2D>().constraints = RigidbodyConstraints2D.FreezeAll;
+            }
+            EnemyRoleTests.PlaceEnemy(a, origin + Vector2.right * 2);
+            EnemyRoleTests.PlaceEnemy(b, origin + Vector2.right * 3);
             Physics2D.SyncTransforms(); float ah = a.Health, bh = b.Health;
             Projectile.Create(run, origin, Vector2.right, 26, 10, false, 1);
             yield return new WaitForSeconds(.2f);

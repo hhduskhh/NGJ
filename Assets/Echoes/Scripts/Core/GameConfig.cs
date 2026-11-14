@@ -53,6 +53,8 @@ namespace Echoes
         [Tooltip("Tile stride used to collect enemy spawn points; lower values add more points.")]
         [Min(1)] public int spawnCellStride = 2;
         [Header("Room traps")]
+        [Min(0)] public int trapAnchorSearchRadius = 3;
+        [Min(0)] public int trapDoorClearance = 2;
         [Min(0)] public float spikeDamage = 10;
         [Min(.1f)] public float spikeRadius = .85f;
         [Min(.1f)] public float spikeRest = 2f;

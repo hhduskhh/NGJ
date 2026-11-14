@@ -97,6 +97,10 @@ namespace Echoes.Tests
             yield return new WaitForSeconds(run.Config.guardWindup + .1f);
             Assert.IsFalse(guard.IsWindingUp);
             Assert.IsNull(Shot());
+            // Isolate wall interception from a second volley when the camera
+            // returns and the guard sees the player again.
+            guard.enabled = false;
+            guard.GetComponent<Rigidbody2D>().velocity = Vector2.zero;
             run.Player.PlaceAt(door.Around);
             camera.transform.position = (Vector3)(Vector2)door.Around + Vector3.back * 10;
             Vector2 start = door.Source, end = door.Around;

@@ -11,9 +11,13 @@ namespace Echoes
         private LineRenderer radiusRing;
         private bool bomb, armed, struck;
         private float clock;
+        public bool IsBomb => bomb;
+        public Vector2Int PlannedTile { get; private set; }
 
-        public static void Create(RunController run, DungeonMap map, Vector2Int tile, bool bomb, Transform parent)
+        public static void Create(RunController run, DungeonMap map, Vector2Int tile,
+            RoomTrapAnchor anchor, Transform parent)
         {
+            bool bomb = anchor.Bomb;
             var icon = PixelArt.Create(bomb ? "FloorBomb" : "SpikePlate", bomb ? "floorBomb" : "spikePlate",
                 tile, -860, parent);
             var trap = icon.gameObject.AddComponent<RoomTrap>();
@@ -21,6 +25,7 @@ namespace Echoes
             trap.run = run;
             trap.map = map;
             trap.bomb = bomb;
+            trap.PlannedTile = anchor.Tile;
             if (!bomb)
             {
                 trap.loweredSpikes = icon.sprite;

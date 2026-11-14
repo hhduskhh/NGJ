@@ -121,11 +121,15 @@ namespace Echoes.Tests
                     {
                         x = wall.x, y = wall.y, width = wall.width, height = wall.height
                     });
-                foreach (var anchor in RoomInterior.TrapAnchors(room))
+                foreach (var trap in map.GetComponentsInChildren<RoomTrap>())
+                {
+                    if (map.RoomAtPosition(trap.transform.position) != room) continue;
+                    var tile = Vector2Int.RoundToInt(trap.transform.position);
                     roomData.traps.Add(new TrapData
                     {
-                        x = anchor.Tile.x, y = anchor.Tile.y, bomb = anchor.Bomb
+                        x = tile.x, y = tile.y, bomb = trap.IsBomb
                     });
+                }
                 foreach (var zone in RoomInterior.NoSpawnZones(room))
                     roomData.noSpawn.Add(new RectData
                     {
@@ -148,13 +152,18 @@ namespace Echoes.Tests
             return data;
         }
 
-        private static PropData ToData(RoomPropSpec spec) => new PropData
+        private static PropData ToData(RoomPropSpec spec)
         {
-            kind = spec.Kind,
-            layer = spec.Solid ? "Solid" : spec.Layer.ToString(),
-            x = spec.X, y = spec.Y,
-            width = spec.Width, height = spec.Height,
-            scale = spec.Scale
-        };
+            var bounds = spec.Solid ? spec.NavigationBounds :
+                new RectInt(spec.X, spec.Y, spec.Width, spec.Height);
+            return new PropData
+            {
+                kind = spec.Kind,
+                layer = spec.Solid ? "Solid" : spec.Layer.ToString(),
+                x = bounds.x, y = bounds.y,
+                width = bounds.width, height = bounds.height,
+                scale = spec.Scale
+            };
+        }
     }
 }

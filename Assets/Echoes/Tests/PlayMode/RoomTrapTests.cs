@@ -38,7 +38,20 @@ namespace Echoes.Tests
                     Assert.AreEqual(anchors.Count(a => a.Bomb), local.Count(t => t.name == "FloorBomb"),
                         room.Name + " bomb count follows the room schematic");
                     foreach (var trap in local)
+                    {
                         Assert.IsTrue(map.IsWalkable(Vector2Int.RoundToInt(trap.transform.position)));
+                        var tile = Vector2Int.RoundToInt(trap.transform.position);
+                        var offset = tile - trap.PlannedTile;
+                        Assert.LessOrEqual(Mathf.Max(Mathf.Abs(offset.x), Mathf.Abs(offset.y)),
+                            run.Config.trapAnchorSearchRadius, "Trap stays near its planned position");
+                        foreach (var door in room.DoorOpenings)
+                        {
+                            int margin = run.Config.trapDoorClearance;
+                            Assert.IsFalse(new RectInt(door.x - margin, door.y - margin,
+                                door.width + margin * 2, door.height + margin * 2).Contains(tile),
+                                "Trap must leave the doorway clear");
+                        }
+                    }
                     if (room.Role != RoomRole.Start)
                         Assert.IsNotEmpty(map.FindPath(map.StartPosition, room.Center));
                     foreach (var spawn in map.SpawnCells(room.Index))
