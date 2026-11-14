@@ -123,30 +123,59 @@ namespace Echoes.Tests
                 int expected = floor == 1 ? run.Config.eliteScatterCount :
                     floor == 2 ? run.Config.eliteBurstCount : run.Config.eliteRingCount;
                 var angles = new System.Collections.Generic.List<float>();
+                Projectile[] ring = null;
                 float deadline = Time.time + run.Config.guardWindup + 1.3f;
                 while (seen.Count < expected && Time.time < deadline)
                 {
                     yield return null;
                     int before = seen.Count;
-                    foreach (var bullet in Object.FindObjectsOfType<Projectile>())
+                    var bullets = Object.FindObjectsOfType<Projectile>();
+                    if (floor == 3 && bullets.Length > 0)
+                    {
+                        ring = bullets;
+                        break;
+                    }
+                    foreach (var bullet in bullets)
                     {
                         Vector2 delta = (Vector2)bullet.transform.position - origin;
                         if (delta.sqrMagnitude < .00001f || !seen.Add(bullet.GetInstanceID())) continue;
-                        float speed = run.Config.guardBulletSpeed * (floor == 3 ? 2.5f : 1);
+                        float speed = run.Config.guardBulletSpeed;
                         Assert.AreEqual(speed * Time.deltaTime, delta.magnitude, .015f);
                         angles.Add(Vector2.SignedAngle(Vector2.left, delta));
                     }
                     if (seen.Count > before)
                         Assert.AreEqual(floor == 2 ? 1 : expected, seen.Count - before);
                 }
-                Assert.AreEqual(expected, seen.Count);
-                angles.Sort();
-                if (floor == 1) Assert.AreEqual(run.Config.eliteScatterAngle, angles.Last() - angles.First(), .2f);
-                for (int i = 1; i < angles.Count; i++)
+                if (floor == 3)
                 {
-                    float spacing = floor == 3 ? 360f / expected : floor == 1 ?
-                        run.Config.eliteScatterAngle / (expected - 1) : 0f;
-                    Assert.AreEqual(spacing, angles[i] - angles[i - 1], .2f);
+                    Assert.IsNotNull(ring);
+                    Assert.AreEqual(expected, ring.Length);
+                    var start = ring.Select(p => (Vector2)p.transform.position).ToArray();
+                    Vector2 center = start.Aggregate(Vector2.zero, (a, b) => a + b) / start.Length;
+                    yield return null;
+                    for (int i = 0; i < ring.Length; i++)
+                    {
+                        Vector2 spoke = start[i] - center;
+                        Assert.AreEqual(run.Config.eliteRingRadius, spoke.magnitude, .01f);
+                        angles.Add(Vector2.SignedAngle(Vector2.left, spoke));
+                        Vector2 step = (Vector2)ring[i].transform.position - start[i];
+                        Assert.AreEqual(0f, step.y, .01f);
+                        Assert.AreEqual(-2.5f * run.Config.guardBulletSpeed * Time.deltaTime, step.x, .01f);
+                    }
+                }
+                else Assert.AreEqual(expected, seen.Count);
+
+                angles.Sort();
+                if (floor == 2)
+                {
+                    Assert.LessOrEqual(angles.Max(a => Mathf.Abs(a)), run.Config.eliteBurstSpread / 2 + .1f);
+                    Assert.Greater(angles.Last() - angles.First(), 1f);
+                }
+                else
+                {
+                    float spacing = floor == 3 ? 360f / expected : run.Config.eliteScatterAngle / (expected - 1);
+                    for (int i = 1; i < angles.Count; i++)
+                        Assert.AreEqual(spacing, angles[i] - angles[i - 1], .2f);
                 }
                 if (floor < 3)
                 {

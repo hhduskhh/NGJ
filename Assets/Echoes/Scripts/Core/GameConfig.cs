@@ -97,7 +97,9 @@ namespace Echoes
         [Range(0, 180)] public float eliteScatterAngle = 40f;
         [Min(1)] public int eliteBurstCount = 6;
         [Min(.02f)] public float eliteBurstInterval = .12f;
-        [Min(1)] public int eliteRingCount = 12;
+        [Range(0, 90)] public float eliteBurstSpread = 24f;
+        [Min(1)] public int eliteRingCount = 10;
+        [Min(.1f)] public float eliteRingRadius = .85f;
 
         [Header("Progression")]
         [Min(1)] public int experiencePerKill = 1;

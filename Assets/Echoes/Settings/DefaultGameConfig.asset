@@ -65,7 +65,9 @@ MonoBehaviour:
   eliteScatterAngle: 40
   eliteBurstCount: 6
   eliteBurstInterval: 0.12
-  eliteRingCount: 12
+  eliteBurstSpread: 24
+  eliteRingCount: 10
+  eliteRingRadius: 0.85
   guardRange: 9
   guardWindup: 0.75
   guardShotInterval: 2.2

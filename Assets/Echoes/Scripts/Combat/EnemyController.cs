@@ -278,14 +278,26 @@ namespace Echoes
                 return;
             }
 
-            bool ring = IsElite && run.Floor == 3;
-            int count = ring ? run.Config.eliteRingCount : IsElite ? run.Config.eliteScatterCount : 1;
-            for (int i = 0; i < count; i++)
+            if (IsElite && run.Floor == 3)
             {
-                float angle = ring ? 360f * i / count : count == 1 ? 0f :
-                    run.Config.eliteScatterAngle * ((float)i / (count - 1) - .5f);
-                Vector2 direction = Quaternion.Euler(0, 0, angle) * aim;
-                FireRound(origin, direction, ring ? 2.5f : 1f);
+                int count = run.Config.eliteRingCount;
+                float radius = run.Config.eliteRingRadius;
+                for (int i = 0; i < count; i++)
+                {
+                    Vector2 spoke = Quaternion.Euler(0, 0, 360f * i / count) * aim;
+                    Vector2 start = origin + (aim + spoke) * radius;
+                    if (run.Map.HasFiringLine(origin, start, null))
+                        FireRound(start, aim, 2.5f);
+                }
+            }
+            else
+            {
+                int count = IsElite ? run.Config.eliteScatterCount : 1;
+                for (int i = 0; i < count; i++)
+                {
+                    float angle = count == 1 ? 0f : run.Config.eliteScatterAngle * ((float)i / (count - 1) - .5f);
+                    FireRound(origin, Quaternion.Euler(0, 0, angle) * aim, 1f);
+                }
             }
             attackTimer = run.Config.guardShotInterval - run.Config.guardWindup;
             art.Attack();
@@ -293,7 +305,8 @@ namespace Echoes
 
         private void FireBurstRound(Vector2 origin, Vector2 aim)
         {
-            FireRound(origin, aim, 1f);
+            float offset = ((float)run.Random.NextDouble() - .5f) * run.Config.eliteBurstSpread;
+            FireRound(origin, Quaternion.Euler(0, 0, offset) * aim, 1f);
             burstRemaining--;
             attackTimer = burstRemaining > 0 ? run.Config.eliteBurstInterval :
                 run.Config.guardShotInterval - run.Config.guardWindup;
