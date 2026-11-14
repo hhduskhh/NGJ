@@ -10,7 +10,7 @@ namespace Echoes.Tests
     public sealed class CombatAudioTests
     {
         [UnityTest]
-        public IEnumerator EmptyCityLoopsOnFirstFloorOnly()
+        public IEnumerator EmptyCityLoopsAcrossAllFloors()
         {
             yield return SceneManager.LoadSceneAsync("Prototype");
             yield return null;
@@ -23,10 +23,15 @@ namespace Echoes.Tests
             run.Player.PlaceAt(run.Map.BossPosition);
             yield return null;
             Assert.IsTrue(music.isPlaying);
-            run.SetState(RunState.FloorCleared);
-            run.AdvanceFloor();
-            Assert.AreEqual(2, run.Floor);
-            Assert.IsFalse(music.isPlaying);
+            for (int floor = 2; floor <= FloorTheme.Count; floor++)
+            {
+                run.SetState(RunState.FloorCleared);
+                run.AdvanceFloor();
+                yield return null;
+                Assert.AreEqual(floor, run.Floor);
+                Assert.IsTrue(music.isPlaying);
+                Assert.AreSame(music, run.GetComponents<AudioSource>().Single(source => source.clip == clip));
+            }
         }
 
         [UnityTest]
