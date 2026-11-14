@@ -37,13 +37,13 @@ namespace Echoes
             if (descend)
             {
                 ArtPanel("FloorGuardian", modal, new Vector2(10, -10), new Vector2(96, 92), GameArt.Get("boss"), icon: true);
-                Label(modal, FloorName + "  已净化", new Vector2(122, -13), new Vector2(470, 44), 30, Paper);
+                Label(modal, FloorName + "  已净化", new Vector2(122, -13), new Vector2(470, 44), 36, Paper);
                 Label(modal, $"下潜恢复 {run.Config.floorEntryHealFraction:P0} 生命，随身装备保留", new Vector2(122, -65), new Vector2(490, 32), 19, muted);
             }
             else
             {
                 ArtPanel("Explorer", modal, new Vector2(12, -14), new Vector2(116, 116), GameArt.Get("player"), icon: true);
-                Label(modal, won ? "遗迹已净化" : "探索失败", new Vector2(132, -14), new Vector2(290, 60), 42, accent);
+                Label(modal, won ? "遗迹已净化" : "探索失败", new Vector2(132, -14), new Vector2(290, 60), 48, accent);
                 Label(modal, run.Map.Rooms[run.Map.CurrentRoom].Name, new Vector2(134, -76), new Vector2(250, 34), 21, Paper);
                 DrawDepthTrail(cleared);
                 Label(modal, $"等级 {run.Level}     击败 {run.Kills}     {(int)run.Elapsed / 60:00}:{(int)run.Elapsed % 60:00}", new Vector2(32, -190), new Vector2(354, 34), 21, Paper);
@@ -82,7 +82,7 @@ namespace Echoes
                 ArtPanel("Icon", tile, new Vector2(9, -2), new Vector2(64, 64), art.Weapon(weapon.Kind, weapon.Tier), icon: true);
                 var color = ShopController.TierColor(weapon.Tier);
                 Panel("Tier", tile, new Vector2(6, -67), new Vector2(12 * (weapon.Tier + 1), 4), color);
-                var name = Label(modal, run.Player.Weapons.Definition(weapon).title, new Vector2(397 + i * 89, -134), new Vector2(89, 24), 14, Paper);
+                var name = Label(modal, run.Player.Weapons.Definition(weapon).title, new Vector2(397 + i * 89, -134), new Vector2(89, 24), 12, Paper);
                 name.alignment = TMPro.TextAlignmentOptions.Top;
             }
 

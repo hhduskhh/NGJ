@@ -50,7 +50,7 @@ namespace Echoes
 
         private void Heading(string title, string context)
         {
-            Label(modal, title, new Vector2(40, -28), new Vector2(490, 58), 38, Paper);
+            Label(modal, title, new Vector2(40, -28), new Vector2(490, 58), 36, Paper);
             var location = Label(modal, context, new Vector2(-40, -45), new Vector2(310, 35), 19, Brass, Vector2.one);
             location.alignment = TMPro.TextAlignmentOptions.TopRight;
             Panel("Rule", modal, new Vector2(40, -99), new Vector2(780, 2), new Color32(80, 78, 63, 255));
@@ -76,7 +76,7 @@ namespace Echoes
         private void DrawSettings()
         {
             Heading("设置", FloorName);
-            Label(modal, "手感调试模式", new Vector2(40, -150), new Vector2(490, 52), 29, Paper);
+            Label(modal, "手感调试模式", new Vector2(40, -150), new Vector2(490, 52), 24, Paper);
             Button(modal, run.FeelDebugMode ? "已开启" : "已关闭", new Vector2(300, -144), new Vector2(180, 54), () =>
             {
                 run.SetFeelDebugMode(!run.FeelDebugMode);
@@ -104,7 +104,7 @@ namespace Echoes
                 var face = button.Face;
                 Label(face, $"[{i + 1}]", new Vector2(16, -30), new Vector2(48, 32), 19, Brass);
                 ArtPanel("UpgradeIcon", face, new Vector2(68, -15), new Vector2(64, 64), PresentationArt.Current.Upgrade(choice.Title), icon: true);
-                Label(face, choice.Title, new Vector2(154, -29), new Vector2(208, 45), 26, choice.IncreasesNoise ? PixelArt.Gold : Paper);
+                Label(face, choice.Title, new Vector2(154, -29), new Vector2(208, 45), 24, choice.IncreasesNoise ? PixelArt.Gold : Paper);
                 var detail = Label(face, choice.Description, new Vector2(374, -6), new Vector2(388, 82), 19, Paper);
                 detail.alignment = TMPro.TextAlignmentOptions.MidlineLeft;
             }

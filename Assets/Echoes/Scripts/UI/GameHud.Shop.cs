@@ -18,8 +18,10 @@ namespace Echoes
             rect.GetComponent<UnityEngine.UI.Button>().interactable = enabled;
             foreach (var label in rect.GetComponentsInChildren<TMPro.TMP_Text>())
             {
-                label.fontSize = 16; label.enableAutoSizing = true;
-                label.fontSizeMin = 12; label.fontSizeMax = 16;
+                // Keep short actions on the native 2x grid. Long reasons use the 1x face.
+                label.fontSize = 24;
+                if (label.GetPreferredValues(text, float.PositiveInfinity, float.PositiveInfinity).x > width - 24)
+                    label.fontSize = 12;
                 label.color = enabled ? Color.white : new Color(.58f, .62f, .67f);
                 if (shortage) rect.GetComponent<HudButton>().SetShortageLabel(label);
             }
@@ -35,7 +37,7 @@ namespace Echoes
             aspect.aspectMode = UnityEngine.UI.AspectRatioFitter.AspectMode.EnvelopeParent;
             aspect.aspectRatio = 1600f / 900;
             ArtPanel("ShopMainPanel", modal, new Vector2(0, -18), new Vector2(1440, 864), art.shopMainPanel, new Vector2(.5f, 1));
-            var title = Label(modal, "商店", new Vector2(0, -40), new Vector2(400, 48), 34, PixelArt.Gold, new Vector2(.5f, 1));
+            var title = Label(modal, "商店", new Vector2(0, -40), new Vector2(400, 48), 36, PixelArt.Gold, new Vector2(.5f, 1));
             title.alignment = TMPro.TextAlignmentOptions.Center;
             ShopButton("退出 [Esc]", -570, 42, 220, true, () => run.Shop.Close(), "ShopExit");
             ArtPanel("ShopGoldIcon", modal, new Vector2(515, -50), new Vector2(32, 32), art.shopGoldCoin, new Vector2(.5f, 1), true);
@@ -53,7 +55,7 @@ namespace Echoes
                 var card = ArtPanel("Offer" + i, modal, new Vector2(x, -105), new Vector2(334, 260),
                     art.offerPanels[offer.Tier], new Vector2(.5f, 1));
                 bool weaponOffer = offer.Item == null;
-                Label(card, run.Shop.Title(offer), new Vector2(86, -19), new Vector2(226, 40), 23, Paper);
+                Label(card, run.Shop.Title(offer), new Vector2(86, -19), new Vector2(226, 40), 24, Paper);
                 Label(card, ShopController.TierName(offer.Tier), new Vector2(86, -57), new Vector2(208, 28), 16, ShopController.TierColor(offer.Tier));
                 var icon = weaponOffer ? art.Weapon(offer.Weapon, offer.Tier) : art.Passive(offer.Item.title);
                 if (icon)
