@@ -69,7 +69,11 @@ MonoBehaviour:
   bossDashSpeed: 11
   finalBossAttackRate: 2
   bossBulletSpeed: 4
+  bossBulletScale: 1.35
   bossBulletCount: 12
+  bossSummonInterval: 8
+  bossSummonCount: 2
+  bossSummonLimit: 4
   floorEnemyHealth:
   - 1
   - 1.2

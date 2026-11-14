@@ -19,6 +19,7 @@ namespace Echoes
         public DungeonVisibility Visibility { get; private set; }
         public EnemyController Boss { get; private set; }
         public readonly List<EnemyController> Enemies = new List<EnemyController>();
+        private readonly List<EnemyController> bossMinions = new List<EnemyController>();
         public RunState State { get; private set; }
         public int Floor { get; private set; } = 1;
         public string FloorTitle { get { return FloorTheme.Title(Floor); } }
@@ -77,7 +78,7 @@ namespace Echoes
 
         private void SpawnFloor()
         {
-            // Spawn once. Sound, upgrades and the boss never create additional enemies.
+            // Initial room population. The activated boss summons reinforcements separately.
             for (int room = 1; room < Map.Rooms.Count - 1; room++)
             {
                 var cells = Map.SpawnCells(room);
@@ -97,6 +98,39 @@ namespace Echoes
         {
             if (values == null || values.Length == 0) return 1;
             return values[Mathf.Clamp(Floor - 1, 0, values.Length - 1)];
+        }
+
+        internal void SummonBossMinions()
+        {
+            int alive = 0;
+            for (int i = bossMinions.Count - 1; i >= 0; i--)
+            {
+                var minion = bossMinions[i];
+                if (minion.Alive) alive++;
+                else if (!minion.gameObject.activeSelf)
+                {
+                    Enemies.Remove(minion);
+                    bossMinions.RemoveAt(i);
+                    Destroy(minion.gameObject);
+                }
+            }
+            int remaining = Mathf.Min(config.bossSummonCount, config.bossSummonLimit - alive);
+            Vector2 origin = Boss.transform.position;
+            var room = Map.RoomAtPosition(origin);
+            if (remaining <= 0 || room == null) return;
+            var cells = Map.SpawnCells(room.Index);
+            cells.Sort((a, b) => (a - origin).sqrMagnitude.CompareTo((b - origin).sqrMagnitude));
+            Vector2 player = Player.transform.position;
+            foreach (var cell in cells)
+            {
+                if ((cell - player).sqrMagnitude < 9f ||
+                    Enemies.Exists(e => e.Alive && ((Vector2)e.transform.position - cell).sqrMagnitude < 2.25f)) continue;
+                var minion = EnemyController.Create(this, cell, false);
+                Enemies.Add(minion);
+                bossMinions.Add(minion);
+                minion.Hear(player);
+                if (--remaining == 0) break;
+            }
         }
 
         private void Update()
@@ -184,6 +218,7 @@ namespace Echoes
         {
             foreach (var enemy in Enemies) if (enemy) Destroy(enemy.gameObject);
             Enemies.Clear();
+            bossMinions.Clear();
             Boss = null;
             foreach (var projectile in FindObjectsOfType<Projectile>())
                 if (projectile) Destroy(projectile.gameObject);

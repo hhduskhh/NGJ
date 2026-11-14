@@ -18,6 +18,7 @@ namespace Echoes
         private float repath, lostSight, contactReady, wanderTimer, attackTimer, warningTimer;
         private LineRenderer warning;
         private float dashCooldown, dashRemaining;
+        private float summonTimer;
         private Vector2 dashDirection;
         private bool dashStep, dashHitPlayer;
         private CharacterArt art;
@@ -115,7 +116,12 @@ namespace Echoes
         }
 
         public void ActivateBoss()
-        { State = EnemyState.Chasing; lastSeen = run.Player.transform.position; RefreshVisual(); }
+        {
+            State = EnemyState.Chasing;
+            lastSeen = run.Player.transform.position;
+            summonTimer = run.Config.bossSummonInterval;
+            RefreshVisual();
+        }
 
         private bool CanDetectPlayer()
         {
@@ -177,6 +183,12 @@ namespace Echoes
                 float attackTime = dt * (run.Floor == 3 ? run.Config.finalBossAttackRate : 1f);
                 if (run.Floor != 2) UpdateBossBarrage(attackTime);
                 if (run.Floor >= 2) UpdateBossDash(attackTime, player);
+                summonTimer -= dt;
+                if (summonTimer <= 0)
+                {
+                    run.SummonBossMinions();
+                    summonTimer = run.Config.bossSummonInterval;
+                }
             }
             RefreshVisual();
         }
@@ -302,7 +314,8 @@ namespace Echoes
                         float angle = i * Mathf.PI * 2 / run.Config.bossBulletCount;
                         var direction = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle));
                         Projectile.Create(run, (Vector2)transform.position + direction * 1.1f, direction,
-                            run.Config.bossBulletSpeed, run.Config.bossDamage * run.EnemyDamageScale, true);
+                            run.Config.bossBulletSpeed, run.Config.bossDamage * run.EnemyDamageScale, true,
+                            sizeScale: run.Config.bossBulletScale);
                     }
                     attackTimer = run.Config.bossAttackInterval;
                     art.Attack();

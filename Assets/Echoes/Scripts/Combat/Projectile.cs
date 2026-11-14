@@ -6,6 +6,7 @@ namespace Echoes
     public sealed class Projectile : MonoBehaviour
     {
         public const float Radius = .085f;
+        private float hitRadius;
         private RunController run;
         private Vector2 direction;
         private float speed, damage;
@@ -18,14 +19,16 @@ namespace Echoes
         private readonly List<RaycastHit2D> hits = new List<RaycastHit2D>(16);
 
         public static void Create(RunController run, Vector2 position, Vector2 direction,
-            float speed, float damage, bool hostile, int pierces = 0, HashSet<EnemyController> impactTargets = null)
+            float speed, float damage, bool hostile, int pierces = 0, HashSet<EnemyController> impactTargets = null,
+            float sizeScale = 1f)
         {
             var renderer = PixelArt.Create(hostile ? "HostileProjectile" : "PlayerProjectile",
-                hostile ? "hostileBullet" : "bullet", position, 30);
+                hostile ? "hostileBullet" : "bullet", position, 30, scale: sizeScale);
             var projectile = renderer.gameObject.AddComponent<Projectile>();
             projectile.run = run; projectile.direction = direction.normalized;
             projectile.speed = speed; projectile.damage = damage; projectile.hostile = hostile;
             projectile.pierces = pierces;
+            projectile.hitRadius = Radius * sizeScale;
             projectile.impactTargets = impactTargets;
             projectile.trail = run.Visibility.BeginTrail(position, projectile.direction, speed);
             if (hostile)
@@ -46,7 +49,7 @@ namespace Echoes
             if (run.State != RunState.Playing) return;
             float distance = speed * Time.deltaTime;
             // Cast the entire movement segment, so fast shots cannot tunnel through walls/enemies.
-            int count = Physics2D.CircleCast(transform.position, Radius, direction,
+            int count = Physics2D.CircleCast(transform.position, hitRadius, direction,
                 new ContactFilter2D().NoFilter(), hits, distance);
             Collider2D nearest = null;
             float nearestDistance = float.MaxValue;

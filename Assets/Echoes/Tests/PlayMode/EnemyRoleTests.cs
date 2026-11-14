@@ -56,7 +56,9 @@ namespace Echoes.Tests
                     }
                     if (windingUp && !boss.IsWindingUp && firstBarrage < 0)
                     {
-                        Assert.IsNotNull(GameObject.Find("HostileProjectile"));
+                        var bullet = GameObject.Find("HostileProjectile");
+                        Assert.IsNotNull(bullet);
+                        Assert.AreEqual(Vector3.one * run.Config.bossBulletScale, bullet.transform.localScale);
                         firstBarrage = Time.time - started;
                     }
                     windingUp = boss.IsWindingUp;
@@ -72,6 +74,39 @@ namespace Echoes.Tests
                     boss.TakeDamage(boss.Health);
                     run.AdvanceFloor();
                     yield return null;
+                }
+            }
+        }
+
+        [UnityTest] public IEnumerator BossSummonsAwakeMinionsUpToTheLimitOnEveryFloor()
+        {
+            run.Config.bossSummonInterval = .3f;
+            for (int floor = 1; floor <= 3; floor++)
+            {
+                int initialCount = run.Enemies.Count;
+                yield return new WaitForSeconds(.35f);
+                Assert.AreEqual(initialCount, run.Enemies.Count);
+                run.ActivateBoss();
+                yield return new WaitForSeconds(.35f);
+                var wave = run.Enemies.Skip(initialCount).ToArray();
+                Assert.AreEqual(run.Config.bossSummonCount, wave.Length);
+                foreach (var minion in wave)
+                {
+                    Assert.IsTrue(minion.Awake && !minion.IsBoss);
+                    Assert.AreSame(run.Map.RoomAtPosition(run.Boss.transform.position),
+                        run.Map.RoomAtPosition(minion.transform.position));
+                }
+                yield return new WaitForSeconds(.65f);
+                Assert.AreEqual(initialCount + run.Config.bossSummonLimit, run.Enemies.Count);
+                wave[0].TakeDamage(wave[0].Health);
+                yield return new WaitForSeconds(.35f);
+                Assert.AreEqual(run.Config.bossSummonLimit, run.Enemies.Skip(initialCount).Count(e => e.Alive));
+                run.Boss.TakeDamage(run.Boss.Health);
+                if (floor < 3)
+                {
+                    run.AdvanceFloor();
+                    yield return null;
+                    Assert.IsFalse(wave[1]);
                 }
             }
         }

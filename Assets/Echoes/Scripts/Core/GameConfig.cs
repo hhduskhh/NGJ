@@ -108,7 +108,11 @@ namespace Echoes
         [Min(.1f)] public float bossDashSpeed = 11f;
         [Min(1)] public float finalBossAttackRate = 2f;
         [Min(1)] public float bossBulletSpeed = 4;
+        [Min(1)] public float bossBulletScale = 1.35f;
         [Range(4, 24)] public int bossBulletCount = 12;
+        [Min(.1f)] public float bossSummonInterval = 8f;
+        [Min(1)] public int bossSummonCount = 2;
+        [Min(1)] public int bossSummonLimit = 4;
         [Header("Floor scaling")]
         public float[] floorEnemyHealth = { 1f, 1.2f, 1.4f };
         public float[] floorEnemyDamage = { 1f, 1.1f, 1.2f };
