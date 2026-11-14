@@ -101,7 +101,10 @@ namespace Echoes.Tests
             Projectile.Create(run, front, Vector2.up, 20, 10, false);
             var shot = Object.FindObjectOfType<Projectile>();
             Assert.IsNotNull(shot);
-            yield return new WaitForSeconds(.2f);
+            // Batch mode can advance a whole .2 s wait as a single short frame.
+            // Wait for the collision instead of assuming a fixed travel distance.
+            float timeout = Time.time + 2f;
+            while (shot && Time.time < timeout) yield return null;
             Assert.IsFalse(shot, "Solid furniture absorbs the shot");
         }
 

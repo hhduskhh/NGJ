@@ -31,6 +31,10 @@ MonoBehaviour:
   bonusEnemyCap: 8
   generationAttempts: 100
   extraDoorChance: 0.15
+  floorGridSizes:
+  - 3
+  - 4
+  - 5
   spawnCellDraws:
   - 24
   - 32

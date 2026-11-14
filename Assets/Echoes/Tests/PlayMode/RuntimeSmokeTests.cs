@@ -132,8 +132,8 @@ namespace Echoes.Tests
             yield return null;
             var run = Object.FindObjectOfType<RunController>();
             Assert.IsNotNull(run.Player);
-            Assert.GreaterOrEqual(run.Map.Rooms.Count, 10);
-            Assert.LessOrEqual(run.Map.Rooms.Count, 25);
+            Assert.GreaterOrEqual(run.Map.Rooms.Count, 4);
+            Assert.LessOrEqual(run.Map.Rooms.Count, 9);
             int initialCount = run.Enemies.Count;
             Assert.Greater(initialCount, 1);
             foreach (var room in run.Map.Rooms)

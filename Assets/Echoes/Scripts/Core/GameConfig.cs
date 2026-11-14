@@ -44,6 +44,8 @@ namespace Echoes
         [Min(1)] public float altarEntranceDistance = 3;
         [Min(1)] public int generationAttempts = 100;
         [Range(0, 1)] public float extraDoorChance = .15f;
+        [Tooltip("每层地图房间格的边长；索引 0/1/2 对应第 1/2/3 层。")]
+        public int[] floorGridSizes = { 3, 4, 5 };
         [Tooltip("每层随机选择中间房格子的次数；索引 0/1/2 对应第 1/2/3 层。")]
         public int[] spawnCellDraws = { 24, 32, 40 };
         [Tooltip("每层每个格子的刷新权重；同一层内所有格子目前使用相同权重。")]

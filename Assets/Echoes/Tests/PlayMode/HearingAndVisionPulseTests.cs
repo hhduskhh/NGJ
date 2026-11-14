@@ -15,7 +15,7 @@ namespace Echoes.Tests
             yield return null;
             var run = Object.FindObjectOfType<RunController>();
             foreach (var enemy in run.Enemies)
-                enemy.GetComponent<Rigidbody2D>().position = run.Map.Rooms[4].Center;
+                enemy.GetComponent<Rigidbody2D>().position = run.Map.Rooms[1].Center;
             yield return new WaitForSeconds(.04f);
         }
 

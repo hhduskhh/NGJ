@@ -90,8 +90,8 @@ namespace Echoes.Tests
                         int shapeSeed = -1;
                         for (int seed = 100; seed < 400 && shapeSeed < 0; seed++)
                         {
-                            var plan = DungeonPlan.Generate(seed, run.Config.generationAttempts,
-                                run.Config.extraDoorChance);
+                            var plan = DungeonPlan.Generate(seed, run.Config.floorGridSizes[0],
+                                run.Config.generationAttempts, run.Config.extraDoorChance);
                             if (!plan.Valid) continue;
                             foreach (var planned in plan.Rooms)
                                 if (planned.Role == RoomRole.Middle && planned.Shape == shape)

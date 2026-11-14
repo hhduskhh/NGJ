@@ -97,7 +97,9 @@ namespace Echoes
             if (Time.unscaledTime >= noticeUntil) noticeText.text = "";
             if (drawnRoom != run.Map.CurrentRoom) DrawMinimap();
             var cell = run.Map.CurrentCell;
-            playerMarker.anchoredPosition = new Vector2((cell.x + .5f) * 20 - 2, -(cell.y + .5f) * 20 + 2);
+            float markerStep = 100f / run.Map.GridSize;
+            playerMarker.anchoredPosition = new Vector2(
+                (cell.x + .5f) * markerStep - 2, -(cell.y + .5f) * markerStep + 2);
             if (run.BossActivated && run.Boss.Alive)
             {
                 bossBar.transform.parent.gameObject.SetActive(true);
@@ -122,10 +124,15 @@ namespace Echoes
                 rect.sizeDelta = new Vector2(100, 100);
                 rect.anchoredPosition = new Vector2(40, -35);
                 mapImage.raycastTarget = false;
-                mapTexture = new Texture2D(DungeonMap.Width, DungeonMap.Height, TextureFormat.RGBA32, false)
+                playerMarker = Panel("CurrentCell", rect, Vector2.zero, new Vector2(4, 4), Color.white);
+            }
+            if (!mapTexture || mapTexture.width != run.Map.MapWidth ||
+                mapTexture.height != run.Map.MapHeight)
+            {
+                if (mapTexture) Destroy(mapTexture);
+                mapTexture = new Texture2D(run.Map.MapWidth, run.Map.MapHeight, TextureFormat.RGBA32, false)
                     { filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp };
                 mapImage.texture = mapTexture;
-                playerMarker = Panel("CurrentCell", rect, Vector2.zero, new Vector2(4, 4), Color.white);
             }
             DrawMinimap();
             if (bossBar) bossBar.transform.parent.gameObject.SetActive(false);
@@ -137,7 +144,15 @@ namespace Echoes
         {
             var map = run.Map;
             drawnRoom = map.CurrentRoom;
-            var pixels = new Color32[DungeonMap.Width * DungeonMap.Height];
+            if (!mapImage) return;
+            if (!mapTexture || mapTexture.width != map.Width || mapTexture.height != map.Height)
+            {
+                if (mapTexture) Destroy(mapTexture);
+                mapTexture = new Texture2D(map.Width, map.Height, TextureFormat.RGBA32, false)
+                    { filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp };
+                mapImage.texture = mapTexture;
+            }
+            var pixels = new Color32[map.Width * map.Height];
             foreach (var room in map.Rooms)
             {
                 if (!room.Visited) continue;
@@ -145,10 +160,10 @@ namespace Echoes
                     room.Index == drawnRoom ? new Color(.16f, .52f, .53f) : new Color(.35f, .43f, .50f);
                 foreach (var cell in room.Cells)
                 {
-                    int left = cell.x * DungeonMap.CellWidth, bottom = DungeonMap.CellOriginY(cell.y);
+                    int left = cell.x * DungeonMap.CellWidth, bottom = map.CellOriginY(cell.y);
                     for (int y = bottom; y < bottom + DungeonMap.CellHeight; y++)
                         for (int x = left; x < left + DungeonMap.CellWidth; x++)
-                            if (map.IsFloorTile(new Vector2Int(x, y))) pixels[y * DungeonMap.Width + x] = color;
+                            if (map.IsFloorTile(new Vector2Int(x, y))) pixels[y * map.Width + x] = color;
                 }
             }
             foreach (var door in map.Doors)
@@ -159,7 +174,7 @@ namespace Echoes
                 int dx = opening.width == 2 ? 3 : 0, dy = opening.height == 2 ? 3 : 0;
                 for (int y = opening.yMin - dy; y < opening.yMax + dy; y++)
                     for (int x = opening.xMin - dx; x < opening.xMax + dx; x++)
-                        pixels[y * DungeonMap.Width + x] = Brass;
+                        pixels[y * map.Width + x] = Brass;
             }
             mapTexture.SetPixels32(pixels);
             mapTexture.Apply(false);

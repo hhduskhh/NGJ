@@ -4,7 +4,7 @@ using UnityEngine.Tilemaps;
 
 namespace Echoes
 {
-    // Builds the playable 5x5-cell floor from a pure DungeonPlan and owns all walkability queries.
+    // Builds the playable per-floor cell grid from a pure DungeonPlan and owns all walkability queries.
     public sealed class DungeonMap : MonoBehaviour
     {
         public sealed class Room
@@ -20,8 +20,10 @@ namespace Echoes
             public RoomShape Shape;
             public int Rotation;
             public int LayoutVariant;
+            public int GridSize;
             public readonly List<RectInt> Walls = new List<RectInt>();
             public int CellCount { get { return Cells.Count; } }
+            public int CellOriginY(int row) => (GridSize - 1 - row) * DungeonMap.CellHeight;
         }
 
         public sealed class Door
@@ -33,12 +35,12 @@ namespace Echoes
                 Opening.x + Opening.width * .5f, Opening.y + Opening.height * .5f); } }
         }
 
-        public const int GridSize = DungeonPlan.GridSize;
         public const int CellWidth = 36;
         public const int CellHeight = 36;
         public const int DoorWidth = 6;
-        public const int Width = GridSize * CellWidth;
-        public const int Height = GridSize * CellHeight;
+        public int GridSize { get; private set; } = DungeonPlan.MaxGridSize;
+        public int Width { get; private set; } = DungeonPlan.MaxGridSize * CellWidth;
+        public int Height { get; private set; } = DungeonPlan.MaxGridSize * CellHeight;
 
         private static readonly Vector2Int GridRight = new Vector2Int(1, 0);
         private static readonly Vector2Int GridDown = new Vector2Int(0, 1);
@@ -47,9 +49,11 @@ namespace Echoes
             new Vector2Int(0, 1), new Vector2Int(1, 0),
             new Vector2Int(0, -1), new Vector2Int(-1, 0)
         };
-        private readonly bool[,] walkable = new bool[Width, Height];
-        private readonly bool[,] floor = new bool[Width, Height];
-        private readonly Room[,] cellRooms = new Room[GridSize, GridSize];
+        private bool[,] walkable = new bool[DungeonPlan.MaxGridSize * CellWidth,
+            DungeonPlan.MaxGridSize * CellHeight];
+        private bool[,] floor = new bool[DungeonPlan.MaxGridSize * CellWidth,
+            DungeonPlan.MaxGridSize * CellHeight];
+        private Room[,] cellRooms = new Room[DungeonPlan.MaxGridSize, DungeonPlan.MaxGridSize];
         private readonly List<RoomPropSpec> obstacleSpecs = new List<RoomPropSpec>();
         private readonly List<RoomPropSpec> decorSpecs = new List<RoomPropSpec>();
         private readonly Dictionary<string, TileBase> floorTiles = new Dictionary<string, TileBase>();
@@ -101,20 +105,19 @@ namespace Echoes
             obstacleSpecs.Clear();
             decorSpecs.Clear();
             CurrentRoom = 0;
-            for (int x = 0; x < Width; x++)
-                for (int y = 0; y < Height; y++)
-                {
-                    walkable[x, y] = false;
-                    floor[x, y] = false;
-                }
-            for (int col = 0; col < GridSize; col++)
-                for (int row = 0; row < GridSize; row++)
-                    cellRooms[col, row] = null;
 
             var config = controller.Config;
-            var plan = DungeonPlan.Generate(config.randomSeed + floorIndex * 1009,
+            int gridSize = GridSizeForFloor(config);
+            var plan = DungeonPlan.Generate(config.randomSeed + floorIndex * 1009, gridSize,
                 config.generationAttempts, config.extraDoorChance);
             if (!plan.Valid) throw new System.InvalidOperationException("Dungeon layout generation failed.");
+
+            GridSize = plan.GridSize;
+            Width = GridSize * CellWidth;
+            Height = GridSize * CellHeight;
+            walkable = new bool[Width, Height];
+            floor = new bool[Width, Height];
+            cellRooms = new Room[GridSize, GridSize];
 
             BuildWorldRooms(plan);
             CarveRooms(plan);
@@ -159,13 +162,14 @@ namespace Echoes
                     Bounds = WorldBounds(planned),
                     Name = name
                 };
+                room.GridSize = GridSize;
                 room.Cells.AddRange(planned.Cells);
                 Rooms.Add(room);
                 foreach (var cell in planned.Cells) cellRooms[cell.x, cell.y] = room;
             }
         }
 
-        private static RectInt WorldBounds(PlannedRoom room)
+        private RectInt WorldBounds(PlannedRoom room)
         {
             int minX = room.MinCell.x * CellWidth;
             int maxX = (room.MaxCell.x + 1) * CellWidth;
@@ -174,8 +178,16 @@ namespace Echoes
             return new RectInt(minX, minY, maxX - minX, maxY - minY);
         }
 
-        public static int CellOriginY(int row) => (GridSize - 1 - row) * CellHeight;
-        private static int WorldCellY(int row) => CellOriginY(row);
+        public int CellOriginY(int row) => (GridSize - 1 - row) * CellHeight;
+        private int WorldCellY(int row) => CellOriginY(row);
+
+        private int GridSizeForFloor(GameConfig config)
+        {
+            if (config.floorGridSizes == null || config.floorGridSizes.Length == 0)
+                return DungeonPlan.MaxGridSize;
+            int value = config.floorGridSizes[Mathf.Clamp(Floor - 1, 0, config.floorGridSizes.Length - 1)];
+            return Mathf.Clamp(value, DungeonPlan.MinGridSize, DungeonPlan.MaxGridSize);
+        }
 
         private void CarveRooms(DungeonPlan plan)
         {
@@ -759,7 +771,7 @@ namespace Echoes
             }
         }
 
-        private static bool InBounds(int x, int y) =>
+        private bool InBounds(int x, int y) =>
             x >= 0 && y >= 0 && x < Width && y < Height;
 
         private bool IsTileInRoom(int x, int y, Room room)
@@ -777,7 +789,7 @@ namespace Echoes
             return cellRooms[col, row];
         }
 
-        private static Vector2Int CellAtPosition(Vector2 position)
+        private Vector2Int CellAtPosition(Vector2 position)
         {
             int col = Mathf.FloorToInt((position.x + .5f) / CellWidth);
             int row = GridSize - 1 - Mathf.FloorToInt((position.y + .5f) / CellHeight);
@@ -854,7 +866,7 @@ namespace Echoes
         public bool HasClearInteractionPath(Vector2 from, Vector2 to) =>
             ClearSegment(from, to, walkable, false);
 
-        private static bool ClearSegment(Vector2 from, Vector2 to, bool[,] grid, bool revealBlockingWall)
+        private bool ClearSegment(Vector2 from, Vector2 to, bool[,] grid, bool revealBlockingWall)
         {
             bool Open(Vector2Int p) => InBounds(p.x, p.y) && grid[p.x, p.y];
             var cell = Vector2Int.FloorToInt(from + Vector2.one * .5f);

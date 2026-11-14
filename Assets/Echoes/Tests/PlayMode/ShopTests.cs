@@ -265,7 +265,7 @@ namespace Echoes.Tests
             Assert.AreEqual(pulses + 1, run.Visibility.Pulses.Count, "Shotgun emits one pulse");
             yield return new WaitForSeconds(.4f);
             Assert.Greater(Object.FindObjectsOfType<Projectile>().Length, 0, "Pellets continue beyond targeting range");
-            foreach (var enemy in run.Enemies) enemy.GetComponent<Rigidbody2D>().position = run.Map.Rooms[4].Center;
+            foreach (var enemy in run.Enemies) enemy.GetComponent<Rigidbody2D>().position = run.Map.Rooms[1].Center;
             Vector2 origin = run.Map.Rooms[0].Center;
             var a = run.Enemies[0]; var b = run.Enemies[1];
             a.GetComponent<Rigidbody2D>().position = origin + Vector2.right * 2;

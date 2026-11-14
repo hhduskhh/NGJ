@@ -7,56 +7,59 @@ namespace Echoes.Tests
     public sealed class DungeonGenerationTests
     {
         [Test]
-        public void PlansCoverTheFiveByFiveGridAndRespectLeafRooms()
+        public void PlansCoverEachFloorGridAndRespectLeafRooms()
         {
             var bossCells = new HashSet<Vector2Int>();
             var shapeCounts = new Dictionary<RoomShape, int>();
-            for (int seed = 0; seed < 300; seed++)
-            {
-                var plan = DungeonPlan.Generate(seed);
-                Assert.IsTrue(plan.Valid, "Seed " + seed);
-                Assert.AreEqual(DungeonPlan.GridSize * DungeonPlan.GridSize,
-                    CellCount(plan), "Every seed fills all 25 cells");
-
-                Assert.AreEqual(RoomRole.Start, plan.Rooms[0].Role);
-                Assert.AreEqual(RoomRole.Boss, plan.Rooms[plan.Rooms.Count - 1].Role);
-                Assert.AreEqual(DungeonPlan.StartCell, plan.Rooms[0].Cells[0]);
-                bossCells.Add(plan.Boss.Cells[0]);
-                Assert.AreEqual(1, plan.Rooms[0].Cells.Count);
-                Assert.AreEqual(1, plan.Rooms[plan.Rooms.Count - 1].Cells.Count);
-                Assert.AreEqual(1, plan.Rooms[0].Doors.Count, "Start is a leaf");
-                Assert.AreEqual(1, plan.Rooms[plan.Rooms.Count - 1].Doors.Count, "Boss is a leaf");
-
-                int multiCellKinds = 0;
-                var kinds = new HashSet<RoomShape>();
-                foreach (var room in plan.Rooms)
+            for (int gridSize = DungeonPlan.MinGridSize; gridSize <= DungeonPlan.MaxGridSize; gridSize++)
+                for (int seed = 0; seed < 100; seed++)
                 {
-                    Assert.LessOrEqual(room.Cells.Count, 4);
-                    Assert.GreaterOrEqual(room.Doors.Count, 1);
-                    Assert.LessOrEqual(room.Doors.Count, 4);
-                    Assert.AreEqual(ExpectedCells(room.Shape), room.Cells.Count);
-                    int width = room.MaxCell.x - room.MinCell.x + 1;
-                    int height = room.MaxCell.y - room.MinCell.y + 1;
-                    Assert.IsTrue(ExpectedFootprint(room.Shape, width, height),
-                        room.Shape + " has an unexpected footprint " + width + "x" + height);
-                    if (room.Role == RoomRole.Middle && room.Shape != RoomShape.Single)
-                        kinds.Add(room.Shape);
-                    if (!shapeCounts.ContainsKey(room.Shape)) shapeCounts[room.Shape] = 0;
-                    shapeCounts[room.Shape]++;
-                }
-                multiCellKinds = kinds.Count;
-                Assert.GreaterOrEqual(multiCellKinds, 2, "Mixed room sizes on seed " + seed);
+                    var plan = DungeonPlan.Generate(seed, gridSize);
+                    Assert.IsTrue(plan.Valid, "Grid " + gridSize + " seed " + seed);
+                    Assert.AreEqual(gridSize, plan.GridSize);
+                    Assert.AreEqual(gridSize * gridSize,
+                        CellCount(plan), "Every seed fills all cells");
 
-                foreach (var door in plan.Doors)
-                {
-                    Assert.AreEqual(1, Mathf.Abs(door.CellA.x - door.CellB.x) +
-                        Mathf.Abs(door.CellA.y - door.CellB.y), "Doors join adjacent cells");
-                    Assert.AreNotSame(door.A, door.B);
-                    Assert.IsTrue(door.A.ContainsCell(door.CellA));
-                    Assert.IsTrue(door.B.ContainsCell(door.CellB));
+                    Assert.AreEqual(RoomRole.Start, plan.Rooms[0].Role);
+                    Assert.AreEqual(RoomRole.Boss, plan.Rooms[plan.Rooms.Count - 1].Role);
+                    Assert.AreEqual(plan.StartCell, plan.Rooms[0].Cells[0]);
+                    bossCells.Add(plan.Boss.Cells[0]);
+                    Assert.AreEqual(1, plan.Rooms[0].Cells.Count);
+                    Assert.AreEqual(1, plan.Rooms[plan.Rooms.Count - 1].Cells.Count);
+                    Assert.AreEqual(1, plan.Rooms[0].Doors.Count, "Start is a leaf");
+                    Assert.AreEqual(1, plan.Rooms[plan.Rooms.Count - 1].Doors.Count, "Boss is a leaf");
+
+                    int multiCellKinds = 0;
+                    var kinds = new HashSet<RoomShape>();
+                    foreach (var room in plan.Rooms)
+                    {
+                        Assert.LessOrEqual(room.Cells.Count, 4);
+                        Assert.GreaterOrEqual(room.Doors.Count, 1);
+                        Assert.LessOrEqual(room.Doors.Count, 4);
+                        Assert.AreEqual(ExpectedCells(room.Shape), room.Cells.Count);
+                        int width = room.MaxCell.x - room.MinCell.x + 1;
+                        int height = room.MaxCell.y - room.MinCell.y + 1;
+                        Assert.IsTrue(ExpectedFootprint(room.Shape, width, height),
+                            room.Shape + " has an unexpected footprint " + width + "x" + height);
+                        if (room.Role == RoomRole.Middle && room.Shape != RoomShape.Single)
+                            kinds.Add(room.Shape);
+                        if (!shapeCounts.ContainsKey(room.Shape)) shapeCounts[room.Shape] = 0;
+                        shapeCounts[room.Shape]++;
+                    }
+                    multiCellKinds = kinds.Count;
+                    Assert.GreaterOrEqual(multiCellKinds, 2,
+                        "Mixed room sizes on grid " + gridSize + " seed " + seed);
+
+                    foreach (var door in plan.Doors)
+                    {
+                        Assert.AreEqual(1, Mathf.Abs(door.CellA.x - door.CellB.x) +
+                            Mathf.Abs(door.CellA.y - door.CellB.y), "Doors join adjacent cells");
+                        Assert.AreNotSame(door.A, door.B);
+                        Assert.IsTrue(door.A.ContainsCell(door.CellA));
+                        Assert.IsTrue(door.B.ContainsCell(door.CellB));
+                    }
+                    AssertAllRoomsReachable(plan);
                 }
-                AssertAllRoomsReachable(plan);
-            }
 
             Assert.Greater(bossCells.Count, 1);
             foreach (RoomShape shape in System.Enum.GetValues(typeof(RoomShape)))
@@ -69,46 +72,53 @@ namespace Echoes.Tests
             var method = typeof(DungeonPlan).GetMethod("BuildFallback",
                 System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
             Assert.IsNotNull(method);
-            for (int seed = 0; seed < 10; seed++)
-            {
-                var plan = (DungeonPlan)method.Invoke(null, new object[] { seed });
-                Assert.IsTrue(plan.Valid);
-                Assert.AreEqual(DungeonPlan.GridSize * DungeonPlan.GridSize, CellCount(plan));
-                Assert.AreEqual(1, plan.Rooms[0].Doors.Count);
-                Assert.AreEqual(1, plan.Rooms[plan.Rooms.Count - 1].Doors.Count);
-                AssertAllRoomsReachable(plan);
-            }
+            for (int gridSize = DungeonPlan.MinGridSize; gridSize <= DungeonPlan.MaxGridSize; gridSize++)
+                for (int seed = 0; seed < 10; seed++)
+                {
+                    var plan = (DungeonPlan)method.Invoke(null, new object[] { seed, gridSize });
+                    Assert.IsTrue(plan.Valid);
+                    Assert.AreEqual(gridSize, plan.GridSize);
+                    Assert.AreEqual(gridSize * gridSize, CellCount(plan));
+                    Assert.AreEqual(1, plan.Rooms[0].Doors.Count);
+                    Assert.AreEqual(1, plan.Rooms[plan.Rooms.Count - 1].Doors.Count);
+                    AssertAllRoomsReachable(plan);
+                }
         }
 
         [Test]
         public void SameSeedProducesTheSamePlan()
         {
-            var a = DungeonPlan.Generate(713);
-            var b = DungeonPlan.Generate(713);
-            Assert.AreEqual(a.Rooms.Count, b.Rooms.Count);
-            Assert.AreEqual(a.Doors.Count, b.Doors.Count);
-            for (int i = 0; i < a.Rooms.Count; i++)
+            for (int gridSize = DungeonPlan.MinGridSize; gridSize <= DungeonPlan.MaxGridSize; gridSize++)
             {
-                Assert.AreEqual(a.Rooms[i].Shape, b.Rooms[i].Shape);
-                Assert.AreEqual(a.Rooms[i].Rotation, b.Rooms[i].Rotation);
-                CollectionAssert.AreEqual(a.Rooms[i].Cells, b.Rooms[i].Cells);
-            }
-            for (int i = 0; i < a.Doors.Count; i++)
-            {
-                Assert.AreEqual(a.Doors[i].CellA, b.Doors[i].CellA);
-                Assert.AreEqual(a.Doors[i].CellB, b.Doors[i].CellB);
+                var a = DungeonPlan.Generate(713, gridSize);
+                var b = DungeonPlan.Generate(713, gridSize);
+                Assert.AreEqual(a.Rooms.Count, b.Rooms.Count);
+                Assert.AreEqual(a.Doors.Count, b.Doors.Count);
+                for (int i = 0; i < a.Rooms.Count; i++)
+                {
+                    Assert.AreEqual(a.Rooms[i].Shape, b.Rooms[i].Shape);
+                    Assert.AreEqual(a.Rooms[i].Rotation, b.Rooms[i].Rotation);
+                    CollectionAssert.AreEqual(a.Rooms[i].Cells, b.Rooms[i].Cells);
+                }
+                for (int i = 0; i < a.Doors.Count; i++)
+                {
+                    Assert.AreEqual(a.Doors[i].CellA, b.Doors[i].CellA);
+                    Assert.AreEqual(a.Doors[i].CellB, b.Doors[i].CellB);
+                }
             }
         }
 
         [Test]
         public void EveryMiddleRoomHasAtLeastOneDoorAndTheGraphIsATreePlusOptionalLoops()
         {
-            for (int seed = 0; seed < 100; seed++)
-            {
-                var plan = DungeonPlan.Generate(seed);
-                int minimum = plan.Rooms.Count - 1;
-                Assert.GreaterOrEqual(plan.Doors.Count, minimum, "A connected room graph needs a spanning tree");
-            }
+            for (int gridSize = DungeonPlan.MinGridSize; gridSize <= DungeonPlan.MaxGridSize; gridSize++)
+                for (int seed = 0; seed < 100; seed++)
+                {
+                    var plan = DungeonPlan.Generate(seed, gridSize);
+                    int minimum = plan.Rooms.Count - 1;
+                    Assert.GreaterOrEqual(plan.Doors.Count, minimum,
+                        "A connected room graph needs a spanning tree");
+                }
         }
 
         private static int CellCount(DungeonPlan plan)

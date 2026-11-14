@@ -24,11 +24,12 @@ namespace Echoes.Tests
             Assert.AreEqual(1, run.Map.Floor);
             Assert.AreEqual(36, DungeonMap.CellWidth);
             Assert.AreEqual(36, DungeonMap.CellHeight);
-            Assert.AreEqual(180, DungeonMap.Width);
-            Assert.AreEqual(180, DungeonMap.Height);
+            Assert.AreEqual(3, run.Map.GridSize);
+            Assert.AreEqual(3 * DungeonMap.CellWidth, run.Map.Width);
+            Assert.AreEqual(3 * DungeonMap.CellHeight, run.Map.Height);
             Assert.AreEqual("Floor1/", GameArt.Floor);
-            Assert.GreaterOrEqual(run.Map.Rooms.Count, 10);
-            Assert.LessOrEqual(run.Map.Rooms.Count, 25);
+            Assert.GreaterOrEqual(run.Map.Rooms.Count, 4);
+            Assert.LessOrEqual(run.Map.Rooms.Count, 9);
 
             var start = run.Map.Rooms[0];
             var boss = run.Map.Rooms[run.Map.Rooms.Count - 1];
@@ -79,13 +80,13 @@ namespace Echoes.Tests
             var texture = (Texture2D)GameObject.Find("GameHUD/MiniMap/RoomMap")
                 .GetComponent<UnityEngine.UI.RawImage>().texture;
             foreach (var cell in room.Cells)
-                Assert.AreEqual(0f, texture.GetPixel((cell.x * DungeonMap.CellWidth) + DungeonMap.CellWidth / 2, DungeonMap.CellOriginY(cell.y) + DungeonMap.CellHeight / 2).a);
+                Assert.AreEqual(0f, texture.GetPixel((cell.x * DungeonMap.CellWidth) + DungeonMap.CellWidth / 2, run.Map.CellOriginY(cell.y) + DungeonMap.CellHeight / 2).a);
             run.Player.PlaceAt(room.Center);
             yield return null;
             yield return null;
             Assert.IsTrue(room.Visited);
             foreach (var cell in room.Cells)
-                Assert.AreEqual(1f, texture.GetPixel((cell.x * DungeonMap.CellWidth) + DungeonMap.CellWidth / 2, DungeonMap.CellOriginY(cell.y) + DungeonMap.CellHeight / 2).a);
+                Assert.AreEqual(1f, texture.GetPixel((cell.x * DungeonMap.CellWidth) + DungeonMap.CellWidth / 2, run.Map.CellOriginY(cell.y) + DungeonMap.CellHeight / 2).a);
             foreach (var door in room.DoorOpenings)
                 Assert.Greater(texture.GetPixel(door.x, door.y).r, .7f);
         }

@@ -15,8 +15,8 @@ namespace Echoes.Tests
             map = new GameObject("SightTestMap").AddComponent<DungeonMap>();
             cells = (bool[,])typeof(DungeonMap).GetField("floor", BindingFlags.Instance | BindingFlags.NonPublic)
                 .GetValue(map);
-            for (int x = 1; x < DungeonMap.Width - 1; x++)
-                for (int y = 1; y < DungeonMap.Height - 1; y++) cells[x, y] = true;
+            for (int x = 1; x < map.Width - 1; x++)
+                for (int y = 1; y < map.Height - 1; y++) cells[x, y] = true;
         }
 
         [TearDown]
@@ -56,7 +56,7 @@ namespace Echoes.Tests
         [Test]
         public void DoorwaysPassSightWhileTheAdjacentWallBlocksIt()
         {
-            for (int y = 1; y < DungeonMap.Height - 1; y++) cells[4, y] = y == 5;
+            for (int y = 1; y < map.Height - 1; y++) cells[4, y] = y == 5;
             Assert.IsTrue(map.HasLineOfSight(new Vector2(2, 5), new Vector2(6, 5)));
             Assert.IsFalse(map.HasLineOfSight(new Vector2(2, 4), new Vector2(6, 4), true));
         }

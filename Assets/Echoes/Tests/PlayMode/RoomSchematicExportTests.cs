@@ -87,11 +87,11 @@ namespace Echoes.Tests
 
             var data = new SchematicData
             {
-                gridSize = DungeonMap.GridSize,
+                gridSize = map.GridSize,
                 cellWidth = DungeonMap.CellWidth,
                 cellHeight = DungeonMap.CellHeight,
-                mapWidth = DungeonMap.Width,
-                mapHeight = DungeonMap.Height,
+                mapWidth = map.Width,
+                mapHeight = map.Height,
                 floor = map.Floor,
                 floorTitle = FloorTheme.Title(map.Floor)
             };

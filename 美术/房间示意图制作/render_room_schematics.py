@@ -204,7 +204,8 @@ def draw_overview(floor: dict[str, Any], theme: dict[str, Any]) -> Image.Image:
     small_font = font(FONT, 11)
     tiny_font = font(FONT, 8)
     d.text((margin, 10), f"第 {floor['floor']} 层 · {floor['floorTitle']}", fill=TEXT, font=title_font)
-    d.text((margin, 39), "5×5 房间格 · 180×180 · 门/起点/终点/实心物示意",
+    grid = floor["gridSize"]
+    d.text((margin, 39), f"{grid}×{grid} 房间格 · {mw}×{mh} · 门/起点/终点/实心物示意",
            fill=MUTED, font=small_font)
     for room in floor["rooms"]:
         mask = build_mask(room, floor["gridSize"], floor["cellWidth"], floor["cellHeight"])
