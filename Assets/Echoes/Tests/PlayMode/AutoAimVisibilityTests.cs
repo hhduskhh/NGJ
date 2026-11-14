@@ -48,6 +48,38 @@ namespace Echoes.Tests
         public void RestoreClock() => Time.captureDeltaTime = previousStep;
 
         [UnityTest]
+        public IEnumerator ScreenLightWakesSleepersInTheViewportAtCastTime()
+        {
+            var door = DungeonTestGeometry.FindDoor(run);
+            Vector2 source = DungeonTestGeometry.World(door.Source);
+            Vector2 behindWall = DungeonTestGeometry.World(door.Around);
+            run.Player.PlaceAt(source);
+            EnemyRoleTests.PlaceEnemy(target, behindWall);
+            EnemyRoleTests.PlaceEnemy(run.Boss, behindWall);
+            var outside = run.Enemies.First(e => !e.IsBoss && e != target);
+            EnemyRoleTests.PlaceEnemy(outside, source + Vector2.up * 1000);
+            yield return null;
+
+            Assert.IsTrue(run.Visibility.InCamera(behindWall));
+            Assert.IsFalse(run.Map.HasLineOfSight(source, behindWall));
+            Assert.IsFalse(run.Visibility.InCamera(outside.transform.position));
+            run.SetState(RunState.Paused);
+            Assert.IsFalse(run.Visibility.TryLightScreen());
+            Assert.IsFalse(target.Awake);
+            run.SetState(RunState.Playing);
+            Assert.IsTrue(run.Visibility.TryLightScreen());
+            Assert.AreEqual(EnemyState.Investigating, target.State);
+            Assert.AreEqual(source, target.InvestigationTarget);
+            Assert.IsFalse(outside.Awake);
+            Assert.IsFalse(run.Boss.Awake);
+
+            EnemyRoleTests.PlaceEnemy(outside, behindWall);
+            yield return null;
+            Assert.IsFalse(run.Visibility.TryLightScreen());
+            Assert.IsFalse(outside.Awake);
+        }
+
+        [UnityTest]
         public IEnumerator ScreenLightRevealsViewportAndRechargesInPlayTime()
         {
             var vision = run.Visibility;

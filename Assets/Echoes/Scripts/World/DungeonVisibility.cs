@@ -23,6 +23,12 @@ namespace Echoes
             screenLightEndsAt = Time.time + run.Config.screenLightDuration;
             screenLightReadyAt = Time.time + run.Config.screenLightCooldown;
             run.Noise.PlayScreenLight();
+            Vector2 source = run.Player.transform.position;
+            foreach (var enemy in run.Enemies)
+            {
+                if (enemy && enemy.State == EnemyState.Sleeping && InCamera(enemy.transform.position))
+                    enemy.Hear(source);
+            }
             return true;
         }
 
