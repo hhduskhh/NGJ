@@ -62,6 +62,8 @@ namespace Echoes
         [Min(1)] public float enemyDamage = 9;
         [Min(.1f)] public float enemyAttackInterval = 1;
         [Min(.1f)] public float playerInvulnerability = .65f;
+        [Min(0)] public float corpseHoldSeconds = .3f;
+        [Min(.05f)] public float corpseFadeSeconds = 1.1f;
         [Header("Progression")]
         [Min(1)] public int experiencePerKill = 1;
         [Min(1)] public int firstLevelExperience = 4;
@@ -86,7 +88,9 @@ namespace Echoes
         [Range(0, 1)] public float floorEntryHealFraction = .3f;
         [Header("Shop and loot")]
         [Min(1)] public int goldPerKill = 6;
-        [Min(.2f)] public float goldPickupRadius = 1.5f;
+        [Min(.2f)] public float goldPickupRadius = 4f;
+        [Min(.1f)] public float goldPullSpeed = 3f;
+        [Min(.1f)] public float goldPullAcceleration = 36f;
         [Min(.5f)] public float shopInteractRadius = 2.5f;
         [Min(1)] public int shopRefreshCost = 4;
         [Min(0)] public int shopRefreshIncrease = 2;

@@ -226,6 +226,7 @@ namespace Echoes
             art.Hurt();
             if (Health > 0) { RefreshVisual(); return; }
             State = EnemyState.Dead;
+            art.BeginCorpseFade(run.Config);
             body.velocity = Vector2.zero;
             GetComponent<Collider2D>().enabled = false;
             marker.enabled = healthFill.enabled = false;
