@@ -3,6 +3,7 @@ using UnityEngine;
 
 namespace Echoes
 {
+    // Builds the playable 5x5-cell floor from a pure DungeonPlan and owns all walkability queries.
     public sealed class DungeonMap : MonoBehaviour
     {
         public sealed class Room
@@ -10,83 +11,619 @@ namespace Echoes
             public RectInt Bounds;
             public string Name;
             public bool Visited;
-            public Vector2 Center => new Vector2(Bounds.x + 8.5f, Bounds.y + 6.5f);
+            public Vector2 Center { get; set; }
+            public readonly List<Vector2Int> Cells = new List<Vector2Int>();
+            public readonly List<RectInt> DoorOpenings = new List<RectInt>();
+            public int Index;
+            public RoomRole Role;
+            public RoomShape Shape;
+            public int Rotation;
+            public int CellCount { get { return Cells.Count; } }
         }
-        public const int Width = 54, Height = 42;
-        private readonly bool[,] walkable = new bool[Width, Height];
-        public List<Room> Rooms { get; } = new List<Room>();
-        public Vector2 BossPosition => Rooms[Rooms.Count - 1].Center + Vector2.up * 2;
-        public Vector2 AltarPosition => Rooms[Rooms.Count - 1].Center + Vector2.down * 3;
-        public int CurrentRoom { get; private set; }
-        private RunController run;
-        private static readonly Vector2Int[] steps =
-            { Vector2Int.up, Vector2Int.right, Vector2Int.down, Vector2Int.left };
 
-        public void Generate(RunController controller)
+        public sealed class Door
+        {
+            public Room A;
+            public Room B;
+            public RectInt Opening;
+            public Vector2 Center { get { return new Vector2(
+                Opening.x + Opening.width * .5f, Opening.y + Opening.height * .5f); } }
+        }
+
+        private sealed class ObstacleSpec
+        {
+            public string Kind;
+            public int X, Y, Width, Height;
+        }
+
+        public const int GridSize = DungeonPlan.GridSize;
+        public const int CellWidth = 18;
+        public const int CellHeight = 14;
+        public const int Width = GridSize * CellWidth;
+        public const int Height = GridSize * CellHeight;
+
+        private static readonly Vector2Int GridRight = new Vector2Int(1, 0);
+        private static readonly Vector2Int GridDown = new Vector2Int(0, 1);
+        private static readonly Vector2Int[] Steps =
+        {
+            new Vector2Int(0, 1), new Vector2Int(1, 0),
+            new Vector2Int(0, -1), new Vector2Int(-1, 0)
+        };
+        private static readonly string[][] SolidProps =
+        {
+            new[] { "crate", "pillar", "station", "rack", "bench" },
+            new[] { "crate", "station", "pipe", "pipeBend", "panel", "conduit" },
+            new[] { "pillar", "crystal", "fork", "panel", "station", "conduit" }
+        };
+        private static readonly string[][] DressingKinds =
+        {
+            new[] { "lamp", "signature" },
+            new[] { "lamp", "panel" },
+            new[] { "lamp", "signature" }
+        };
+
+        private readonly bool[,] walkable = new bool[Width, Height];
+        private readonly bool[,] floor = new bool[Width, Height];
+        private readonly Room[,] cellRooms = new Room[GridSize, GridSize];
+        private readonly List<ObstacleSpec> obstacleSpecs = new List<ObstacleSpec>();
+        private Transform generatedRoot;
+        private RunController run;
+
+        public List<Room> Rooms { get; } = new List<Room>();
+        public List<Door> Doors { get; } = new List<Door>();
+        public int CurrentRoom { get; private set; }
+        public int Floor { get; private set; } = 1;
+        public int MapWidth { get { return Width; } }
+        public int MapHeight { get { return Height; } }
+
+        public Vector2 BossPosition
+        {
+            get
+            {
+                if (Rooms.Count == 0) return Vector2.zero;
+                var boss = Rooms[Rooms.Count - 1];
+                return FindWalkableInRoom(boss.Center + Vector2.up * 2f, boss);
+            }
+        }
+
+        public Vector2 AltarPosition
+        {
+            get
+            {
+                if (Rooms.Count == 0) return Vector2.zero;
+                var boss = Rooms[Rooms.Count - 1];
+                return FindWalkableInRoom(boss.Center + Vector2.down * 3f, boss);
+            }
+        }
+
+        public void Generate(RunController controller, int floorIndex)
         {
             run = controller;
-            var locations = new[] { new Vector2Int(0, 0), new Vector2Int(1, 0), new Vector2Int(2, 0),
-                new Vector2Int(0, 1), new Vector2Int(1, 1), new Vector2Int(2, 1), new Vector2Int(2, 2) };
-            var names = new[] { "01 / 静默前厅", "02 / 碎石回廊", "03 / 遗忘兵库", "04 / 回声档案室",
-                "05 / 共振中庭", "06 / 深层通道", "07 / 守关者圣所" };
-            for (int i = 0; i < locations.Length; i++)
+            Floor = Mathf.Clamp(floorIndex + 1, 1, FloorTheme.Count);
+            GameArt.SetTheme(floorIndex);
+            ClearGenerated();
+            Rooms.Clear();
+            Doors.Clear();
+            obstacleSpecs.Clear();
+            CurrentRoom = 0;
+            for (int x = 0; x < Width; x++)
+                for (int y = 0; y < Height; y++)
+                {
+                    walkable[x, y] = false;
+                    floor[x, y] = false;
+                }
+            for (int col = 0; col < GridSize; col++)
+                for (int row = 0; row < GridSize; row++)
+                    cellRooms[col, row] = null;
+
+            var config = controller.Config;
+            var plan = DungeonPlan.Generate(config.randomSeed + floorIndex * 1009,
+                config.generationAttempts, config.extraDoorChance);
+            if (!plan.Valid) throw new System.InvalidOperationException("Dungeon layout generation failed.");
+
+            BuildWorldRooms(plan);
+            CarveRooms(plan);
+            CarveDoors(plan);
+            ApplyTerrain(plan);
+            ComputeCenters();
+            RenderDungeon();
+        }
+
+        private void BuildWorldRooms(DungeonPlan plan)
+        {
+            int middleIndex = 0;
+            foreach (var planned in plan.Rooms)
             {
-                var bounds = new RectInt(locations[i].x * 18, locations[i].y * 14, 18, 14);
-                Rooms.Add(new Room { Bounds = bounds, Name = names[i] });
-                for (int x = bounds.x + 1; x < bounds.xMax - 1; x++)
-                    for (int y = bounds.y + 1; y < bounds.yMax - 1; y++) walkable[x, y] = true;
+                string name = planned.Role == RoomRole.Start ? FloorTheme.StartName(Floor) :
+                    planned.Role == RoomRole.Boss ? FloorTheme.BossName(Floor) :
+                    FloorTheme.MiddleName(Floor, middleIndex++);
+                var room = new Room
+                {
+                    Index = planned.Index,
+                    Role = planned.Role,
+                    Shape = planned.Shape,
+                    Rotation = planned.Rotation,
+                    Bounds = WorldBounds(planned),
+                    Name = name
+                };
+                room.Cells.AddRange(planned.Cells);
+                Rooms.Add(room);
+                foreach (var cell in planned.Cells) cellRooms[cell.x, cell.y] = room;
             }
-            // All adjacent rooms connect through permanently open, four-cell doorways.
-            foreach (var room in Rooms) foreach (var other in Rooms)
+        }
+
+        private static RectInt WorldBounds(PlannedRoom room)
+        {
+            int minX = room.MinCell.x * CellWidth;
+            int maxX = (room.MaxCell.x + 1) * CellWidth;
+            int minY = (GridSize - 1 - room.MaxCell.y) * CellHeight;
+            int maxY = (GridSize - room.MinCell.y) * CellHeight;
+            return new RectInt(minX, minY, maxX - minX, maxY - minY);
+        }
+
+        private static int WorldCellY(int row) => (GridSize - 1 - row) * CellHeight;
+
+        private void CarveRooms(DungeonPlan plan)
+        {
+            foreach (var room in plan.Rooms)
             {
-                if (other.Bounds.x == room.Bounds.xMax && other.Bounds.y == room.Bounds.y)
-                    for (int y = room.Bounds.y + 5; y <= room.Bounds.y + 8; y++)
-                    { walkable[room.Bounds.xMax - 1, y] = true; walkable[other.Bounds.x, y] = true; }
-                if (other.Bounds.y == room.Bounds.yMax && other.Bounds.x == room.Bounds.x)
-                    for (int x = room.Bounds.x + 7; x <= room.Bounds.x + 10; x++)
-                    { walkable[x, room.Bounds.yMax - 1] = true; walkable[x, other.Bounds.y] = true; }
+                foreach (var cell in room.Cells)
+                {
+                    int x0 = cell.x * CellWidth;
+                    int y0 = WorldCellY(cell.y);
+                    SetFloorRect(x0 + 1, y0 + 1, CellWidth - 2, CellHeight - 2);
+                }
+                foreach (var cell in room.Cells)
+                {
+                    int x0 = cell.x * CellWidth;
+                    int y0 = WorldCellY(cell.y);
+                    if (room.ContainsCell(cell + GridRight))
+                        SetFloorRect(x0 + CellWidth - 1, y0 + 1, 2, CellHeight - 2);
+                    if (room.ContainsCell(cell + GridDown))
+                        SetFloorRect(x0 + 1, y0 - 1, CellWidth - 2, 2);
+                    // The crossing of two internal seams is a 2x2 wall block in a 2x2 room.
+                    // Open it when all four grid cells belong to the same room.
+                    if (room.ContainsCell(cell + GridRight) && room.ContainsCell(cell + GridDown) &&
+                        room.ContainsCell(cell + GridRight + GridDown))
+                        SetFloorRect(x0 + CellWidth - 1, y0 - 1, 2, 2);
+                }
             }
-            var tiles = new GameObject("DungeonTiles").transform;
-            tiles.SetParent(transform);
-            foreach (var room in Rooms)
-                for (int x = room.Bounds.x; x < room.Bounds.xMax; x++)
-                    for (int y = room.Bounds.y; y < room.Bounds.yMax; y++)
+        }
+
+        private void CarveDoors(DungeonPlan plan)
+        {
+            foreach (var planned in plan.Doors)
+            {
+                Vector2Int cellA = planned.CellA;
+                Vector2Int cellB = planned.CellB;
+                RectInt opening;
+                if (cellA.x != cellB.x)
+                {
+                    int left = Mathf.Min(cellA.x, cellB.x);
+                    int row = cellA.y;
+                    opening = new RectInt(left * CellWidth + CellWidth - 1,
+                        WorldCellY(row) + 5, 2, 4);
+                }
+                else
+                {
+                    int above = Mathf.Min(cellA.y, cellB.y);
+                    int below = Mathf.Max(cellA.y, cellB.y);
+                    int col = cellA.x;
+                    opening = new RectInt(col * CellWidth + 7,
+                        WorldCellY(below) + CellHeight - 1, 4, 2);
+                }
+                SetFloorRect(opening.x, opening.y, opening.width, opening.height);
+                var roomA = Rooms[planned.A.Index];
+                var roomB = Rooms[planned.B.Index];
+                Doors.Add(new Door { A = roomA, B = roomB, Opening = opening });
+                roomA.DoorOpenings.Add(opening);
+                roomB.DoorOpenings.Add(opening);
+            }
+        }
+
+        private void SetFloorRect(int x, int y, int width, int height)
+        {
+            for (int ix = x; ix < x + width; ix++)
+                for (int iy = y; iy < y + height; iy++)
+                    if (ix >= 0 && iy >= 0 && ix < Width && iy < Height)
                     {
-                        bool floor = walkable[x, y];
-                        var tile = PixelArt.Create(floor ? "Floor" : "Wall", floor ?
-                            ((x * 7 + y * 11) % 9 == 0 ? "floorDetail" : (x+y)%4==0 ? "floorAlt" : "floor") :
-                            (x+y)%3==0 ? "wallAlt" : "wall",
-                            new Vector2(x, y), floor ? -200 : GameArt.FootOrder(y), tiles);
-                        if (!floor) tile.gameObject.AddComponent<BoxCollider2D>();
+                        floor[ix, iy] = true;
+                        walkable[ix, iy] = true;
                     }
-            PixelArt.Create("ChallengeAltar", "altar", AltarPosition, -120, tiles);
+        }
+
+        private void ApplyTerrain(DungeonPlan plan)
+        {
+            int theme = Mathf.Clamp(Floor - 1, 0, 2);
+            var random = new System.Random(run.Config.randomSeed + Floor * 2003 + 17);
+            foreach (var room in Rooms)
+                if (room.Role == RoomRole.Middle) BuildRoomObstacles(room, theme, random);
+            if (AllWalkableConnected()) return;
+            RestoreObstacles();
+            if (!AllWalkableConnected())
+                throw new System.InvalidOperationException("Dungeon floor is disconnected.");
+        }
+
+        private void BuildRoomObstacles(Room room, int theme, System.Random random)
+        {
+            var candidates = BuildObstacleCandidates(room, theme, random);
+            var blocked = new List<Vector2Int>();
+            var accepted = new List<ObstacleSpec>();
+            foreach (var spec in candidates)
+                if (TryBlockObstacle(spec, room, blocked)) accepted.Add(spec);
+            if (!RoomConnected(room))
+            {
+                foreach (var tile in blocked) walkable[tile.x, tile.y] = true;
+                blocked.Clear();
+                accepted.Clear();
+            }
+            foreach (var spec in accepted) obstacleSpecs.Add(spec);
+        }
+
+        private List<ObstacleSpec> BuildObstacleCandidates(Room room, int theme, System.Random random)
+        {
+            var anchors = new List<Vector2Int>();
+            var b = room.Bounds;
+            switch (room.Shape)
+            {
+                case RoomShape.Single:
+                    anchors.Add(new Vector2Int(b.x + 4, b.y + 4));
+                    anchors.Add(new Vector2Int(b.xMax - 5, b.yMax - 5));
+                    break;
+                case RoomShape.Line2:
+                    if (b.width > b.height)
+                    {
+                        anchors.Add(new Vector2Int(b.x + b.width / 3, b.y + 4));
+                        anchors.Add(new Vector2Int(b.x + b.width * 2 / 3, b.yMax - 6));
+                    }
+                    else
+                    {
+                        anchors.Add(new Vector2Int(b.x + 4, b.y + b.height / 3));
+                        anchors.Add(new Vector2Int(b.xMax - 6, b.y + b.height * 2 / 3));
+                    }
+                    break;
+                case RoomShape.Line3:
+                    if (b.width > b.height)
+                    {
+                        for (int i = 1; i <= 4; i++)
+                            anchors.Add(new Vector2Int(b.x + b.width * i / 5,
+                                i % 2 == 0 ? b.yMax - 6 : b.y + 4));
+                    }
+                    else
+                    {
+                        for (int i = 1; i <= 4; i++)
+                            anchors.Add(new Vector2Int(i % 2 == 0 ? b.xMax - 6 : b.x + 4,
+                                b.y + b.height * i / 5));
+                    }
+                    break;
+                case RoomShape.Square2:
+                    int cx = b.x + b.width / 2;
+                    int cy = b.y + b.height / 2;
+                    anchors.Add(new Vector2Int(cx - 5, cy - 5));
+                    anchors.Add(new Vector2Int(cx + 3, cy - 5));
+                    anchors.Add(new Vector2Int(cx - 5, cy + 3));
+                    anchors.Add(new Vector2Int(cx + 3, cy + 3));
+                    break;
+                case RoomShape.L:
+                    anchors.Add(new Vector2Int(b.x + 4, b.y + 4));
+                    anchors.Add(new Vector2Int(b.xMax - 6, b.y + 4));
+                    anchors.Add(new Vector2Int(b.x + 4, b.yMax - 6));
+                    anchors.Add(new Vector2Int(b.xMax - 6, b.yMax - 6));
+                    break;
+            }
+
+            var result = new List<ObstacleSpec>();
+            var pool = SolidProps[Mathf.Clamp(theme, 0, SolidProps.Length - 1)];
+            foreach (var anchor in anchors)
+            {
+                var kinds = new List<string>(pool);
+                Shuffle(kinds, random);
+                foreach (var kind in kinds)
+                {
+                    var size = Footprint(kind);
+                    result.Add(new ObstacleSpec
+                    {
+                        Kind = kind,
+                        X = anchor.x + random.Next(-1, 2),
+                        Y = anchor.y + random.Next(-1, 2),
+                        Width = size.x,
+                        Height = size.y
+                    });
+                }
+            }
+            return result;
+        }
+
+        private static Vector2Int Footprint(string kind)
+        {
+            switch (kind)
+            {
+                case "station":
+                case "rack":
+                case "bench":
+                case "pipe":
+                case "conduit":
+                    return new Vector2Int(2, 1);
+                default:
+                    return Vector2Int.one;
+            }
+        }
+
+        private bool TryBlockObstacle(ObstacleSpec spec, Room room, List<Vector2Int> blocked)
+        {
+            // Keep one floor tile of clearance around every solid prop.
+            for (int x = spec.X - 1; x <= spec.X + spec.Width; x++)
+                for (int y = spec.Y - 1; y <= spec.Y + spec.Height; y++)
+                    if (!InBounds(x, y) || !floor[x, y]) return false;
+            for (int x = spec.X; x < spec.X + spec.Width; x++)
+                for (int y = spec.Y; y < spec.Y + spec.Height; y++)
+                {
+                    if (!walkable[x, y] || !IsTileInRoom(x, y, room)) return false;
+                    foreach (var door in room.DoorOpenings)
+                    {
+                        var clearance = new RectInt(door.x - 2, door.y - 2,
+                            door.width + 4, door.height + 4);
+                        if (clearance.Contains(new Vector2Int(x, y))) return false;
+                    }
+                }
+            for (int x = spec.X; x < spec.X + spec.Width; x++)
+                for (int y = spec.Y; y < spec.Y + spec.Height; y++)
+                {
+                    walkable[x, y] = false;
+                    blocked.Add(new Vector2Int(x, y));
+                }
+            return true;
+        }
+
+        private void RestoreObstacles()
+        {
+            foreach (var spec in obstacleSpecs)
+                for (int x = spec.X; x < spec.X + spec.Width; x++)
+                    for (int y = spec.Y; y < spec.Y + spec.Height; y++)
+                        if (InBounds(x, y)) walkable[x, y] = true;
+            obstacleSpecs.Clear();
+        }
+
+        private bool RoomConnected(Room room)
+        {
+            var start = FindAnyWalkableTile(room);
+            if (!start.HasValue) return false;
+            var visited = new HashSet<Vector2Int>();
+            var frontier = new Queue<Vector2Int>();
+            visited.Add(start.Value);
+            frontier.Enqueue(start.Value);
+            while (frontier.Count > 0)
+            {
+                var current = frontier.Dequeue();
+                foreach (var step in Steps)
+                {
+                    var next = current + step;
+                    if (!InBounds(next.x, next.y) || visited.Contains(next) ||
+                        !walkable[next.x, next.y] || !IsTileInRoom(next.x, next.y, room)) continue;
+                    visited.Add(next);
+                    frontier.Enqueue(next);
+                }
+            }
+            int total = 0;
+            foreach (var cell in room.Cells)
+            {
+                int x0 = cell.x * CellWidth;
+                int y0 = WorldCellY(cell.y);
+                for (int x = x0; x < x0 + CellWidth; x++)
+                    for (int y = y0; y < y0 + CellHeight; y++)
+                        if (walkable[x, y] && IsTileInRoom(x, y, room)) total++;
+            }
+            return visited.Count == total;
+        }
+
+        private bool AllWalkableConnected()
+        {
+            if (Rooms.Count == 0) return false;
+            var start = FindAnyWalkableTile(Rooms[0]);
+            if (!start.HasValue) return false;
+            var visited = new HashSet<Vector2Int>();
+            var frontier = new Queue<Vector2Int>();
+            visited.Add(start.Value);
+            frontier.Enqueue(start.Value);
+            while (frontier.Count > 0)
+            {
+                var current = frontier.Dequeue();
+                foreach (var step in Steps)
+                {
+                    var next = current + step;
+                    if (!InBounds(next.x, next.y) || visited.Contains(next) ||
+                        !walkable[next.x, next.y]) continue;
+                    visited.Add(next);
+                    frontier.Enqueue(next);
+                }
+            }
+            int total = 0;
+            for (int x = 0; x < Width; x++)
+                for (int y = 0; y < Height; y++)
+                    if (walkable[x, y]) total++;
+            return visited.Count == total;
+        }
+
+        private Vector2Int? FindAnyWalkableTile(Room room)
+        {
+            foreach (var cell in room.Cells)
+            {
+                int x0 = cell.x * CellWidth;
+                int y0 = WorldCellY(cell.y);
+                for (int x = x0 + 1; x < x0 + CellWidth - 1; x++)
+                    for (int y = y0 + 1; y < y0 + CellHeight - 1; y++)
+                        if (walkable[x, y]) return new Vector2Int(x, y);
+            }
+            return null;
+        }
+
+        private void ComputeCenters()
+        {
             foreach (var room in Rooms)
             {
                 var b = room.Bounds;
-                // Bases lie on existing blocked wall cells. Dressing cannot add invisible obstacles.
-                Decorate("lamp", new Vector2(b.x + 3, b.yMax - 1), tiles);
-                Decorate("signature", new Vector2(b.x + 12, b.yMax - 1), tiles);
-                Decorate("pipe", new Vector2(b.x + 9, b.yMax - 1), tiles);
-                Decorate("station", new Vector2(b.x, b.y + 3), tiles);
-                Decorate("crate", new Vector2(b.x, b.y + 9), tiles);
-                if (Rooms.IndexOf(room) % 2 == 0) Decorate("rack", new Vector2(b.x + 6, b.yMax - 1), tiles);
-                if (Rooms.Exists(r => r.Bounds.x == b.xMax && r.Bounds.y == b.y))
+                var desired = new Vector2(b.x + b.width * .5f, b.y + b.height * .5f);
+                room.Center = FindWalkableInRoom(desired, room);
+            }
+        }
+
+        private Vector2 FindWalkableInRoom(Vector2 desired, Room room)
+        {
+            var origin = new Vector2Int(Mathf.FloorToInt(desired.x), Mathf.FloorToInt(desired.y));
+            int max = Mathf.Max(Width, Height);
+            for (int radius = 0; radius <= max; radius++)
+                for (int dx = -radius; dx <= radius; dx++)
+                    for (int dy = -radius; dy <= radius; dy++)
+                    {
+                        if (Mathf.Abs(dx) != radius && Mathf.Abs(dy) != radius) continue;
+                        int x = origin.x + dx;
+                        int y = origin.y + dy;
+                        if (InBounds(x, y) && walkable[x, y] && IsTileInRoom(x, y, room))
+                            return new Vector2(x, y);
+                    }
+            var any = FindAnyWalkableTile(room);
+            return any.HasValue ? new Vector2(any.Value.x, any.Value.y) : desired;
+        }
+
+        private void RenderDungeon()
+        {
+            var root = new GameObject("DungeonTiles");
+            generatedRoot = root.transform;
+            generatedRoot.SetParent(transform);
+            foreach (var room in Rooms)
+                foreach (var cell in room.Cells)
                 {
-                    Decorate("doorpost", new Vector2(b.xMax - 1, b.y + 4), tiles);
-                    Decorate("doorpost", new Vector2(b.xMax, b.y + 9), tiles);
+                    int x0 = cell.x * CellWidth;
+                    int y0 = WorldCellY(cell.y);
+                    for (int x = x0; x < x0 + CellWidth; x++)
+                        for (int y = y0; y < y0 + CellHeight; y++)
+                        {
+                            bool isFloor = floor[x, y];
+                            var renderer = PixelArt.Create(isFloor ? "Floor" : "Wall",
+                                isFloor ? FloorKind(x, y) : WallKind(x, y),
+                                new Vector2(x, y),
+                                isFloor ? -200 : GameArt.FootOrder(y), generatedRoot);
+                            if (!isFloor) renderer.gameObject.AddComponent<BoxCollider2D>();
+                        }
                 }
-                if (Rooms.Exists(r => r.Bounds.y == b.yMax && r.Bounds.x == b.x))
+            RenderDoorposts();
+            RenderObstacles();
+            RenderWallDressing();
+            PixelArt.Create("ChallengeAltar", "altar", AltarPosition, -120, generatedRoot);
+        }
+
+        private static string FloorKind(int x, int y) =>
+            (x * 7 + y * 11) % 9 == 0 ? "floorDetail" : (x + y) % 4 == 0 ? "floorAlt" : "floor";
+
+        private static string WallKind(int x, int y) => (x + y) % 3 == 0 ? "wallAlt" : "wall";
+
+        private void RenderDoorposts()
+        {
+            foreach (var door in Doors)
+            {
+                var o = door.Opening;
+                if (o.width == 2)
                 {
-                    Decorate("doorpost", new Vector2(b.x + 6, b.yMax - 1), tiles);
-                    Decorate("doorpost", new Vector2(b.x + 11, b.yMax - 1), tiles);
+                    float x = o.x + .5f;
+                    PlaceDoorpost(new Vector2(x, o.y - 1));
+                    PlaceDoorpost(new Vector2(x, o.y + o.height));
+                }
+                else
+                {
+                    float y = o.y + .5f;
+                    PlaceDoorpost(new Vector2(o.x - 1, y));
+                    PlaceDoorpost(new Vector2(o.x + o.width, y));
                 }
             }
         }
 
-        private static void Decorate(string kind, Vector2 position, Transform parent) =>
-            PixelArt.Create("Dressing_" + kind, kind, position, GameArt.FootOrder(position.y) + 1, parent);
+        private void PlaceDoorpost(Vector2 position) =>
+            PixelArt.Create("Dressing_doorpost", "doorpost", position,
+                GameArt.FootOrder(position.y) + 1, generatedRoot);
 
-        // Art review only: no population, geometry, collision, AI or floor progression changes.
+        private void RenderObstacles()
+        {
+            foreach (var spec in obstacleSpecs)
+            {
+                var position = new Vector2(spec.X + (spec.Width - 1) * .5f, spec.Y);
+                var renderer = PixelArt.Create("Obstacle_" + spec.Kind, spec.Kind, position,
+                    GameArt.FootOrder(position.y) + 1, generatedRoot);
+                var collider = renderer.gameObject.AddComponent<BoxCollider2D>();
+                collider.size = new Vector2(spec.Width, .7f);
+                collider.offset = new Vector2(0, .25f);
+            }
+        }
+
+        private void RenderWallDressing()
+        {
+            int theme = Mathf.Clamp(Floor - 1, 0, 2);
+            var kinds = DressingKinds[theme];
+            foreach (var room in Rooms)
+                foreach (var cell in room.Cells)
+                {
+                    int x0 = cell.x * CellWidth;
+                    int y0 = WorldCellY(cell.y);
+                    int y = y0 + CellHeight - 1;
+                    foreach (int x in new[] { x0 + 3, x0 + 12 })
+                    {
+                        if (!InBounds(x, y) || floor[x, y]) continue;
+                        string kind = kinds[(x * 7 + y * 11 + room.Index) % kinds.Length];
+                        PixelArt.Create("Dressing_" + kind, kind,
+                            new Vector2(x, y),
+                            GameArt.FootOrder(y) + 1, generatedRoot);
+                    }
+                }
+        }
+
+        private void ClearGenerated()
+        {
+            if (!generatedRoot) return;
+            generatedRoot.gameObject.SetActive(false);
+            if (Application.isPlaying) Destroy(generatedRoot.gameObject);
+            else DestroyImmediate(generatedRoot.gameObject);
+            generatedRoot = null;
+        }
+
+        private static void Shuffle<T>(List<T> list, System.Random random)
+        {
+            for (int i = list.Count - 1; i > 0; i--)
+            {
+                int j = random.Next(i + 1);
+                T value = list[i]; list[i] = list[j]; list[j] = value;
+            }
+        }
+
+        private static bool InBounds(int x, int y) =>
+            x >= 0 && y >= 0 && x < Width && y < Height;
+
+        private bool IsTileInRoom(int x, int y, Room room)
+        {
+            if (!InBounds(x, y)) return false;
+            int col = x / CellWidth;
+            int row = GridSize - 1 - y / CellHeight;
+            if (col < 0 || row < 0 || col >= GridSize || row >= GridSize) return false;
+            return cellRooms[col, row] == room;
+        }
+
+        public Room RoomAtCell(int col, int row)
+        {
+            if (col < 0 || row < 0 || col >= GridSize || row >= GridSize) return null;
+            return cellRooms[col, row];
+        }
+
+        public Room RoomAtPosition(Vector2 position)
+        {
+            int col = Mathf.FloorToInt((position.x + .5f) / CellWidth);
+            int row = GridSize - 1 - Mathf.FloorToInt((position.y + .5f) / CellHeight);
+            return RoomAtCell(col, row);
+        }
+
+        public Vector2 StartPosition
+        {
+            get { return Rooms.Count == 0 ? Vector2.zero : Rooms[0].Center; }
+        }
+
+        // Art review only: re-skins the existing floor without moving rooms or actors.
         public void ApplyArtTheme(int theme)
         {
             GameArt.SetTheme(theme);
@@ -95,13 +632,19 @@ namespace Echoes
 
         private void Update()
         {
-            if (!run.Player) return;
-            var p = Vector2Int.RoundToInt(run.Player.transform.position);
-            for (int i = 0; i < Rooms.Count; i++)
-                if (Rooms[i].Bounds.Contains(p)) { CurrentRoom = i; Rooms[i].Visited = true; break; }
+            if (!run || !run.Player) return;
+            var room = RoomAtPosition(run.Player.transform.position);
+            if (room == null) return;
+            CurrentRoom = room.Index;
+            room.Visited = true;
         }
 
-        public bool IsWalkable(Vector2Int p) => p.x >= 0 && p.y >= 0 && p.x < Width && p.y < Height && walkable[p.x, p.y];
+        public bool IsWalkable(Vector2Int p) =>
+            p.x >= 0 && p.y >= 0 && p.x < Width && p.y < Height && walkable[p.x, p.y];
+
+        public bool IsFloorTile(Vector2Int p) =>
+            p.x >= 0 && p.y >= 0 && p.x < Width && p.y < Height && floor[p.x, p.y];
+
         // Traverse every crossed cell, including both sides of an exact corner.
         // Keep this traversal in sync with DungeonDarkness.shader.
         public bool HasLineOfSight(Vector2 from, Vector2 to, bool revealBlockingWall = false)
@@ -151,18 +694,43 @@ namespace Echoes
                 for (int x = -r; x <= r; x++) for (int y = -r; y <= r; y++)
                     if (Mathf.Abs(x) == r || Mathf.Abs(y) == r)
                     { var q = p + new Vector2Int(x, y); if (IsWalkable(q)) return q; }
-            return Rooms[0].Center;
+            return Rooms.Count > 0 ? Rooms[0].Center : Vector2.zero;
         }
 
         public List<Vector2> SpawnCells(int roomIndex)
         {
-            var b = Rooms[roomIndex].Bounds;
+            var room = Rooms[roomIndex];
             var result = new List<Vector2>();
-            for (int x = b.x + 3; x < b.xMax - 3; x += 3)
-                for (int y = b.y + 3; y < b.yMax - 2; y += 3) result.Add(new Vector2(x, y));
+            foreach (var cell in room.Cells)
+            {
+                int x0 = cell.x * CellWidth;
+                int y0 = WorldCellY(cell.y);
+                for (int x = x0 + 2; x < x0 + CellWidth - 1; x += 2)
+                    for (int y = y0 + 2; y < y0 + CellHeight - 1; y += 2)
+                        if (IsSpawnTile(room, x, y))
+                            result.Add(new Vector2(x, y));
+            }
             for (int i = result.Count - 1; i > 0; i--)
-            { int j = run.Random.Next(i + 1); var t = result[i]; result[i] = result[j]; result[j] = t; }
+            {
+                int j = run.Random.Next(i + 1);
+                var value = result[i]; result[i] = result[j]; result[j] = value;
+            }
             return result;
+        }
+
+        private bool IsSpawnTile(Room room, int x, int y)
+        {
+            if (!InBounds(x, y) || !walkable[x, y] || !floor[x, y] || !IsTileInRoom(x, y, room))
+                return false;
+            foreach (var step in Steps)
+                if (!InBounds(x + step.x, y + step.y) || !walkable[x + step.x, y + step.y]) return false;
+            foreach (var door in room.DoorOpenings)
+            {
+                var clearance = new RectInt(door.x - 2, door.y - 2,
+                    door.width + 4, door.height + 4);
+                if (clearance.Contains(new Vector2Int(x, y))) return false;
+            }
+            return true;
         }
 
         // Breadth-first paths on this small, unweighted floor handle doors and cross-room pursuit.
@@ -177,7 +745,7 @@ namespace Echoes
             {
                 var current = frontier.Dequeue();
                 if (current == goal) break;
-                foreach (var step in steps)
+                foreach (var step in Steps)
                 {
                     var next = current + step;
                     if (!IsWalkable(next) || previous.ContainsKey(next)) continue;
