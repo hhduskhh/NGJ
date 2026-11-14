@@ -6,6 +6,7 @@ namespace Echoes
     {
         public void RefreshModal()
         {
+            RestoreCombatHud();
             ResetScreenFeedback();
             if (run.State != RunState.Paused) settingsOpen = false;
             if (modalBackdrop)
@@ -27,6 +28,12 @@ namespace Echoes
                 return;
             }
 
+            if (run.State == RunState.FloorCleared || run.State == RunState.Won || run.State == RunState.Lost)
+            {
+                DrawResult();
+                return;
+            }
+
             modal = Panel("FieldBook", modalBackdrop, Vector2.zero, new Vector2(860, 480), Iron, new Vector2(.5f, .5f));
             Panel("Spine", modal, Vector2.zero, new Vector2(4, 480), Brass);
             switch (run.State)
@@ -37,9 +44,6 @@ namespace Echoes
                     break;
                 case RunState.Upgrade:
                     DrawUpgrade();
-                    break;
-                default:
-                    DrawResult();
                     break;
             }
         }
@@ -104,23 +108,6 @@ namespace Echoes
                 var detail = Label(face, choice.Description, new Vector2(374, -6), new Vector2(388, 82), 19, Paper);
                 detail.alignment = TMPro.TextAlignmentOptions.MidlineLeft;
             }
-        }
-
-        private void DrawResult()
-        {
-            bool descend = run.State == RunState.FloorCleared;
-            string title = descend ? "本层已净化" : run.State == RunState.Won ? "遗迹重归寂静" : "探索结束";
-            Heading(title, FloorName);
-            ArtPanel("RunPortrait", modal, new Vector2(48, -144), new Vector2(112, 112), GameArt.Get("player"), icon: true);
-            Label(modal, $"探索时间   {(int)run.Elapsed / 60:00}:{(int)run.Elapsed % 60:00}\n击败敌人   {run.Kills}\n角色等级   {run.Level}", new Vector2(195, -135), new Vector2(580, 140), 25, Paper);
-            string outcome = descend ? $"下潜恢复 {run.Config.floorEntryHealFraction:P0} 最大生命。武器、被动道具与金币随身带入下一层。" :
-                run.State == RunState.Won ? "最后一位守关者已被击败。" : $"探索止于{run.Map.Rooms[run.Map.CurrentRoom].Name}。";
-            Label(modal, outcome, new Vector2(40, -310), new Vector2(780, 58), 21, muted);
-            Button(modal, descend ? "下潜  [E]" : "重新开始", new Vector2(-284, -385), new Vector2(212, 58), () =>
-            {
-                ConfirmResult();
-            });
-            if (descend || run.State == RunState.Won) BeginResultReveal();
         }
     }
 }
