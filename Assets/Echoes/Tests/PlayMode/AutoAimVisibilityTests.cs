@@ -68,7 +68,10 @@ namespace Echoes.Tests
             Assert.AreEqual(remaining, vision.ScreenLightCooldownRemaining);
             run.SetState(RunState.Playing);
             Time.captureDeltaTime = .25f;
-            yield return new WaitForSeconds(run.Config.screenLightDuration + .25f);
+            yield return new WaitForSeconds(4f);
+            Assert.IsFalse(cover.activeSelf);
+            Assert.IsTrue(vision.IsVisible(destination));
+            yield return new WaitForSeconds(1.25f);
             Assert.IsTrue(cover.activeSelf);
             Assert.IsFalse(vision.IsVisible(destination));
             Assert.IsFalse(vision.TryLightScreen());

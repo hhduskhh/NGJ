@@ -88,7 +88,7 @@ namespace Echoes
         [Min(1)] public int firstLevelExperience = 4;
         [Min(1)] public int experienceStep = 3;
         [Header("Full-screen light")]
-        [Min(.1f)] public float screenLightDuration = 3;
+        [Min(.1f)] public float screenLightDuration = 5;
         [Min(.1f)] public float screenLightCooldown = 15;
 
         [Header("Bell decoy")]
