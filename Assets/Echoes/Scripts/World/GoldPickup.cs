@@ -8,8 +8,7 @@ namespace Echoes
         private int amount;
         public static void Drop(RunController run, Vector2 position, int amount)
         {
-            var visual = PixelArt.Create("Gold", "solid", position, 8, null, .25f);
-            visual.color = PixelArt.Gold;
+            var visual = PixelArt.Create("Gold", "gold", position, GameArt.FootOrder(position.y) - 1);
             var pickup = visual.gameObject.AddComponent<GoldPickup>();
             pickup.run = run; pickup.amount = amount;
         }

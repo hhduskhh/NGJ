@@ -56,8 +56,10 @@ namespace Echoes
             roomText.alignment = TextAlignmentOptions.Right;
             clockText = Label(canvas, "", new Vector2(-24, -283), new Vector2(300, 30), 17, muted, new Vector2(1, 1));
             clockText.alignment = TextAlignmentOptions.Right;
-            goldText = Label(canvas, "", new Vector2(-24, -319), new Vector2(300, 30), 21, PixelArt.Gold, new Vector2(1, 1));
-            goldText.alignment = TextAlignmentOptions.Right;
+            goldText = Label(canvas, "", new Vector2(-24, -319), new Vector2(268, 30), 21, PixelArt.Gold, new Vector2(1, 1));
+            goldText.alignment = TextAlignmentOptions.Left;
+            ArtPanel("HudGoldIcon", canvas, new Vector2(-300, -319), new Vector2(32, 32),
+                PresentationArt.Current.shopGoldCoin, Vector2.one, true);
 
             var footer = Panel("Footer", canvas, new Vector2(24, 24), new Vector2(-48, 92), panel, Vector2.zero);
             footer.anchorMax = new Vector2(1, 0);
@@ -180,7 +182,9 @@ namespace Echoes
                         () => run.ChooseUpgrade(index));
                     Label(card, $"0{i + 1}  /  {(choice.IncreasesNoise ? "风险升级" : "装备改良")}", new Vector2(23, -22),
                         new Vector2(310, 30), 17, choice.IncreasesNoise ? PixelArt.Red : PixelArt.Cyan);
-                    Label(card, choice.Title, new Vector2(23, -83), new Vector2(310, 45), 29, Color.white);
+                    ArtPanel("UpgradeIcon", card, new Vector2(24, -76), new Vector2(64, 64),
+                        PresentationArt.Current.Upgrade(choice.Title), new Vector2(0, 1), true);
+                    Label(card, choice.Title, new Vector2(100, -85), new Vector2(230, 52), 26, Color.white);
                     Label(card, choice.Description, new Vector2(23, -155), new Vector2(310, 110), 21, muted);
                 }
             }
