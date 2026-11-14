@@ -23,9 +23,12 @@ Shader "Echoes/DungeonDarkness"
                 float4 _MapSize;
                 float4 _PlayerVision;
                 float4 _Echoes[32];
+                float4 _StallBounds;
+                float4 _StallFront;
                 int _EchoCount;
             CBUFFER_END
             sampler2D _Walkable;
+            sampler2D _StallSprite;
 
             Varyings Vert(Attributes input)
             {
@@ -119,11 +122,19 @@ Shader "Echoes/DungeonDarkness"
 
             half4 Frag(Varyings input) : SV_Target
             {
-                float visible = InCircle(input.world, _PlayerVision, 0);
+                // A tall prop's canopy/sign are above its solid ground footprint.
+                // Only its opaque sprite pixels borrow visibility from the reachable front.
+                // Transparent gaps and the floor behind still use the original occlusion.
+                float2 visibilityPoint = input.world;
+                float2 stallUV = (input.world - _StallBounds.xy) / max(_StallBounds.zw, .001);
+                [branch] if (all(stallUV >= 0) && all(stallUV <= 1) &&
+                    tex2D(_StallSprite, stallUV).a > .5)
+                    visibilityPoint = _StallFront.xy;
+                float visible = InCircle(visibilityPoint, _PlayerVision, 0);
                 [loop] for (int i = 0; i < _EchoCount; i++)
                 {
                     if (visible >= 1) break;
-                    visible = max(visible, InCircle(input.world, _Echoes[i], visible));
+                    visible = max(visible, InCircle(visibilityPoint, _Echoes[i], visible));
                 }
                 return half4(0, 0, 0, 1 - visible);
             }
