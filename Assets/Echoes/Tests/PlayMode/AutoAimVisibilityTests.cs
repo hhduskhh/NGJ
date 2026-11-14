@@ -52,10 +52,16 @@ namespace Echoes.Tests
         {
             var vision = run.Visibility;
             var cover = run.transform.Find("UnseenDungeon").gameObject;
+            var laugh = Resources.Load<AudioClip>("CombatAudio/ScreenLightLaugh");
+            Assert.IsNotNull(laugh);
+            Assert.AreEqual(4f, laugh.length, .01f);
+            var voice = run.Noise.GetComponents<AudioSource>().Single(source => source.clip == laugh);
             run.SetState(RunState.Paused);
             Assert.IsFalse(vision.TryLightScreen());
+            Assert.IsFalse(voice.isPlaying);
             run.SetState(RunState.Playing);
             Assert.IsTrue(vision.TryLightScreen());
+            Assert.IsTrue(voice.isPlaying);
             Assert.AreEqual(15f, vision.ScreenLightCooldownRemaining, .01f);
             Assert.AreEqual(1f, vision.VisibilityAt(destination));
             Assert.AreSame(target, run.Player.FindVisibleTarget());
@@ -74,7 +80,9 @@ namespace Echoes.Tests
             yield return new WaitForSeconds(1.25f);
             Assert.IsTrue(cover.activeSelf);
             Assert.IsFalse(vision.IsVisible(destination));
+            voice.Stop();
             Assert.IsFalse(vision.TryLightScreen());
+            Assert.IsFalse(voice.isPlaying);
             yield return new WaitForSeconds(vision.ScreenLightCooldownRemaining + .25f);
             Assert.IsTrue(vision.TryLightScreen());
         }

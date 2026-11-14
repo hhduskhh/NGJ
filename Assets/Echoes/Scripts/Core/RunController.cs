@@ -233,7 +233,7 @@ namespace Echoes
         {
             if (State == RunState.Upgrade && state == RunState.Paused) return;
             State = state;
-            Noise?.PauseBossReady(state != RunState.Playing);
+            Noise?.PauseActionAudio(state != RunState.Playing);
             Time.timeScale = state == RunState.Playing ? 1 : 0;
             Hud?.RefreshModal();
         }

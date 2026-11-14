@@ -22,6 +22,7 @@ namespace Echoes
             if (run.State != RunState.Playing || ScreenLightCooldownRemaining > 0) return false;
             screenLightEndsAt = Time.time + run.Config.screenLightDuration;
             screenLightReadyAt = Time.time + run.Config.screenLightCooldown;
+            run.Noise.PlayScreenLight();
             return true;
         }
 

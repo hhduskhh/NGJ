@@ -15,7 +15,7 @@ namespace Echoes
         private readonly AudioSource[] shotVoices = new AudioSource[3];
         private readonly float[] shotLevels = new float[3];
         private readonly AudioSource[] worldVoices = new AudioSource[12];
-        private AudioSource pickupVoice, hurtVoice, bossVoice;
+        private AudioSource pickupVoice, hurtVoice, bossVoice, screenLightVoice;
         private int pickupFrame = -1, pickupIndex;
         private float nextAmbience, nextWake, duckUntil;
         private readonly Dictionary<EnemyController, bool> impacts = new Dictionary<EnemyController, bool>();
@@ -41,6 +41,8 @@ namespace Echoes
             hurtVoice = Voice();
             bossVoice = Voice();
             bossVoice.clip = Load("BossReady");
+            screenLightVoice = Voice();
+            screenLightVoice.clip = Load("ScreenLightLaugh");
             nextAmbience = Time.time + Random.Range(8f, 16f);
             bell = Tone("BellPlaceholder", 640, .2f);
             footstep = Tone("FootstepPlaceholder", 75, .045f);
@@ -55,6 +57,11 @@ namespace Echoes
             clip.SetData(samples, 0); return clip;
         }
         public void PlayUiPress() => audioSource.PlayOneShot(click, .36f);
+        public void PlayScreenLight()
+        {
+            screenLightVoice.volume = run.Config.screenLightVolume;
+            screenLightVoice.Play();
+        }
         public void PlayPurchase() => audioSource.PlayOneShot(coin, .65f);
         private void OnDestroy()
         {
@@ -122,10 +129,18 @@ namespace Echoes
             bossVoice.Play();
         }
         public void StopBossReady() => bossVoice.Stop();
-        public void PauseBossReady(bool pause)
+        public void PauseActionAudio(bool pause)
         {
-            if (pause) bossVoice.Pause();
-            else bossVoice.UnPause();
+            if (pause)
+            {
+                bossVoice.Pause();
+                screenLightVoice.Pause();
+            }
+            else
+            {
+                bossVoice.UnPause();
+                screenLightVoice.UnPause();
+            }
         }
 
         private bool PlayWorld(AudioClip clip, Vector2 position, float volume, float pitch = 1, int firstVoice = 0)

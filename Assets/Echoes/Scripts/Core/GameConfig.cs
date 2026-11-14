@@ -90,6 +90,7 @@ namespace Echoes
         [Header("Full-screen light")]
         [Min(.1f)] public float screenLightDuration = 5;
         [Min(.1f)] public float screenLightCooldown = 15;
+        [Range(0, 1)] public float screenLightVolume = .16f;
 
         [Header("Bell decoy")]
         [Min(1)] public float decoyRadius = 9;
