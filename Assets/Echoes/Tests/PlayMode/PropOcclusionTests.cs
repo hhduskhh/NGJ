@@ -65,7 +65,27 @@ namespace Echoes.Tests
             yield return SceneManager.LoadSceneAsync("Prototype");
             yield return null;
             var run = Object.FindObjectOfType<RunController>();
-            var column = run.Map.GetComponentsInChildren<ArtBinding>().First(a => a.Kind == "room_column");
+            // Dense interior walls can box in the first column; pick the one
+            // with the most open floor around its upper body so the transparent
+            // pixels still exercise a visible floor patch.
+            var columns = run.Map.GetComponentsInChildren<ArtBinding>()
+                .Where(a => a.Kind == "room_column").ToArray();
+            Assert.IsNotEmpty(columns);
+            var column = columns[0];
+            int bestOpen = -1;
+            foreach (var candidate in columns)
+            {
+                var candidateBox = candidate.GetComponent<BoxCollider2D>();
+                int open = 0;
+                for (int x = Mathf.FloorToInt(candidateBox.bounds.min.x) - 3;
+                     x <= Mathf.CeilToInt(candidateBox.bounds.max.x) + 3; x++)
+                    for (int y = Mathf.FloorToInt(candidateBox.bounds.min.y);
+                         y <= Mathf.CeilToInt(candidateBox.bounds.max.y) + 8; y++)
+                        if (run.Map.IsWalkable(new Vector2Int(x, y))) open++;
+                if (open <= bestOpen) continue;
+                bestOpen = open;
+                column = candidate;
+            }
             var renderer = column.GetComponent<SpriteRenderer>();
             var box = column.GetComponent<BoxCollider2D>();
             Vector2 source = run.Map.NearestFloor((Vector2)box.bounds.center +

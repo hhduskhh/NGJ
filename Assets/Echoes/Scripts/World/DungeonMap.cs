@@ -19,6 +19,8 @@ namespace Echoes
             public RoomRole Role;
             public RoomShape Shape;
             public int Rotation;
+            public int LayoutVariant;
+            public readonly List<RectInt> Walls = new List<RectInt>();
             public int CellCount { get { return Cells.Count; } }
         }
 
@@ -117,11 +119,7 @@ namespace Echoes
             BuildWorldRooms(plan);
             CarveRooms(plan);
             CarveDoors(plan);
-            foreach (var room in Rooms)
-                foreach (var wall in RoomInterior.Partitions(room))
-                    for (int x = wall.xMin; x < wall.xMax; x++)
-                        for (int y = wall.yMin; y < wall.yMax; y++)
-                            floor[x, y] = walkable[x, y] = false;
+            ApplyRoomWalls();
             ApplyTerrain(plan);
             ComputeCenters();
             var bossRoom = Rooms[Rooms.Count - 1];
@@ -135,17 +133,29 @@ namespace Echoes
         private void BuildWorldRooms(DungeonPlan plan)
         {
             int middleIndex = 0;
+            var shapeVariants = new Dictionary<RoomShape, int>();
             foreach (var planned in plan.Rooms)
             {
                 string name = planned.Role == RoomRole.Start ? FloorTheme.StartName(Floor) :
                     planned.Role == RoomRole.Boss ? FloorTheme.BossName(Floor) :
                     FloorTheme.MiddleName(Floor, middleIndex++);
+                // Each shape walks its variant list in placement order, so the
+                // first room of a shape always shows the deck's trap-bearing plan.
+                int variant = 0;
+                if (planned.Role == RoomRole.Middle)
+                {
+                    shapeVariants.TryGetValue(planned.Shape, out variant);
+                    int count = RoomInterior.VariantCount(planned.Shape);
+                    shapeVariants[planned.Shape] = (variant + 1) % count;
+                    variant %= count;
+                }
                 var room = new Room
                 {
                     Index = planned.Index,
                     Role = planned.Role,
                     Shape = planned.Shape,
                     Rotation = planned.Rotation,
+                    LayoutVariant = variant,
                     Bounds = WorldBounds(planned),
                     Name = name
                 };
@@ -225,6 +235,101 @@ namespace Echoes
             }
         }
 
+        // Interior flow walls are applied after doors and before furniture.
+        // Door clearances are subtracted, and any piece that would split the
+        // room is skipped so every anchor layout stays fully connected.
+        private void ApplyRoomWalls()
+        {
+            foreach (var room in Rooms)
+            {
+                var pieces = new List<RectInt>();
+                foreach (var wall in RoomInterior.Partitions(room))
+                {
+                    var parts = new List<RectInt> { wall };
+                    foreach (var door in room.DoorOpenings)
+                    {
+                        var clearance = new RectInt(door.x - 2, door.y - 2,
+                            door.width + 4, door.height + 4);
+                        parts = Subtract(parts, clearance);
+                    }
+                    foreach (var part in parts)
+                        if (part.width > 0 && part.height > 0) pieces.Add(part);
+                }
+                var applied = new List<RectInt>();
+                var appliedTiles = new List<List<Vector2Int>>();
+                foreach (var piece in pieces)
+                {
+                    var tiles = BlockWall(room, piece);
+                    if (tiles == null || tiles.Count == 0) continue;
+                    applied.Add(piece);
+                    appliedTiles.Add(tiles);
+                }
+                // The templates are already verified connected; this guard only
+                // drops a screen when an unusual door cut/seam seals a pocket.
+                for (int i = applied.Count - 1; i >= 0 && !RoomConnected(room); i--)
+                {
+                    RestoreTiles(appliedTiles[i]);
+                    applied.RemoveAt(i);
+                    appliedTiles.RemoveAt(i);
+                }
+                room.Walls.AddRange(applied);
+            }
+        }
+
+        private List<Vector2Int> BlockWall(Room room, RectInt piece)
+        {
+            var tiles = new List<Vector2Int>();
+            for (int x = piece.xMin; x < piece.xMax; x++)
+                for (int y = piece.yMin; y < piece.yMax; y++)
+                {
+                    if (!InBounds(x, y) || !IsTileInRoom(x, y, room))
+                    {
+                        RestoreTiles(tiles);
+                        return null;
+                    }
+                    if (!floor[x, y]) continue;
+                    floor[x, y] = false;
+                    walkable[x, y] = false;
+                    tiles.Add(new Vector2Int(x, y));
+                }
+            return tiles;
+        }
+
+        private void RestoreTiles(List<Vector2Int> tiles)
+        {
+            foreach (var tile in tiles)
+            {
+                floor[tile.x, tile.y] = true;
+                walkable[tile.x, tile.y] = true;
+            }
+        }
+
+        private static List<RectInt> Subtract(List<RectInt> pieces, RectInt cut)
+        {
+            var result = new List<RectInt>();
+            foreach (var piece in pieces)
+            {
+                if (!piece.Overlaps(cut))
+                {
+                    result.Add(piece);
+                    continue;
+                }
+                int xMin = Mathf.Max(piece.xMin, cut.xMin);
+                int xMax = Mathf.Min(piece.xMax, cut.xMax);
+                int yMin = Mathf.Max(piece.yMin, cut.yMin);
+                int yMax = Mathf.Min(piece.yMax, cut.yMax);
+                if (yMax < piece.yMax)
+                    result.Add(new RectInt(piece.xMin, yMax, piece.width, piece.yMax - yMax));
+                if (yMin > piece.yMin)
+                    result.Add(new RectInt(piece.xMin, piece.yMin, piece.width, yMin - piece.yMin));
+                if (xMin > piece.xMin)
+                    result.Add(new RectInt(piece.xMin, yMin, xMin - piece.xMin, yMax - yMin));
+                if (xMax < piece.xMax)
+                    result.Add(new RectInt(xMax, yMin, piece.xMax - xMax, yMax - yMin));
+            }
+            return result;
+        }
+
         private void SetFloorRect(int x, int y, int width, int height)
         {
             for (int ix = x; ix < x + width; ix++)
@@ -262,6 +367,7 @@ namespace Echoes
                     obstacleSpecs.AddRange(accepted);
                     foreach (var spec in specs)
                         if (!spec.Solid) decorSpecs.Add(spec);
+                    EnsureRoomCover(room, theme, accepted);
                     return;
                 }
                 foreach (var tile in blocked) walkable[tile.x, tile.y] = true;
@@ -269,6 +375,79 @@ namespace Echoes
             // Keep the room playable even if every solid layout attempt is too dense.
             foreach (var spec in RoomLayouts.Build(room, theme, random))
                 if (!spec.Solid) decorSpecs.Add(spec);
+        }
+
+        // Dense flow walls reject some planned furniture. Top the room back up
+        // with a few native props so cover stays useful without overfilling.
+        private void EnsureRoomCover(Room room, int theme, List<RoomPropSpec> accepted)
+        {
+            if (room.Role != RoomRole.Middle || room.CellCount == 0) return;
+            int area = room.CellCount * (CellWidth - 2) * (CellHeight - 2);
+            if (area <= 0) return;
+            float target = Floor == 1 ? .06f : .095f;
+            const int minSolids = 6;
+            int tiles = 0;
+            foreach (var spec in accepted) tiles += SolidTiles(spec);
+            if (tiles / (float)area >= target && accepted.Count >= minSolids) return;
+            var kinds = theme == 0
+                ? new[] { "room_rubble", "room_crate" }
+                : theme == 1
+                    ? new[] { "room_f2_pipes", "room_f2_pipes_ns", "room_f2_gears", "room_f2_tank" }
+                    : new[] { "room_f3_organ", "room_f3_crystal", "room_f3_reliquary" };
+            // Scan the room on coarse-to-tight grids. Wall-aware scanning packs
+            // the ring corridors far better than random attempts.
+            for (int pass = 0; pass < 3; pass++)
+            {
+                int step = pass == 0 ? 4 : pass == 1 ? 2 : 1;
+                foreach (var cell in room.Cells)
+                {
+                    int x0 = cell.x * CellWidth, y0 = CellOriginY(cell.y);
+                    for (int ly = 2; ly < CellHeight - 2; ly += step)
+                        for (int lx = 2; lx < CellWidth - 2; lx += step)
+                        {
+                            if (tiles / (float)area >= target && accepted.Count >= minSolids)
+                                return;
+                            var spec = TryFillerProp(room, kinds, x0 + lx, y0 + ly);
+                            if (spec == null) continue;
+                            accepted.Add(spec);
+                            obstacleSpecs.Add(spec);
+                            tiles += SolidTiles(spec);
+                            break;
+                        }
+                }
+            }
+        }
+
+        private static int SolidTiles(RoomPropSpec spec)
+        {
+            var bounds = spec.NavigationBounds;
+            if (bounds.width > 0 && bounds.height > 0) return bounds.width * bounds.height;
+            return Mathf.Max(1, spec.Width) * Mathf.Max(1, spec.Height);
+        }
+
+        private RoomPropSpec TryFillerProp(Room room, string[] kinds, int x, int y)
+        {
+            foreach (var kind in kinds)
+            {
+                var art = RoomArt.Definition(kind);
+                var spec = new RoomPropSpec
+                {
+                    Kind = art.Kind, X = x, Y = y,
+                    Width = Mathf.Max(1, art.Footprint.x),
+                    Height = Mathf.Max(1, art.Footprint.y),
+                    Scale = 1, Solid = true,
+                    Layer = RoomPropLayer.FloorObject, Owner = room
+                };
+                var blocked = new List<Vector2Int>();
+                if (!TryBlockObstacle(spec, room, blocked)) continue;
+                if (!RoomConnected(room))
+                {
+                    RestoreTiles(blocked);
+                    continue;
+                }
+                return spec;
+            }
+            return null;
         }
 
         private bool TryBlockObstacle(RoomPropSpec spec, Room room, List<Vector2Int> blocked)
@@ -729,14 +908,16 @@ namespace Echoes
         public List<Vector2> SpawnCells(int roomIndex)
         {
             var room = Rooms[roomIndex];
+            var noSpawn = RoomInterior.NoSpawnZones(room);
+            int stride = Mathf.Max(1, run.Config.spawnCellStride);
             var result = new List<Vector2>();
             foreach (var cell in room.Cells)
             {
                 int x0 = cell.x * CellWidth;
                 int y0 = WorldCellY(cell.y);
-                for (int x = x0 + 3; x < x0 + CellWidth - 1; x += 3)
-                    for (int y = y0 + 3; y < y0 + CellHeight - 1; y += 3)
-                        if (IsSpawnTile(room, x, y))
+                for (int x = x0 + 2; x < x0 + CellWidth - 1; x += stride)
+                    for (int y = y0 + 2; y < y0 + CellHeight - 1; y += stride)
+                        if (IsSpawnTile(room, x, y) && !InNoSpawnZone(noSpawn, x, y))
                             result.Add(new Vector2(x, y));
             }
             for (int i = result.Count - 1; i > 0; i--)
@@ -745,6 +926,14 @@ namespace Echoes
                 var value = result[i]; result[i] = result[j]; result[j] = value;
             }
             return result;
+        }
+
+        private static bool InNoSpawnZone(List<RectInt> zones, int x, int y)
+        {
+            var tile = new Vector2Int(x, y);
+            foreach (var zone in zones)
+                if (zone.Contains(tile)) return true;
+            return false;
         }
 
         private bool IsSpawnTile(Room room, int x, int y)

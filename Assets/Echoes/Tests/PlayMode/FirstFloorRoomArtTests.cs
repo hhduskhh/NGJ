@@ -71,7 +71,8 @@ namespace Echoes.Tests
             yield return new WaitForSeconds(run.Config.visionExpandDuration + .02f);
             run.Visibility.RefreshMask();
             RuntimeSmokeTests.Capture("TestResults/FirstFloorArt/04-gameplay-vision.png");
-            // The generator can omit any shape on a particular seed.
+            // The generator can omit any shape on a particular seed. Capture
+            // each remaining shape from the first plan that contains it.
             if (captured.Count < 5)
             {
                 int originalSeed = run.Config.randomSeed;
@@ -79,17 +80,37 @@ namespace Echoes.Tests
                 foreach (var enemy in run.Enemies) enemy.gameObject.SetActive(false);
                 try
                 {
-                    for (int seed = 100; seed < 120 && captured.Count < 5; seed++)
+                    foreach (var shape in new[]
                     {
-                        run.Config.randomSeed = seed;
-                        run.Map.Generate(run, 0);
-                        foreach (var room in run.Map.Rooms)
+                        RoomShape.Single, RoomShape.Line2, RoomShape.Line3,
+                        RoomShape.Square2, RoomShape.L
+                    })
+                    {
+                        if (captured.Contains(shape)) continue;
+                        int shapeSeed = -1;
+                        for (int seed = 100; seed < 400 && shapeSeed < 0; seed++)
                         {
-                            if (room.Role != RoomRole.Middle || !captured.Add(room.Shape)) continue;
-                            Move(run, room.Center);
-                            yield return null;
-                            Capture(run, "05-" + room.Shape, room);
+                            var plan = DungeonPlan.Generate(seed, run.Config.generationAttempts,
+                                run.Config.extraDoorChance);
+                            if (!plan.Valid) continue;
+                            foreach (var planned in plan.Rooms)
+                                if (planned.Role == RoomRole.Middle && planned.Shape == shape)
+                                {
+                                    shapeSeed = seed;
+                                    break;
+                                }
                         }
+                        Assert.GreaterOrEqual(shapeSeed, 0,
+                            "A first-floor seed with a " + shape + " room exists");
+                        run.Config.randomSeed = shapeSeed;
+                        run.Map.Generate(run, 0);
+                        var fixture = run.Map.Rooms.Find(r =>
+                            r.Role == RoomRole.Middle && r.Shape == shape);
+                        Assert.IsNotNull(fixture);
+                        Move(run, fixture.Center);
+                        yield return null;
+                        Capture(run, "05-" + shape, fixture);
+                        captured.Add(shape);
                     }
                 }
                 finally { run.Config.randomSeed = originalSeed; cover.enabled = true; }

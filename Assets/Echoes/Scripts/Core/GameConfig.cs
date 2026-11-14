@@ -44,9 +44,11 @@ namespace Echoes
         [Min(1)] public float altarEntranceDistance = 3;
         [Min(1)] public int generationAttempts = 100;
         [Range(0, 1)] public float extraDoorChance = .15f;
-        [Min(1)] public int enemiesPerCell = 6;
+        [Min(1)] public int enemiesPerCell = 7;
         [Min(1)] public int minEnemiesPerRoom = 6;
-        [Min(1)] public int maxEnemiesPerRoom = 28;
+        [Min(1)] public int maxEnemiesPerRoom = 32;
+        [Tooltip("Tile stride used to collect enemy spawn points; lower values add more points.")]
+        [Min(1)] public int spawnCellStride = 2;
         [Header("Room traps")]
         [Min(0)] public float spikeDamage = 10;
         [Min(.1f)] public float spikeRadius = .85f;
