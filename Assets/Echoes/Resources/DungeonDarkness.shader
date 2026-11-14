@@ -23,12 +23,11 @@ Shader "Echoes/DungeonDarkness"
                 float4 _MapSize;
                 float4 _PlayerVision;
                 float4 _Echoes[32];
-                float4 _StallBounds;
-                float4 _StallFront;
+                int _UsePropSurfaces;
                 int _EchoCount;
             CBUFFER_END
             sampler2D _Walkable;
-            sampler2D _StallSprite;
+            sampler2D _PropSurfaces;
 
             Varyings Vert(Attributes input)
             {
@@ -111,30 +110,33 @@ Shader "Echoes/DungeonDarkness"
                 return WallFaceVisible(origin, cell, int2(-1, -1), worldPosition);
             }
 
-            float InCircle(float2 worldPosition, float4 circle, float alreadyVisible)
+            float InCircle(float2 worldPosition, float4 circle, float alreadyVisible, float4 footprint)
             {
-                float distanceFromCenter = length(worldPosition - circle.xy);
+                float2 visibilityPoint = worldPosition;
+                if (footprint.w > 0)
+                {
+                    float2 groundMin = footprint.xy - .5;
+                    visibilityPoint = clamp(circle.xy, groundMin - .01, groundMin + footprint.zw + .01);
+                }
+                float distanceFromCenter = length(visibilityPoint - circle.xy);
                 float coverage = 1 - smoothstep(circle.z, circle.z + circle.w, distanceFromCenter);
                 // Avoid grid walks for circles that cannot brighten this pixel.
                 [branch] if (coverage <= alreadyVisible) return 0;
-                return SurfaceVisible(circle.xy, worldPosition) ? coverage : 0;
+                bool clear = footprint.w > 0 ? HasLineOfSight(circle.xy, visibilityPoint) : SurfaceVisible(circle.xy, worldPosition);
+                return clear ? coverage : 0;
             }
 
             half4 Frag(Varyings input) : SV_Target
             {
-                // A tall prop's canopy/sign are above its solid ground footprint.
-                // Only its opaque sprite pixels borrow visibility from the reachable front.
-                // Transparent gaps and the floor behind still use the original occlusion.
-                float2 visibilityPoint = input.world;
-                float2 stallUV = (input.world - _StallBounds.xy) / max(_StallBounds.zw, .001);
-                [branch] if (all(stallUV >= 0) && all(stallUV <= 1) &&
-                    tex2D(_StallSprite, stallUV).a > .5)
-                    visibilityPoint = _StallFront.xy;
-                float visible = InCircle(visibilityPoint, _PlayerVision, 0);
+                float4 footprint = 0;
+                float2 mapUV = (input.world + .5) * _MapSize.zw;
+                [branch] if (_UsePropSurfaces != 0 && all(mapUV >= 0) && all(mapUV <= 1))
+                    footprint = round(tex2Dlod(_PropSurfaces, float4(mapUV, 0, 0)) * 255);
+                float visible = InCircle(input.world, _PlayerVision, 0, footprint);
                 [loop] for (int i = 0; i < _EchoCount; i++)
                 {
                     if (visible >= 1) break;
-                    visible = max(visible, InCircle(visibilityPoint, _Echoes[i], visible));
+                    visible = max(visible, InCircle(input.world, _Echoes[i], visible, footprint));
                 }
                 return half4(0, 0, 0, 1 - visible);
             }

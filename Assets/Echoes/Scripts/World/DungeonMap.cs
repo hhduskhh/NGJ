@@ -62,6 +62,7 @@ namespace Echoes
         public int Floor { get; private set; } = 1;
         public int MapWidth { get { return Width; } }
         public int MapHeight { get { return Height; } }
+        internal Transform GeometryRoot => generatedRoot;
 
         public Vector2 ShopCounterPosition
         {
