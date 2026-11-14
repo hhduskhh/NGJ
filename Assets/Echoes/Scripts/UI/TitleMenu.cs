@@ -27,9 +27,9 @@ namespace Echoes
             fitter.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
             fitter.aspectRatio = (float)art.texture.width / art.texture.height;
             font = Resources.Load<TMP_FontAsset>("FusionPixelUI");
-            start = Hotspot("开始游戏", .036f, .532f, begin);
-            settingsButton = Hotspot("设置", .036f, .409f, () => ToggleSettings(true));
-            Hotspot("退出游戏", .036f, .284f, Quit);
+            start = Hotspot("开始游戏", 414, begin);
+            settingsButton = Hotspot("设置", 513, () => ToggleSettings(true));
+            Hotspot("退出游戏", 610, Quit);
 
             var panel = Rect("Settings Panel", poster, .018f, .23f, .32f, .60f);
             settings = panel.gameObject;
@@ -37,7 +37,6 @@ namespace Echoes
             displayButton = PanelButton("切换全屏", panel, .52f, () => Screen.fullScreen = !Screen.fullScreen);
             PanelButton("返回", panel, .12f, () => ToggleSettings(false));
             settings.SetActive(false);
-            start.Select();
         }
 
         private static RectTransform Rect(string name, Transform parent, float x, float y, float right, float top)
@@ -64,9 +63,18 @@ namespace Echoes
             return button;
         }
 
-        private Button Hotspot(string name, float left, float bottom, UnityAction action)
+        private Button Hotspot(string name, int topPixel, UnityAction action)
         {
-            return MakeButton(Rect(name, poster, left, bottom, .287f, bottom + .092f), action);
+            // Menu lettering is baked into the 1672 x 941 poster. Match its 400 x 88 plaque.
+            var rect = Rect(name, poster, 47f / 1672, 1 - (topPixel + 88) / 941f,
+                447f / 1672, 1 - topPixel / 941f);
+            var graphic = rect.gameObject.AddComponent<Image>();
+            graphic.canvasRenderer.cullTransparentMesh = false;
+            graphic.color = Color.clear;
+            var button = rect.gameObject.AddComponent<TitleMenuButton>();
+            button.targetGraphic = graphic;
+            button.onClick.AddListener(action);
+            return button;
         }
 
         private Button PanelButton(string name, Transform parent, float y, UnityAction action)
@@ -88,12 +96,17 @@ namespace Echoes
             foreach (Transform child in poster)
                 if (child.GetComponent<Button>()) child.gameObject.SetActive(!open);
             settings.SetActive(open);
-            (open ? displayButton : settingsButton).Select();
+            if (open) displayButton.Select();
+            else if (!Input.GetMouseButtonUp(0)) settingsButton.Select();
         }
 
         private void Update()
         {
             if (settings.activeSelf && Input.GetKeyDown(KeyCode.Escape)) ToggleSettings(false);
+            if (!settings.activeSelf && !EventSystem.current.currentSelectedGameObject &&
+                (Input.GetKeyDown(KeyCode.DownArrow) || Input.GetKeyDown(KeyCode.UpArrow) ||
+                 Input.GetKeyDown(KeyCode.Tab)))
+                start.Select();
         }
 
         private static void Quit()
