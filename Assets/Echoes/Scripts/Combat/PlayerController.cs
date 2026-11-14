@@ -115,6 +115,15 @@ namespace Echoes
 
         public void InitializeWeapons() => Weapons = new WeaponInventory(run);
 
+        public void PlaceAt(Vector2 position)
+        {
+            body.velocity = Vector2.zero;
+            body.position = position;
+            transform.position = position;
+            invulnerableUntil = Time.time + .5f;
+            waitForFireRelease = true;
+        }
+
         private void ThrowDecoy()
         {
             var delta = Vector2.ClampMagnitude(AimPoint - (Vector2)transform.position, run.Config.decoyThrowRange);

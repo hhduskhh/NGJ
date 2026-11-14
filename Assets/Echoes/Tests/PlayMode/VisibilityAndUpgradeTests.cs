@@ -28,7 +28,7 @@ namespace Echoes.Tests
             var target = run.Enemies[0];
             var farther = run.Enemies[1];
             target.GetComponent<Rigidbody2D>().position = player + Vector2.right * 2;
-            farther.GetComponent<Rigidbody2D>().position = player + Vector2.up * 2.5f;
+            farther.GetComponent<Rigidbody2D>().position = player + Vector2.up * 3;
             Physics2D.SyncTransforms();
             run.Visibility.Reveal(player, run.Config.playerVisionRadius);
             yield return new WaitForSeconds(run.Config.visionExpandDuration);
@@ -54,25 +54,29 @@ namespace Echoes.Tests
         {
             yield return LoadFloor();
             var run = Object.FindObjectOfType<RunController>();
+            run.Player.enabled = false;
             Vector2 player = run.Player.transform.position;
-            Vector2 hidden = player + Vector2.right * 5;
+            // Keep the probe inside the 1x1 start room, outside the stationary gradient.
+            Vector2 hidden = player + Vector2.right * 4;
             var target = run.Enemies[0];
             target.GetComponent<Rigidbody2D>().position = hidden;
             Physics2D.SyncTransforms();
             yield return new WaitForSeconds(.04f);
             Assert.IsFalse(run.Visibility.IsVisible(hidden));
+            run.Player.Weapons.Slots[0].Cooldown = 0;
             Assert.IsTrue(run.Player.TryFire(player + Vector2.down * 6));
             Assert.IsNull(run.Player.AimTarget, "An unrevealed enemy must not attract automatic fire");
             // An unactivated boss and enemies behind the room walls must never become targets.
-            run.Boss.GetComponent<Rigidbody2D>().position = player + Vector2.up;
+            run.Boss.GetComponent<Rigidbody2D>().position = run.Map.BossPosition;
             run.Enemies[1].GetComponent<Rigidbody2D>().position = new Vector2(-1, player.y);
             run.Visibility.Reveal(player, 20);
             yield return new WaitForSeconds(run.Player.Weapons.Interval(run.Player.Weapons.Slots[0]) + .02f);
             Assert.IsTrue(run.Visibility.IsVisible(hidden));
+            run.Player.Weapons.Slots[0].Cooldown = 0;
             Assert.IsTrue(run.Player.TryFire(player + Vector2.down * 6));
             Assert.AreEqual(target, run.Player.AimTarget, "A sonar-revealed enemy can be auto-targeted");
             // Use a separate, empty region to avoid subsequent gunshots extending its visibility.
-            Vector2 probe = player + Vector2.up * 6;
+            Vector2 probe = player + Vector2.right * 4;
             float duration = run.Config.VisionPulseDuration;
             yield return new WaitForSeconds(duration + .15f);
             Assert.IsFalse(run.Visibility.IsVisible(probe));

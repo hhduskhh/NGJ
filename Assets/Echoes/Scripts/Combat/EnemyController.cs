@@ -35,7 +35,9 @@ namespace Echoes
                 position, 9);
             var enemy = renderer.gameObject.AddComponent<EnemyController>();
             enemy.run = run; enemy.sprite = renderer; enemy.IsBoss = boss;
-            enemy.MaxHealth = enemy.Health = boss ? run.Config.bossHealth : run.Config.enemyHealth;
+            enemy.MaxHealth = enemy.Health = boss ?
+                run.Config.bossHealth * run.BossHealthScale :
+                run.Config.enemyHealth * run.EnemyHealthScale;
             enemy.destination = enemy.lastSeen = position;
             enemy.body = renderer.gameObject.AddComponent<Rigidbody2D>();
             enemy.body.gravityScale = 0; enemy.body.freezeRotation = true;
@@ -107,7 +109,8 @@ namespace Echoes
             {
                 contactReady = Time.time + run.Config.enemyAttackInterval;
                 art.Attack();
-                run.Player.TakeDamage(IsBoss ? run.Config.bossDamage : run.Config.enemyDamage);
+                run.Player.TakeDamage((IsBoss ? run.Config.bossDamage : run.Config.enemyDamage) *
+                    run.EnemyDamageScale);
             }
             if (IsBoss) UpdateBossAttack(dt);
             RefreshVisual();
@@ -134,7 +137,7 @@ namespace Echoes
                         float angle = i * Mathf.PI * 2 / run.Config.bossBulletCount;
                         var direction = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle));
                         Projectile.Create(run, (Vector2)transform.position + direction * 1.1f, direction,
-                            run.Config.bossBulletSpeed, run.Config.bossDamage, true);
+                            run.Config.bossBulletSpeed, run.Config.bossDamage * run.EnemyDamageScale, true);
                     }
                     attackTimer = run.Config.bossAttackInterval;
                     art.Attack();

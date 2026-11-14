@@ -28,8 +28,13 @@ namespace Echoes
         [Min(1)] public float pressureRadius = 5;
         [Min(0)] public float bonusPerEnemy = .08f;
         [Min(1)] public int bonusEnemyCap = 8;
+        [Header("Dungeon generation")]
+        [Min(1)] public int generationAttempts = 100;
+        [Range(0, 1)] public float extraDoorChance = .15f;
+        [Min(1)] public int enemiesPerCell = 2;
+        [Min(1)] public int minEnemiesPerRoom = 3;
+        [Min(1)] public int maxEnemiesPerRoom = 12;
         [Header("Finite floor population")]
-        [Min(1)] public int enemiesPerRoom = 8;
         [Min(1)] public float enemyHealth = 32;
         [Min(.1f)] public float enemySpeed = 1.7f;
         [Min(1)] public float enemyDamage = 9;
@@ -51,6 +56,11 @@ namespace Echoes
         [Min(.1f)] public float bossWarningDuration = .9f;
         [Min(1)] public float bossBulletSpeed = 4;
         [Range(4, 24)] public int bossBulletCount = 12;
+        [Header("Floor scaling")]
+        public float[] floorEnemyHealth = { 1f, 1.2f, 1.4f };
+        public float[] floorEnemyDamage = { 1f, 1.1f, 1.2f };
+        public float[] floorBossHealth = { 1f, 1.35f, 1.7f };
+        [Range(0, 1)] public float floorEntryHealFraction = .3f;
         [Header("Shop and loot")]
         [Min(1)] public int goldPerKill = 6;
         [Min(.2f)] public float goldPickupRadius = 1.5f;
