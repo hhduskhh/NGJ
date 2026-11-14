@@ -29,7 +29,11 @@ MonoBehaviour:
   pressureRadius: 5
   bonusPerEnemy: 0.08
   bonusEnemyCap: 8
-  enemiesPerRoom: 8
+  generationAttempts: 100
+  extraDoorChance: 0.15
+  enemiesPerCell: 2
+  minEnemiesPerRoom: 3
+  maxEnemiesPerRoom: 12
   enemyHealth: 32
   enemySpeed: 1.7
   enemyDamage: 9
@@ -48,4 +52,17 @@ MonoBehaviour:
   bossWarningDuration: 0.9
   bossBulletSpeed: 4
   bossBulletCount: 12
+  floorEnemyHealth:
+  - 1
+  - 1.2
+  - 1.4
+  floorEnemyDamage:
+  - 1
+  - 1.1
+  - 1.2
+  floorBossHealth:
+  - 1
+  - 1.35
+  - 1.7
+  floorEntryHealFraction: 0.3
   randomSeed: 713
