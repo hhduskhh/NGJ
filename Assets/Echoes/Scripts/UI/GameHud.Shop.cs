@@ -1,4 +1,3 @@
-using System.Text;
 using UnityEngine;
 
 namespace Echoes
@@ -51,10 +50,11 @@ namespace Echoes
                     art.offerPanels[offer.Tier], new Vector2(.5f, 1));
                 bool weaponOffer = offer.Item == null;
                 ShopLabel($"{ShopController.TierName(offer.Tier)} · {run.Shop.Title(offer)}",
-                    weaponOffer ? x - 36 : x, 140, weaponOffer ? 238 : 310, 40, 21, ShopController.TierColor(offer.Tier));
-                if (weaponOffer)
-                    ArtPanel("WeaponIcon", card, new Vector2(-16, -12), new Vector2(48, 48),
-                        art.Weapon(offer.Weapon, offer.Tier), Vector2.one, true);
+                    x - 29, 146, 228, 40, 21, ShopController.TierColor(offer.Tier));
+                var icon = weaponOffer ? art.Weapon(offer.Weapon, offer.Tier) : art.Passive(offer.Item.title);
+                if (icon)
+                    ArtPanel(weaponOffer ? "WeaponIcon" : "PassiveIcon", card, new Vector2(-20, -18),
+                        weaponOffer ? new Vector2(48, 48) : new Vector2(32, 32), icon, Vector2.one, true);
                 string description;
                 if (offer.Item != null) description = offer.Item.description + $"\n持有 {run.Player.Passives.Count(offer.Item)}/{offer.Item.Limit}";
                 else
@@ -62,7 +62,7 @@ namespace Echoes
                     var weapon = run.Config.weapons[offer.Weapon];
                     description = $"伤害 {weapon.damage[offer.Tier] * run.Player.TotalDamageScale:0.#} × {weapon.pellets} · 间隔 {Mathf.Max(.1f, weapon.interval[offer.Tier] / run.Player.AttackSpeed):0.00}秒\n射程 {weapon.range} · 声音 {weapon.noise * run.Player.NoiseRadius:0.#}";
                 }
-                ShopLabel(description, x, 185, 310, 86, 17, muted);
+                ShopLabel(description, x, 190, 294, 82, 17, muted);
                 string blocked = run.Shop.Blocked(offer);
                 ShopButton(blocked ?? $"购买 · {run.Shop.Price(offer)} 金币", x, 282, 308, blocked == null,
                     () => run.Shop.Buy(index), "BuyOffer" + i);
@@ -95,10 +95,18 @@ namespace Echoes
                 0, 698, 1380, 48, 18, muted);
             var owned = new System.Collections.Generic.List<System.Collections.Generic.KeyValuePair<PassiveDefinition, int>>(player.Passives.Owned);
             int pages = Mathf.Max(1, Mathf.CeilToInt(owned.Count / 4f)); itemPage = Mathf.Clamp(itemPage, 0, pages - 1);
-            var text = new StringBuilder();
+            if (owned.Count == 0) ShopLabel("被动道具：尚未购买", -120, 750, 1140, 78, 15, muted);
             for (int i = itemPage * 4; i < Mathf.Min(owned.Count, itemPage * 4 + 4); i++)
-                text.AppendLine($"{owned[i].Key.title} ×{owned[i].Value}：{owned[i].Key.description}");
-            ShopLabel(owned.Count == 0 ? "被动道具：尚未购买" : text.ToString(), -120, 750, 1140, 78, 15, muted);
+            {
+                var item = owned[i].Key;
+                float x = -658 + (i % 2) * 582;
+                float y = 748 + (i % 4 / 2) * 43;
+                var icon = art.Passive(item.title);
+                if (icon) ArtPanel("OwnedPassiveIcon", modal, new Vector2(x, -y), new Vector2(32, 32),
+                    icon, new Vector2(.5f, 1), true);
+                ShopLabel($"{item.title} ×{owned[i].Value}：{item.description}",
+                    x + 288, y, 528, 44, 15, muted);
+            }
             ShopButton($"道具 {itemPage + 1}/{pages} →", 595, 765, 195, pages > 1,
                 () => { itemPage = (itemPage + 1) % pages; RefreshModal(); }, "ItemPage");
         }

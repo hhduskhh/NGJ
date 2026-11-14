@@ -45,3 +45,16 @@ MonoBehaviour:
   emergencyRepair: {fileID: 21300000, guid: e2353695e2767a24c996f8c4eeca3453, type: 3}
   resonanceAmplifier: {fileID: 21300000, guid: 789ead112fbd29d4ba8b4dd5fff79027, type: 3}
   decoyTuning: {fileID: 21300000, guid: 28bc77c953cf31c438329495c28b421e, type: 3}
+  passiveIcons:
+  - {fileID: 21300000, guid: 75382432227446eebf3da32d8013e170, type: 3}
+  - {fileID: 21300000, guid: 30c755458cac420b954c95c3662eead7, type: 3}
+  - {fileID: 21300000, guid: ad38c7ccbefe4c12ac119d89c8d1638b, type: 3}
+  - {fileID: 21300000, guid: 1db4f7e810a342c38438bba81273738d, type: 3}
+  - {fileID: 21300000, guid: f730a2e4ea9441949e5e27639f953de9, type: 3}
+  - {fileID: 21300000, guid: b30d4c0f3222432e86f7b08aa0600d48, type: 3}
+  - {fileID: 21300000, guid: e7a9e0773c39422a98ec53918279f4ca, type: 3}
+  - {fileID: 21300000, guid: c83877cb822841359d78ac7412ab3117, type: 3}
+  - {fileID: 21300000, guid: f8e5ef9b7fad4079af626fbf28655c1c, type: 3}
+  - {fileID: 21300000, guid: 14cb6b7f58804d72b30b70c08af9925e, type: 3}
+  - {fileID: 21300000, guid: 1cdeaea6c923468b802435afcf869226, type: 3}
+  - {fileID: 21300000, guid: 005389112c7040118a30fe040c20fe96, type: 3}

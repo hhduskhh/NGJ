@@ -10,6 +10,7 @@ namespace Echoes
         public Sprite[] offerPanels = new Sprite[4];
         public Sprite[] buttonStates = new Sprite[4]; // Normal, hover, pressed, disabled.
         public Sprite[] weapons = new Sprite[12]; // Kind * 4 + tier.
+        [SerializeField] private Sprite[] passiveIcons;
         public Sprite quickBolt, lightStep, emergencyRepair, resonanceAmplifier, decoyTuning;
         private static PresentationArt current;
         public static PresentationArt Current
@@ -22,6 +23,7 @@ namespace Echoes
             }
         }
         public Sprite Weapon(int kind, int tier) => weapons[kind * 4 + tier];
+        public Sprite Passive(string title) => Array.Find(passiveIcons, icon => icon && icon.name == title);
         public Sprite Upgrade(string title)
         {
             switch (title)
