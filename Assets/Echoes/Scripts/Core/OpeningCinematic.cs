@@ -11,6 +11,7 @@ namespace Echoes
         private VideoPlayer player;
         private float prepareDeadline;
         private bool leaving;
+        private bool menuShown;
 
         private void Start()
         {
@@ -36,20 +37,29 @@ namespace Echoes
 
         private void Update()
         {
+            if (menuShown) return;
             if (Input.GetKeyDown(KeyCode.Escape) || Input.GetKeyDown(KeyCode.Space) ||
                 (player && !player.isPrepared && Time.realtimeSinceStartup > prepareDeadline))
-                EnterDungeon();
+                ShowMenu();
         }
 
-        private void OnEnd(VideoPlayer source) => EnterDungeon();
+        private void OnEnd(VideoPlayer source) => ShowMenu();
 
         private void OnError(VideoPlayer source, string message)
         {
             Debug.LogWarning("Opening cinematic: " + message);
-            EnterDungeon();
+            ShowMenu();
         }
 
-        public void EnterDungeon()
+        private void ShowMenu()
+        {
+            if (menuShown) return;
+            menuShown = true;
+            player.Stop();
+            gameObject.AddComponent<TitleMenu>().Initialize(EnterDungeon);
+        }
+
+        private void EnterDungeon()
         {
             if (leaving) return;
             leaving = true;
