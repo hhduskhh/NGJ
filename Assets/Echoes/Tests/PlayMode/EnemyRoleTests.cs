@@ -32,6 +32,50 @@ namespace Echoes.Tests
             Physics2D.SyncTransforms();
         }
 
+        [UnityTest] public IEnumerator BossUsesFloorHealthAndAttackPatterns()
+        {
+            float[] expectedHealth = { 2200f, 7425f, 18700f };
+            for (int floor = 1; floor <= 3; floor++)
+            {
+                var boss = run.Boss;
+                var body = boss.GetComponent<Rigidbody2D>();
+                Assert.AreEqual(expectedHealth[floor - 1], boss.MaxHealth);
+                Vector2 player = run.Player.transform.position;
+                PlaceEnemy(boss, player + Vector2.left * 6);
+                run.ActivateBoss();
+                float started = Time.time;
+                float firstDash = -1, firstBarrage = -1;
+                bool windingUp = false;
+                while (Time.time - started < 2.1f)
+                {
+                    yield return null;
+                    if (firstDash < 0 && body.velocity.magnitude > run.Config.bossSpeed + 1f)
+                    {
+                        Assert.Greater(Vector2.Dot(body.velocity, player - body.position), 0);
+                        firstDash = Time.time - started;
+                    }
+                    if (windingUp && !boss.IsWindingUp && firstBarrage < 0)
+                    {
+                        Assert.IsNotNull(GameObject.Find("HostileProjectile"));
+                        firstBarrage = Time.time - started;
+                    }
+                    windingUp = boss.IsWindingUp;
+                }
+                float rate = floor == 3 ? run.Config.finalBossAttackRate : 1f;
+                if (floor == 1) Assert.Less(firstDash, 0);
+                else Assert.AreEqual(run.Config.bossDashInterval / rate, firstDash, .1f);
+                if (floor == 2) Assert.Less(firstBarrage, 0);
+                else Assert.AreEqual((run.Config.bossAttackInterval + run.Config.bossWarningDuration) / rate,
+                    firstBarrage, .1f);
+                if (floor < 3)
+                {
+                    boss.TakeDamage(boss.Health);
+                    run.AdvanceFloor();
+                    yield return null;
+                }
+            }
+        }
+
         private Projectile Shot() => Object.FindObjectsOfType<Projectile>().SingleOrDefault();
 
         [UnityTest] public IEnumerator GuardAcquiresAtShortRangeTracksDuringWindupAndFiresStraight()

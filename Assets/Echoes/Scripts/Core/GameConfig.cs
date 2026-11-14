@@ -100,14 +100,18 @@ namespace Echoes
         [Min(.1f)] public float bossSpeed = 1.7f;
         [Min(1)] public float bossHealth = 1100;
         [Min(1)] public float bossDamage = 14;
-        [Min(.1f)] public float bossAttackInterval = 2.8f;
-        [Min(.1f)] public float bossWarningDuration = .9f;
+        [Min(.1f)] public float bossAttackInterval = 1.2f;
+        [Min(.1f)] public float bossWarningDuration = .6f;
+        [Min(.1f)] public float bossDashInterval = 1.4f;
+        [Min(.1f)] public float bossDashDuration = .32f;
+        [Min(.1f)] public float bossDashSpeed = 11f;
+        [Min(1)] public float finalBossAttackRate = 2f;
         [Min(1)] public float bossBulletSpeed = 4;
         [Range(4, 24)] public int bossBulletCount = 12;
         [Header("Floor scaling")]
         public float[] floorEnemyHealth = { 1f, 1.2f, 1.4f };
         public float[] floorEnemyDamage = { 1f, 1.1f, 1.2f };
-        public float[] floorBossHealth = { 1f, 1.35f, 1.7f };
+        public float[] floorBossHealth = { 2f, 6.75f, 17f };
         [Range(0, 1)] public float floorEntryHealFraction = .3f;
         [Header("Shop and loot")]
         [Min(1)] public int goldPerKill = 6;

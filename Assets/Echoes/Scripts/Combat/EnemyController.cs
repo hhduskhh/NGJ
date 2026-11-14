@@ -17,6 +17,9 @@ namespace Echoes
         private int pathIndex;
         private float repath, lostSight, contactReady, wanderTimer, attackTimer, warningTimer;
         private LineRenderer warning;
+        private float dashCooldown, dashRemaining;
+        private Vector2 dashDirection;
+        private bool dashStep, dashHitPlayer;
         private CharacterArt art;
         private SpriteRenderer muzzleWarning;
         private PolygonCollider2D damageShape;
@@ -76,6 +79,11 @@ namespace Echoes
             enemy.healthFill.color = PixelArt.Red;
             enemy.repath = (float)run.Random.NextDouble() * .5f;
             enemy.attackTimer = boss ? run.Config.bossAttackInterval : 0;
+            if (boss && run.Floor >= 2)
+            {
+                enemy.dashCooldown = run.Config.bossDashInterval;
+                enemy.body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+            }
             enemy.RefreshVisual();
             return enemy;
         }
@@ -156,14 +164,20 @@ namespace Echoes
             repath -= dt;
             if (repath <= 0)
             { repath = .55f; path = run.Map.FindPath(body.position, destination); pathIndex = 0; }
-            if (!IsGuard && Vector2.Distance(transform.position, player) < (IsBoss ? 1.15f : .8f) && Time.time >= contactReady)
+            if (!IsGuard && (!IsBoss || run.Floor == 1) &&
+                Vector2.Distance(transform.position, player) < (IsBoss ? 1.15f : .8f) && Time.time >= contactReady)
             {
                 contactReady = Time.time + run.Config.enemyAttackInterval;
                 art.Attack();
                 run.Player.TakeDamage((IsBoss ? run.Config.bossDamage : run.Config.enemyDamage) *
                     run.EnemyDamageScale);
             }
-            if (IsBoss) UpdateBossAttack(dt);
+            if (IsBoss)
+            {
+                float attackTime = dt * (run.Floor == 3 ? run.Config.finalBossAttackRate : 1f);
+                if (run.Floor != 2) UpdateBossBarrage(attackTime);
+                if (run.Floor >= 2) UpdateBossDash(attackTime, player);
+            }
             RefreshVisual();
         }
 
@@ -173,8 +187,18 @@ namespace Echoes
             Vector2 position = body.position;
             float distance = Vector2.Distance(position, lastStepPosition);
             lastStepPosition = position;
+            dashStep = false;
             if (run.State != RunState.Playing || !Alive || !Awake || holdingPosition)
             { body.velocity = Vector2.zero; return; }
+            if (dashRemaining > 0)
+            {
+                dashStep = true;
+                float step = Mathf.Min(dashRemaining, Time.fixedDeltaTime);
+                body.velocity = dashDirection * (run.Config.bossDashSpeed * step / Time.fixedDeltaTime);
+                dashRemaining -= step;
+                repath = 0;
+                return;
+            }
             Move();
             if (IsBoss) return;
             distanceSinceStep += distance;
@@ -241,7 +265,30 @@ namespace Echoes
             muzzleWarning.transform.localScale = Vector3.one * Mathf.Lerp(.55f, 1f, progress);
         }
 
-        private void UpdateBossAttack(float dt)
+        private void UpdateBossDash(float dt, Vector2 player)
+        {
+            dashCooldown -= dt;
+            if (dashCooldown > 0 || dashRemaining > 0) return;
+            dashDirection = (player - body.position).normalized;
+            dashRemaining = run.Config.bossDashDuration;
+            dashCooldown = run.Config.bossDashInterval;
+            dashHitPlayer = false;
+            if (dashDirection.x != 0) sprite.flipX = dashDirection.x < 0;
+            art.Attack();
+        }
+
+        private void OnCollisionEnter2D(Collision2D collision) => HitDuringDash(collision);
+        private void OnCollisionStay2D(Collision2D collision) => HitDuringDash(collision);
+
+        private void HitDuringDash(Collision2D collision)
+        {
+            if (!dashStep || dashHitPlayer || !Alive || run.State != RunState.Playing ||
+                collision.gameObject != run.Player.gameObject) return;
+            dashHitPlayer = true;
+            run.Player.TakeDamage(run.Config.bossDamage * run.EnemyDamageScale);
+        }
+
+        private void UpdateBossBarrage(float dt)
         {
             if (warningTimer > 0)
             {
@@ -266,10 +313,9 @@ namespace Echoes
             if (attackTimer <= 0)
             {
                 warningTimer = run.Config.bossWarningDuration;
-                run.Noise.PlayBossReady(warningTimer);
+                run.Noise.PlayBossReady(warningTimer / (run.Floor == 3 ? run.Config.finalBossAttackRate : 1f));
                 warning = PixelArt.Circle("BossAttackTelegraph", transform, PixelArt.Red, .08f);
                 PixelArt.SetRadius(warning, 1);
-                run.Hud.Notify("守关者蓄力 · 红色环形弹幕即将发射", run.Config.bossWarningDuration);
             }
         }
 

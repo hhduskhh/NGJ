@@ -62,8 +62,12 @@ MonoBehaviour:
   bossSpeed: 1.7
   bossHealth: 1100
   bossDamage: 14
-  bossAttackInterval: 2.8
-  bossWarningDuration: 0.9
+  bossAttackInterval: 1.2
+  bossWarningDuration: 0.6
+  bossDashInterval: 1.4
+  bossDashDuration: 0.32
+  bossDashSpeed: 11
+  finalBossAttackRate: 2
   bossBulletSpeed: 4
   bossBulletCount: 12
   floorEnemyHealth:
@@ -75,8 +79,8 @@ MonoBehaviour:
   - 1.1
   - 1.2
   floorBossHealth:
-  - 1
-  - 1.35
-  - 1.7
+  - 2
+  - 6.75
+  - 17
   floorEntryHealFraction: 0.3
   randomSeed: 713
