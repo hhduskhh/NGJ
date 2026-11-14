@@ -57,13 +57,13 @@ namespace Echoes
         [Tooltip("每层地图房间格的边长；索引 0/1/2 对应第 1/2/3 层。")]
         public int[] floorGridSizes = { 3, 4, 5 };
         [Tooltip("每层随机选择中间房格子的次数；索引 0/1/2 对应第 1/2/3 层。")]
-        public int[] spawnCellDraws = { 24, 32, 40 };
+        public int[] spawnCellDraws = { 24, 64, 120 };
         [Tooltip("每层每个格子的刷新权重；同一层内所有格子目前使用相同权重。")]
         public int[] spawnCellWeights = { 1, 1, 1 };
         [Tooltip("每层每次选中格子时生成的小怪数量下限。")]
-        public int[] spawnAmountMin = { 1, 2, 3 };
+        public int[] spawnAmountMin = { 1, 4, 9 };
         [Tooltip("每层每次选中格子时生成的小怪数量上限。")]
-        public int[] spawnAmountMax = { 3, 4, 5 };
+        public int[] spawnAmountMax = { 3, 8, 15 };
         [Tooltip("Tile stride used to collect enemy spawn points; lower values add more points.")]
         [Min(1)] public int spawnCellStride = 2;
         [Header("Room traps")]
@@ -124,7 +124,7 @@ namespace Echoes
         [Min(1)] public int bossSummonCount = 2;
         [Min(1)] public int bossSummonLimit = 4;
         [Header("Floor scaling")]
-        public float[] floorEnemyHealth = { 1f, 1.2f, 1.4f };
+        public float[] floorEnemyHealth = { 1f, 2.4f, 4.2f };
         public float[] floorEnemyDamage = { 1f, 1.1f, 1.2f };
         public float[] floorBossHealth = { 2f, 6.75f, 17f };
         [Range(0, 1)] public float floorEntryHealFraction = .3f;

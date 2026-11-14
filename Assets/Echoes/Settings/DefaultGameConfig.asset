@@ -40,20 +40,20 @@ MonoBehaviour:
   - 5
   spawnCellDraws:
   - 24
-  - 32
-  - 40
+  - 64
+  - 120
   spawnCellWeights:
   - 1
   - 1
   - 1
   spawnAmountMin:
   - 1
-  - 2
-  - 3
+  - 4
+  - 9
   spawnAmountMax:
   - 3
-  - 4
-  - 5
+  - 8
+  - 15
   spawnCellStride: 2
   trapAnchorSearchRadius: 3
   trapDoorClearance: 2
@@ -94,8 +94,8 @@ MonoBehaviour:
   bossSummonLimit: 4
   floorEnemyHealth:
   - 1
-  - 1.2
-  - 1.4
+  - 2.4
+  - 4.2
   floorEnemyDamage:
   - 1
   - 1.1
