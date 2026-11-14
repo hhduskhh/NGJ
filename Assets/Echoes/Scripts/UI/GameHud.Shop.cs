@@ -5,12 +5,12 @@ namespace Echoes
     public sealed partial class GameHud
     {
         private int itemPage;
-        private void ShopLabel(string text, float x, float y, float width, float height, int size, Color color)
+        private TMPro.TMP_Text ShopLabel(string text, float x, float y, float width, float height, int size, Color color)
         {
-            Label(modal, text, new Vector2(x, -y), new Vector2(width, height), size, color, new Vector2(.5f, 1));
+            return Label(modal, text, new Vector2(x, -y), new Vector2(width, height), size, color, new Vector2(.5f, 1));
         }
         private void ShopButton(string text, float x, float y, float width, bool enabled, UnityEngine.Events.UnityAction action,
-            string name = "ShopButton")
+            string name = "ShopButton", bool shortage = false)
         {
             var rect = Button(modal, text, new Vector2(x, -y), new Vector2(width, 44), action);
             rect.name = name;
@@ -21,6 +21,7 @@ namespace Echoes
                 label.fontSize = 16; label.enableAutoSizing = true;
                 label.fontSizeMin = 12; label.fontSizeMax = 16;
                 label.color = enabled ? Color.white : new Color(.58f, .62f, .67f);
+                if (shortage) rect.GetComponent<HudButton>().SetShortageLabel(label);
             }
         }
         private void DrawShop()
@@ -38,7 +39,7 @@ namespace Echoes
             title.alignment = TMPro.TextAlignmentOptions.Center;
             ShopButton("退出 [Esc]", -570, 42, 220, true, () => run.Shop.Close(), "ShopExit");
             ArtPanel("ShopGoldIcon", modal, new Vector2(515, -50), new Vector2(32, 32), art.shopGoldCoin, new Vector2(.5f, 1), true);
-            ShopLabel(run.Shop.GoldText, 600, 50, 120, 36, 25, PixelArt.Gold);
+            shopBalance = ShopLabel(run.Shop.GoldText, 600, 50, 120, 36, 25, PixelArt.Gold);
             DrawOffers();
             DrawInventory();
         }
@@ -68,17 +69,37 @@ namespace Echoes
                 Label(card, description, new Vector2(18, -90), new Vector2(298, 66), 17, Paper);
                 string blocked = run.Shop.Blocked(offer);
                 ShopButton(blocked ?? $"购买 · {run.Shop.Price(offer)} 金币", x, 264, 298, blocked == null,
-                    () => run.Shop.Buy(index), "BuyOffer" + i);
+                    () => BuyOffer(index, false), "BuyOffer" + i, blocked != null && blocked.StartsWith("还差"));
                 if (weaponOffer && offer.Tier < 3)
-                    ShopButton($"购买并升至 {ShopController.TierName(offer.Tier + 1)} · {run.Shop.Price(offer)}", x, 312, 298,
-                        run.Shop.Blocked(offer, true) == null, () => run.Shop.Buy(index, true), "MergeOffer" + i);
+                {
+                    string mergeBlocked = run.Shop.Blocked(offer, true);
+                    bool shortOnGold = mergeBlocked != null && mergeBlocked.StartsWith("还差");
+                    ShopButton(shortOnGold ? mergeBlocked : $"购买并升至 {ShopController.TierName(offer.Tier + 1)} · {run.Shop.Price(offer)}", x, 312, 298,
+                        mergeBlocked == null, () => BuyOffer(index, true), "MergeOffer" + i, shortOnGold);
+                }
             }
             var weights = run.Shop.QualityWeights;
             float total = weights[0] + weights[1] + weights[2] + weights[3];
             ShopLabel($"刷新概率   白 {weights[0] / total:P0} / 蓝 {weights[1] / total:P0} / 紫 {weights[2] / total:P0} / 红 {weights[3] / total:P0}",
                 -172, 395, 970, 30, 16, muted);
-            ShopButton($"刷新 {run.Shop.RefreshPrice} 金币", 525, 380, 298, run.Shop.CanAfford(run.Shop.RefreshPrice),
-                () => run.Shop.RefreshStock(), "ShopRefresh");
+            bool canRefresh = run.Shop.CanAfford(run.Shop.RefreshPrice);
+            string refreshText = canRefresh ? $"刷新 {run.Shop.RefreshPrice} 金币" : $"刷新 · 还差 {run.Shop.RefreshPrice - run.Shop.Gold} 金币";
+            ShopButton(refreshText, 525, 380, 298, canRefresh, RefreshShelf, "ShopRefresh", !canRefresh);
+        }
+
+        private void RefreshShelf()
+        {
+            if (!run.Shop.RefreshStock()) return;
+            var button = modal.Find("ShopRefresh").GetComponent<HudButton>();
+            button.Rebound();
+        }
+
+        private void BuyOffer(int index, bool merge)
+        {
+            if (!run.Shop.Buy(index, merge)) return;
+            run.Noise.PlayPurchase();
+            balanceFlashUntil = Time.unscaledTime + .22f;
+            shopBalance.color = Color.white;
         }
 
         private void DrawInventory()

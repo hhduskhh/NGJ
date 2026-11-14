@@ -6,6 +6,7 @@ namespace Echoes
     {
         public void RefreshModal()
         {
+            ResetScreenFeedback();
             if (run.State != RunState.Paused) settingsOpen = false;
             if (modalBackdrop)
             {
@@ -94,10 +95,13 @@ namespace Echoes
                 var choice = run.Choices[i];
                 var row = Button(modal, "", new Vector2(0, -124 - i * 110), new Vector2(780, 94), () => run.ChooseUpgrade(index));
                 row.name = "UpgradeChoice" + i;
-                Label(row, $"[{i + 1}]", new Vector2(16, -30), new Vector2(48, 32), 19, Brass);
-                ArtPanel("UpgradeIcon", row, new Vector2(68, -15), new Vector2(64, 64), PresentationArt.Current.Upgrade(choice.Title), icon: true);
-                Label(row, choice.Title, new Vector2(154, -29), new Vector2(208, 45), 26, choice.IncreasesNoise ? PixelArt.Gold : Paper);
-                var detail = Label(row, choice.Description, new Vector2(374, -6), new Vector2(388, 82), 19, Paper);
+                var button = row.GetComponent<HudButton>();
+                upgradeButtons[i] = button;
+                var face = button.Face;
+                Label(face, $"[{i + 1}]", new Vector2(16, -30), new Vector2(48, 32), 19, Brass);
+                ArtPanel("UpgradeIcon", face, new Vector2(68, -15), new Vector2(64, 64), PresentationArt.Current.Upgrade(choice.Title), icon: true);
+                Label(face, choice.Title, new Vector2(154, -29), new Vector2(208, 45), 26, choice.IncreasesNoise ? PixelArt.Gold : Paper);
+                var detail = Label(face, choice.Description, new Vector2(374, -6), new Vector2(388, 82), 19, Paper);
                 detail.alignment = TMPro.TextAlignmentOptions.MidlineLeft;
             }
         }
@@ -114,9 +118,9 @@ namespace Echoes
             Label(modal, outcome, new Vector2(40, -310), new Vector2(780, 58), 21, muted);
             Button(modal, descend ? "下潜  [E]" : "重新开始", new Vector2(-284, -385), new Vector2(212, 58), () =>
             {
-                if (descend) run.AdvanceFloor();
-                else run.Restart();
+                ConfirmResult();
             });
+            if (descend || run.State == RunState.Won) BeginResultReveal();
         }
     }
 }

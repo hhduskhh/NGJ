@@ -94,7 +94,11 @@ namespace Echoes
                 Muted = !Muted;
                 AudioListener.volume = Muted ? 0 : 1;
             }
-            if (State == RunState.FloorCleared && Input.GetKeyDown(KeyCode.E)) { AdvanceFloor(); return; }
+            if (State == RunState.FloorCleared || State == RunState.Won)
+            {
+                Hud.ReadResultInput();
+                return;
+            }
             if (State == RunState.Shop && Input.GetKeyDown(KeyCode.Escape)) { Shop.Close(); return; }
             if (Input.GetKeyDown(KeyCode.Escape) &&
                 (State == RunState.Playing || State == RunState.Paused))

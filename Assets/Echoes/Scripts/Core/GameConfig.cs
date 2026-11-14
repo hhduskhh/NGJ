@@ -5,6 +5,11 @@ namespace Echoes
     [CreateAssetMenu(menuName = "Echoes/Game Config")]
     public sealed class GameConfig : ScriptableObject
     {
+        [Header("Interface feedback")]
+        [Min(0)] public float buttonPressDepth = 2f;
+        [Min(.01f)] public float healthTrailSeconds = .4f;
+        [Min(.01f)] public float floorRevealSeconds = .6f;
+        [Min(.01f)] public float victoryRevealSeconds = 1.2f;
         [Header("Player")]
         [Min(1)] public float playerHealth = 100;
         [Min(.1f)] public float moveSpeed = 4.5f;

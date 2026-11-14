@@ -45,6 +45,11 @@ namespace Echoes
                 GameArt.Get("player"), icon: true);
             healthText = Label(vitals, "", new Vector2(70, -5), new Vector2(180, 28), 21, Paper);
             healthBar = Bar(vitals, new Vector2(70, -34), new Vector2(174, 8), new Color32(198, 81, 64, 255));
+            damageTrail = Instantiate(healthBar, healthBar.transform.parent);
+            damageTrail.name = "DamageTrail";
+            damageTrail.color = Paper;
+            damageTrail.transform.SetAsFirstSibling();
+            lastHealth = run.Player.Health;
             xpText = Label(vitals, "", new Vector2(70, -44), new Vector2(180, 24), 15, Paper);
             xpBar = Bar(vitals, new Vector2(70, -68), new Vector2(174, 3), Brass);
             pressureText = Label(canvas, "", new Vector2(28, -108), new Vector2(300, 32), 19, PixelArt.Gold);
@@ -56,7 +61,7 @@ namespace Echoes
             clockText = Label(mapPanel, "", new Vector2(12, -159), new Vector2(158, 18), 14, muted);
 
             var belt = Panel("Decoy", canvas, new Vector2(24, 24), new Vector2(156, 52), iron, Vector2.zero);
-            ArtPanel("Bell", belt, new Vector2(2, -2), new Vector2(48, 48), GameArt.Get("bell"), icon: true);
+            bellIcon = ArtPanel("Bell", belt, new Vector2(2, -2), new Vector2(48, 48), GameArt.Get("bell"), icon: true);
             Label(belt, "Q   诱饵", new Vector2(56, -4), new Vector2(96, 24), 18, Paper);
             statusText = Label(belt, "", new Vector2(56, -28), new Vector2(96, 21), 15, Brass);
             var purse = Panel("Purse", canvas, new Vector2(-24, 24), new Vector2(116, 40), iron, Vector2.right);
@@ -84,6 +89,7 @@ namespace Echoes
             goldText.text = run.Shop.GoldText;
             float cooldown = run.Player.DecoyCooldownRemaining;
             statusText.text = cooldown <= 0 ? "就绪" : $"{cooldown:0.0} 秒";
+            UpdateHudFeedback(cooldown);
             if (Time.unscaledTime >= noticeUntil) noticeText.text = "";
             for (int i = 0; i < roomIcons.Length; i++)
             {
@@ -95,21 +101,16 @@ namespace Echoes
                     room.Index == run.Map.CurrentRoom ? new Color(.16f, .52f, .53f) :
                     room.Visited ? new Color(.27f, .34f, .43f) : new Color(.12f, .17f, .25f);
             }
-            if (run.BossActivated)
+            if (run.BossActivated && run.Boss.Alive)
             {
                 bossBar.transform.parent.gameObject.SetActive(true);
                 bossBar.fillAmount = run.Boss.Health / run.Boss.MaxHealth;
                 bossText.text = $"守关者   {Mathf.CeilToInt(run.Boss.Health)}";
             }
-            else if (Vector2.Distance(run.Player.transform.position, run.Map.AltarPosition) < 3)
+            else if (run.State == RunState.Playing && Vector2.Distance(run.Player.transform.position, run.Map.AltarPosition) < 3)
                 Notify("[E] 唤醒守关者", .2f);
             if (run.State == RunState.Playing && run.Shop.InRange) Notify("[E] 打开补给商店", .2f);
-            if (run.State == RunState.Upgrade)
-            {
-                if (Input.GetKeyDown(KeyCode.Alpha1)) run.ChooseUpgrade(0);
-                else if (Input.GetKeyDown(KeyCode.Alpha2)) run.ChooseUpgrade(1);
-                else if (Input.GetKeyDown(KeyCode.Alpha3)) run.ChooseUpgrade(2);
-            }
+            if (run.State == RunState.Upgrade) ReadUpgradeKeys();
         }
 
         public void RebuildMinimap()
@@ -182,16 +183,17 @@ namespace Echoes
 
         private RectTransform Button(Transform parent, string text, Vector2 position, Vector2 size, UnityEngine.Events.UnityAction action)
         {
-            var rect = Panel("Button", parent, position, size, new Color32(58, 61, 56, 255), new Vector2(.5f, 1));
+            var rect = Panel("Button", parent, position, size, Color.clear, new Vector2(.5f, 1));
             rect.GetComponent<UnityEngine.UI.Image>().raycastTarget = true;
-            var button = rect.gameObject.AddComponent<UnityEngine.UI.Button>();
-            button.targetGraphic = rect.GetComponent<UnityEngine.UI.Image>();
+            var face = Panel("Face", rect, Vector2.zero, size, new Color32(58, 61, 56, 255), new Vector2(.5f, .5f));
+            var button = rect.gameObject.AddComponent<HudButton>();
+            button.Initialize(face, run.Noise, run.Config.buttonPressDepth);
             var colors = button.colors; colors.highlightedColor = new Color(1.45f, 1.34f, 1.12f);
             colors.pressedColor = Brass; button.colors = colors;
             button.onClick.AddListener(action);
             if (text.Length > 0)
             {
-                var label = Label(rect, text, Vector2.zero, size, 20, Paper, new Vector2(.5f, .5f));
+                var label = Label(face, text, Vector2.zero, size, 20, Paper, new Vector2(.5f, .5f));
                 label.alignment = TextAlignmentOptions.Center;
             }
             return rect;
