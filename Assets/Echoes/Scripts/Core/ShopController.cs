@@ -67,7 +67,7 @@ namespace Echoes
             var offer = offers[index];
             if (Blocked(offer, merge) != null) return false;
             bool applied = offer.Item != null ? run.Player.Passives.Add(offer.Item) : merge ?
-                run.Player.Weapons.Merge(run.Player.Weapons.Match(offer.Weapon, offer.Tier)) : run.Player.Weapons.Add(offer.Weapon, offer.Tier);
+                run.Player.Weapons.MergePurchase(offer.Weapon, offer.Tier) : run.Player.Weapons.Add(offer.Weapon, offer.Tier);
             if (!applied) return false;
             if (!run.FeelDebugMode) Gold -= Price(offer);
             offer.Sold = true;
@@ -88,10 +88,7 @@ namespace Echoes
         }
         public bool MergeOwned(int slot)
         {
-            if (run.State != RunState.Shop || slot < 0 || slot >= run.Player.Weapons.Slots.Count) return false;
-            var weapon = run.Player.Weapons.Slots[slot];
-            int other = run.Player.Weapons.Match(weapon.Kind, weapon.Tier, slot);
-            if (other < 0 || !run.Player.Weapons.Merge(slot, other)) return false;
+            if (run.State != RunState.Shop || !run.Player.Weapons.MergeOwned(slot)) return false;
             run.Hud.RefreshModal(); return true;
         }
         private void Roll()

@@ -28,20 +28,33 @@ namespace Echoes
             UpdateVisuals(run.Player.AimPoint);
             return true;
         }
-        public bool Merge(int index, int other = -1)
+        public bool MergeOwned(int index)
         {
-            if (index < 0 || index >= slots.Count || slots[index].Tier >= 3) return false;
+            if (index < 0 || index >= slots.Count) return false;
             var slot = slots[index];
-            if (other >= 0 && (other >= slots.Count || other == index || slots[other].Kind != slot.Kind || slots[other].Tier != slot.Tier)) return false;
-            float fraction = slot.Cooldown / Interval(slot);
-            if (other >= 0) fraction = Mathf.Max(fraction, slots[other].Cooldown / Interval(slots[other]));
+            int other = Match(slot.Kind, slot.Tier, index);
+            if (slot.Tier >= 3 || other < 0) return false;
+            float cooldown = Mathf.Max(slot.Cooldown, slots[other].Cooldown);
+            Upgrade(slot, cooldown);
+            Remove(other);
+            return true;
+        }
+        public bool MergePurchase(int kind, int tier)
+        {
+            int index = Match(kind, tier);
+            if (tier >= 3 || index < 0) return false;
+            var slot = slots[index];
+            Upgrade(slot, slot.Cooldown);
+            return true;
+        }
+        private void Upgrade(Slot slot, float cooldown)
+        {
+            float fraction = cooldown / Interval(slot);
             slot.Tier++;
             string art = "weapon_" + (slot.Kind * 4 + slot.Tier);
             slot.Visual.GetComponent<ArtBinding>().Kind = art;
             slot.Visual.GetComponent<SpriteRenderer>().sprite = PixelArt.Get(art);
             slot.Cooldown = Mathf.Max(0, fraction) * Interval(slot);
-            if (other >= 0) Remove(other);
-            return true;
         }
         public void Remove(int index)
         {

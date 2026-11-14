@@ -76,7 +76,7 @@ namespace Echoes
                 {
                     string mergeBlocked = run.Shop.Blocked(offer, true);
                     bool shortOnGold = mergeBlocked != null && mergeBlocked.StartsWith("还差");
-                    ShopButton(shortOnGold ? mergeBlocked : $"购买并升至 {ShopController.TierName(offer.Tier + 1)} · {run.Shop.Price(offer)}", x, 312, 298,
+                    ShopButton(mergeBlocked ?? $"买入合成 {ShopController.TierName(offer.Tier + 1)} · {run.Shop.Price(offer)}", x, 312, 298,
                         mergeBlocked == null, () => BuyOffer(index, true), "MergeOffer" + i, shortOnGold);
                 }
             }
@@ -122,7 +122,7 @@ namespace Echoes
                     () => run.Shop.Sell(index), "SellWeapon" + i);
                 bool canMerge = slot.Tier < 3 && run.Player.Weapons.Match(slot.Kind, slot.Tier, index) >= 0;
                 if (canMerge)
-                    ShopButton("两把合成 → 升一级", x, 630, 215, true, () => run.Shop.MergeOwned(index), "MergeWeapon" + i);
+                    ShopButton($"两把合成 → {ShopController.TierName(slot.Tier + 1)}", x, 630, 215, true, () => run.Shop.MergeOwned(index), "MergeWeapon" + i);
             }
             var player = run.Player;
             ShopLabel($"公共伤害 +{(player.TotalDamageScale - 1) * 100:0}%   攻速 +{(player.AttackSpeed - 1) * 100:0}%   移速 {Mathf.Clamp(player.MoveScale + player.Passives.MoveSpeed,.6f,1.6f)*100:0}%   生命 {player.Health:0}/{player.MaxHealth:0}\n" +
