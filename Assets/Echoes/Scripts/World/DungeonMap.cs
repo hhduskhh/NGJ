@@ -66,7 +66,7 @@ namespace Echoes
             Vector2 delta = to - from;
             float targetDistance = delta.magnitude;
             float blockerDistance = float.PositiveInfinity;
-            Physics2D.CircleCast(from, Projectile.Radius, delta.normalized,
+            Physics2D.CircleCast(from, Projectile.DefaultRadius, delta.normalized,
                 new ContactFilter2D().NoFilter(), aimHits, targetDistance);
             foreach (var hit in aimHits)
             {

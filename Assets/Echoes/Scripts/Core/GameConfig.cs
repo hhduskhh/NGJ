@@ -22,7 +22,7 @@ namespace Echoes
         [Min(.1f)] public float moveSpeed = 9f;
         [Min(1)] public float bulletDamage = 10;
         [Min(.05f)] public float shotInterval = .28f;
-        [Min(1)] public float bulletSpeed = 22;
+        [Min(1)] public float bulletSpeed = 33;
         [Min(.01f)] public float bulletTrailSeconds = .35f;
         [Min(.1f)] public float bulletTrailRadius = 1.15f;
         [Header("Visibility")]
@@ -85,7 +85,7 @@ namespace Echoes
         [Min(.1f)] public float guardRange = 9;
         [Min(.1f)] public float guardWindup = .75f;
         [Min(.1f)] public float guardShotInterval = 2.2f;
-        [Min(.1f)] public float guardBulletSpeed = 5.5f;
+        [Min(.1f)] public float guardBulletSpeed = 8.25f;
         [Min(1)] public float enemyDamage = 9;
         [Min(.1f)] public float enemyAttackInterval = 1;
         [Min(.1f)] public float playerInvulnerability = .65f;
@@ -117,7 +117,7 @@ namespace Echoes
         [Min(.1f)] public float bossDashDuration = .32f;
         [Min(.1f)] public float bossDashSpeed = 11f;
         [Min(1)] public float finalBossAttackRate = 2f;
-        [Min(1)] public float bossBulletSpeed = 4;
+        [Min(1)] public float bossBulletSpeed = 6;
         [Min(1)] public float bossBulletScale = 1.35f;
         [Range(4, 24)] public int bossBulletCount = 18;
         [Min(.1f)] public float bossSummonInterval = 8f;

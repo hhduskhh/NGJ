@@ -16,7 +16,7 @@ MonoBehaviour:
   moveSpeed: 9
   bulletDamage: 10
   shotInterval: 0.28
-  bulletSpeed: 22
+  bulletSpeed: 33
   playerVisionRadius: 3
   gradientVisionRange: 3
   walkFirstPulseDelay: 0.2
@@ -63,7 +63,7 @@ MonoBehaviour:
   guardRange: 9
   guardWindup: 0.75
   guardShotInterval: 2.2
-  guardBulletSpeed: 5.5
+  guardBulletSpeed: 8.25
   enemyDamage: 9
   enemyAttackInterval: 1
   playerInvulnerability: 0.65
@@ -86,7 +86,7 @@ MonoBehaviour:
   bossDashDuration: 0.32
   bossDashSpeed: 11
   finalBossAttackRate: 2
-  bossBulletSpeed: 4
+  bossBulletSpeed: 6
   bossBulletScale: 1.35
   bossBulletCount: 18
   bossSummonInterval: 8

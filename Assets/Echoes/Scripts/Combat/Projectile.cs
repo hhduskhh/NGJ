@@ -5,7 +5,9 @@ namespace Echoes
 {
     public sealed class Projectile : MonoBehaviour
     {
-        public const float Radius = .085f;
+        private const float BaseRadius = .085f;
+        private const float DefaultSizeScale = 1.2f;
+        public const float DefaultRadius = BaseRadius * DefaultSizeScale;
         private float hitRadius;
         private RunController run;
         private Vector2 direction;
@@ -20,7 +22,7 @@ namespace Echoes
 
         public static void Create(RunController run, Vector2 position, Vector2 direction,
             float speed, float damage, bool hostile, int pierces = 0, HashSet<EnemyController> impactTargets = null,
-            float sizeScale = 1f)
+            float sizeScale = DefaultSizeScale)
         {
             var renderer = PixelArt.Create(hostile ? "HostileProjectile" : "PlayerProjectile",
                 hostile ? "hostileBullet" : "bullet", position, 30, scale: sizeScale);
@@ -28,7 +30,7 @@ namespace Echoes
             projectile.run = run; projectile.direction = direction.normalized;
             projectile.speed = speed; projectile.damage = damage; projectile.hostile = hostile;
             projectile.pierces = pierces;
-            projectile.hitRadius = Radius * sizeScale;
+            projectile.hitRadius = BaseRadius * sizeScale;
             projectile.impactTargets = impactTargets;
             projectile.trail = run.Visibility.BeginTrail(position, projectile.direction, speed);
             if (hostile)
