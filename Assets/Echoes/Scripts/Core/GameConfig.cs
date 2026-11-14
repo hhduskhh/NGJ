@@ -10,6 +10,13 @@ namespace Echoes
         [Min(.01f)] public float healthTrailSeconds = .4f;
         [Min(.01f)] public float floorRevealSeconds = .6f;
         [Min(.01f)] public float victoryRevealSeconds = 1.2f;
+        [Header("Minimap")]
+        [Min(80)] public float minimapSize = 200;
+        [Min(4)] public float minimapMarkerSize = 8;
+        [Range(1, 3)] public int minimapOutlineTiles = 1;
+        public Color minimapRoomOutline = new Color32(99, 226, 221, 255);
+        public Color minimapFrontierDoor = new Color32(255, 204, 84, 255);
+        public Color minimapExploredDoor = new Color32(194, 202, 205, 255);
         [Header("Player")]
         [Min(1)] public float playerHealth = 100;
         [Min(.1f)] public float moveSpeed = 6f;

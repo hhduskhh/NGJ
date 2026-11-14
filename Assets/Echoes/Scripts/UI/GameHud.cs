@@ -58,11 +58,12 @@ namespace Echoes
             xpBar = Bar(vitals, new Vector2(70, -68), new Vector2(174, 3), Brass);
             pressureText = Label(canvas, "", new Vector2(28, -108), new Vector2(300, 32), 19, PixelArt.Gold);
 
-            mapPanel = Panel("MiniMap", canvas, new Vector2(-24, -24), new Vector2(180, 179), iron, Vector2.one);
-            mapTitle = Label(mapPanel, "", new Vector2(12, -6), new Vector2(158, 25), 16, Paper);
+            float size = run.Config.minimapSize;
+            mapPanel = Panel("MiniMap", canvas, new Vector2(-24, -24), new Vector2(size + 24, size + 72), iron, Vector2.one);
+            mapTitle = Label(mapPanel, "", new Vector2(12, -4), new Vector2(size, 24), 16, Paper);
             RebuildMinimap();
-            roomText = Label(mapPanel, "", new Vector2(12, -140), new Vector2(158, 20), 15, Paper);
-            clockText = Label(mapPanel, "", new Vector2(12, -159), new Vector2(158, 18), 14, muted);
+            roomText = Label(mapPanel, "", new Vector2(12, -size - 31), new Vector2(size, 20), 15, Paper);
+            clockText = Label(mapPanel, "", new Vector2(12, -size - 51), new Vector2(size, 18), 14, muted);
 
             var belt = Panel("Decoy", canvas, new Vector2(24, 24), new Vector2(156, 52), iron, Vector2.zero);
             bellIcon = ArtPanel("Bell", belt, new Vector2(2, -2), new Vector2(48, 48), GameArt.Get("bell"), icon: true);
@@ -101,8 +102,10 @@ namespace Echoes
             UpdateHudFeedback(cooldown);
             if (Time.unscaledTime >= noticeUntil) noticeText.text = "";
             if (drawnRoom != run.Map.CurrentRoom) DrawMinimap();
-            var cell = run.Map.CurrentCell;
-            playerMarker.anchoredPosition = new Vector2((cell.x + .5f) * 20 - 2, -(cell.y + .5f) * 20 + 2);
+            Vector2 position = run.Player.transform.position;
+            Vector2 size = mapImage.rectTransform.rect.size;
+            playerMarker.anchoredPosition = new Vector2((position.x + .5f) * size.x / DungeonMap.Width,
+                (position.y + .5f) * size.y / DungeonMap.Height);
             if (run.BossActivated && run.Boss.Alive)
             {
                 bossBar.transform.parent.gameObject.SetActive(true);
@@ -126,13 +129,18 @@ namespace Echoes
                 var rect = mapImage.rectTransform;
                 rect.SetParent(mapPanel, false);
                 rect.anchorMin = rect.anchorMax = rect.pivot = Vector2.up;
-                rect.sizeDelta = new Vector2(100, 100);
-                rect.anchoredPosition = new Vector2(40, -35);
+                rect.sizeDelta = Vector2.one * run.Config.minimapSize;
+                rect.anchoredPosition = new Vector2(12, -28);
                 mapImage.raycastTarget = false;
                 mapTexture = new Texture2D(DungeonMap.Width, DungeonMap.Height, TextureFormat.RGBA32, false)
                     { filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp };
                 mapImage.texture = mapTexture;
-                playerMarker = Panel("CurrentCell", rect, Vector2.zero, new Vector2(4, 4), Color.white);
+                // A square rotated 45 degrees has a diagonal sqrt(2) times its side.
+                float side = run.Config.minimapMarkerSize / Mathf.Sqrt(2);
+                playerMarker = Panel("PlayerMarker", rect, Vector2.zero, Vector2.one * side, Iron, Vector2.zero);
+                playerMarker.pivot = Vector2.one * .5f;
+                playerMarker.localRotation = Quaternion.Euler(0, 0, 45);
+                Panel("Center", playerMarker, Vector2.zero, Vector2.one * (side - 2), Color.white, Vector2.one * .5f);
             }
             DrawMinimap();
             if (bossBar) bossBar.transform.parent.gameObject.SetActive(false);
@@ -149,27 +157,58 @@ namespace Echoes
             {
                 if (!room.Visited) continue;
                 Color32 color = room.Role == RoomRole.Boss ? PixelArt.Red : room.Role == RoomRole.Start ? PixelArt.Gold :
-                    room.Index == drawnRoom ? new Color(.16f, .52f, .53f) : new Color(.35f, .43f, .50f);
+                    new Color(.35f, .43f, .50f);
                 foreach (var cell in room.Cells)
                 {
                     int left = cell.x * DungeonMap.CellWidth, bottom = DungeonMap.CellOriginY(cell.y);
                     for (int y = bottom; y < bottom + DungeonMap.CellHeight; y++)
                         for (int x = left; x < left + DungeonMap.CellWidth; x++)
-                            if (map.IsFloorTile(new Vector2Int(x, y))) pixels[y * DungeonMap.Width + x] = color;
+                        {
+                            var tile = new Vector2Int(x, y);
+                            if (!map.IsFloorTile(tile)) continue;
+                            pixels[y * DungeonMap.Width + x] = room.Index == drawnRoom && IsMinimapEdge(map, tile)
+                                ? (Color32)run.Config.minimapRoomOutline : color;
+                        }
                 }
             }
             foreach (var door in map.Doors)
             {
                 if (!door.A.Visited && !door.B.Visited) continue;
                 var opening = door.Opening;
-                // Extend the door mark into each floor so it reads at HUD scale.
-                int dx = opening.width == 2 ? 3 : 0, dy = opening.height == 2 ? 3 : 0;
-                for (int y = opening.yMin - dy; y < opening.yMax + dy; y++)
-                    for (int x = opening.xMin - dx; x < opening.xMax + dx; x++)
-                        pixels[y * DungeonMap.Width + x] = Brass;
+                bool frontier = door.A.Visited != door.B.Visited;
+                Color32 ink = frontier ? run.Config.minimapFrontierDoor : run.Config.minimapExploredDoor;
+                foreach (var tile in opening.allPositionsWithin)
+                    pixels[tile.y * DungeonMap.Width + tile.x] = ink;
+                if (!frontier) continue;
+
+                // Probe across this doorway; an L-shaped room's centre can lie off-axis.
+                var normal = opening.width == 2 ? Vector2Int.right : Vector2Int.up;
+                var center = Vector2Int.FloorToInt(door.Center);
+                if (map.RoomAtPosition(center + normal * 2).Visited) normal = -normal;
+                var tangent = new Vector2Int(-normal.y, normal.x);
+                for (int row = 0; row < 4; row++)
+                {
+                    int halfWidth = 3 - row;
+                    for (int offset = -halfWidth; offset <= halfWidth; offset++)
+                    {
+                        var tile = center + normal * (3 + row) + tangent * offset;
+                        pixels[tile.y * DungeonMap.Width + tile.x] = ink;
+                    }
+                }
             }
             mapTexture.SetPixels32(pixels);
             mapTexture.Apply(false);
+        }
+
+        private bool IsMinimapEdge(DungeonMap map, Vector2Int tile)
+        {
+            for (int distance = 1; distance <= run.Config.minimapOutlineTiles; distance++)
+            {
+                if (!map.IsFloorTile(tile + Vector2Int.left * distance) || !map.IsFloorTile(tile + Vector2Int.right * distance) ||
+                    !map.IsFloorTile(tile + Vector2Int.up * distance) || !map.IsFloorTile(tile + Vector2Int.down * distance))
+                    return true;
+            }
+            return false;
         }
 
         private void OnDestroy()

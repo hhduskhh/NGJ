@@ -90,6 +90,45 @@ namespace Echoes.Tests
         }
 
         [UnityTest]
+        public IEnumerator MinimapTracksMovementAndDistinguishesFrontierDoors()
+        {
+            yield return Load();
+            var run = Object.FindObjectOfType<RunController>();
+            var image = GameObject.Find("GameHUD/MiniMap/RoomMap").GetComponent<UnityEngine.UI.RawImage>();
+            var marker = (RectTransform)image.transform.Find("PlayerMarker");
+            var texture = (Texture2D)image.texture;
+            var start = run.Map.Rooms[0];
+            var door = run.Map.Doors.Find(d => d.A == start || d.B == start);
+            var center = Vector2Int.FloorToInt(door.Center);
+            var direction = door.Opening.width == 2 ? Vector2Int.right : Vector2Int.up;
+            if (run.Map.RoomAtPosition(center + direction * 2) == start) direction = -direction;
+            var tip = center + direction * 6;
+            Assert.AreEqual((Color32)run.Config.minimapFrontierDoor, (Color32)texture.GetPixel(tip.x, tip.y));
+
+            Vector2 near = center - direction * 3;
+            run.Player.PlaceAt(near);
+            yield return null;
+            yield return null;
+            Vector2 before = marker.anchoredPosition;
+            run.Player.PlaceAt(near + (Vector2)direction * .5f);
+            yield return null;
+            yield return null;
+            float scale = image.rectTransform.rect.width / DungeonMap.Width;
+            Assert.Less(Vector2.Distance(marker.anchoredPosition - before, (Vector2)direction * (.5f * scale)), .02f);
+            Assert.Less(Vector2.Distance(marker.anchoredPosition, ((Vector2)run.Player.transform.position + Vector2.one * .5f) * scale), .02f);
+
+            run.Player.PlaceAt(center + direction * 3);
+            yield return null;
+            yield return null;
+            Assert.AreEqual((Color32)run.Config.minimapExploredDoor, (Color32)texture.GetPixel(center.x, center.y));
+            Assert.AreNotEqual((Color32)run.Config.minimapFrontierDoor, (Color32)texture.GetPixel(tip.x, tip.y));
+            run.Player.PlaceAt(near);
+            yield return null;
+            yield return null;
+            Assert.AreEqual((Color32)run.Config.minimapExploredDoor, (Color32)texture.GetPixel(center.x, center.y));
+        }
+
+        [UnityTest]
         public IEnumerator ManySeedsProduceConnectedWalkableFloors()
         {
             yield return Load();
