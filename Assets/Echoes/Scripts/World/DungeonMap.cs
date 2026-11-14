@@ -387,7 +387,7 @@ namespace Echoes
             float target = Floor == 1 ? .06f : .095f;
             const int minSolids = 6;
             int tiles = 0;
-            foreach (var spec in accepted) tiles += spec.Width * spec.Height;
+            foreach (var spec in accepted) tiles += SolidTiles(spec);
             if (tiles / (float)area >= target && accepted.Count >= minSolids) return;
             var kinds = theme == 0
                 ? new[] { "room_rubble", "room_crate" }
@@ -411,11 +411,18 @@ namespace Echoes
                             if (spec == null) continue;
                             accepted.Add(spec);
                             obstacleSpecs.Add(spec);
-                            tiles += spec.Width * spec.Height;
+                            tiles += SolidTiles(spec);
                             break;
                         }
                 }
             }
+        }
+
+        private static int SolidTiles(RoomPropSpec spec)
+        {
+            var bounds = spec.NavigationBounds;
+            if (bounds.width > 0 && bounds.height > 0) return bounds.width * bounds.height;
+            return Mathf.Max(1, spec.Width) * Mathf.Max(1, spec.Height);
         }
 
         private RoomPropSpec TryFillerProp(Room room, string[] kinds, int x, int y)
