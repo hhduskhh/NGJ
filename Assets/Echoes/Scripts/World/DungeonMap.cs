@@ -63,6 +63,16 @@ namespace Echoes
         public int MapWidth { get { return Width; } }
         public int MapHeight { get { return Height; } }
 
+        public Vector2 ShopCounterPosition
+        {
+            get
+            {
+                var stall = obstacleSpecs.Find(spec => spec.Kind == StartStall.Kind);
+                if (stall == null) throw new System.InvalidOperationException("Start room stall was not placed.");
+                return StartStall.CounterPosition(stall);
+            }
+        }
+
         public Vector2 BossPosition
         {
             get
@@ -413,6 +423,7 @@ namespace Echoes
                         }
                 }
             RenderDoorposts();
+            if (Floor == 1) RenderFirstFloorDoorDetails();
             RenderObstacles();
             RenderDecorations();
             PixelArt.Create("ChallengeAltar", "altar", AltarPosition, -120, generatedRoot);
@@ -485,17 +496,39 @@ namespace Echoes
             PixelArt.Create("Dressing_doorpost", "doorpost", position,
                 GameArt.FootOrder(position.y) + 1, generatedRoot);
 
+        private void RenderFirstFloorDoorDetails()
+        {
+            foreach (var door in Doors)
+            {
+                bool vertical = door.Opening.height > door.Opening.width;
+                var threshold = PixelArt.Create("DoorThreshold", "room_threshold", door.Center,
+                    -899, generatedRoot);
+                // These two assets are flat plan-view masonry/metal strips;
+                // only these ground/top-cap sprites may rotate in the plane.
+                threshold.transform.rotation = Quaternion.Euler(0, 0, vertical ? 90 : 0);
+                var cap = PixelArt.Create("DoorLintel", "room_lintel", door.Center,
+                    GameArt.FootOrder(door.Center.y) + 2, generatedRoot);
+                cap.transform.rotation = threshold.transform.rotation;
+            }
+        }
+
         private void RenderObstacles()
         {
             foreach (var spec in obstacleSpecs)
             {
                 float scale = spec.Scale > .01f ? spec.Scale : 1f;
                 var position = new Vector2(spec.X + (spec.Width - 1) * .5f, spec.Y);
+                // The kiosk uses a true bottom-centre pivot, at the footprint's front edge.
+                float frontOffset = spec.Kind == StartStall.Kind ? .5f : 0;
+                position.y -= frontOffset;
                 var renderer = PixelArt.Create("Obstacle_" + spec.Kind, spec.Kind, position,
                     GameArt.FootOrder(position.y) + 1, generatedRoot, scale);
                 var collider = renderer.gameObject.AddComponent<BoxCollider2D>();
-                collider.size = new Vector2(spec.Width, spec.Height);
-                collider.offset = new Vector2(0, (spec.Height - 1) * .5f);
+                // Footprints are world-grid units; the sprite's P0 scale must
+                // not scale physics a second time (including its foot offset).
+                collider.size = new Vector2(spec.Width, spec.Height) / scale;
+                collider.offset = new Vector2(0, (spec.Height - 1) * .5f) / scale;
+                collider.offset += Vector2.up * frontOffset / scale;
             }
         }
 

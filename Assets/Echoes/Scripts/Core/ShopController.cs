@@ -33,16 +33,9 @@ namespace Echoes
         public void BeginFloor(Vector2 spawn)
         {
             foreach (Transform child in transform) Destroy(child.gameObject);
-            Position = run.Map.NearestFloor(spawn + Vector2.right * 2.5f);
-            if (Vector2.Distance(Position, spawn) > run.Config.shopInteractRadius)
-                Position = run.Map.NearestFloor(spawn + Vector2.right * 1.5f);
-            var stand = PixelArt.Create("ShopPlaceholder", "solid", Position, 5, transform);
-            stand.color = new Color(.25f, .14f, .07f);
-            stand.transform.localScale = new Vector3(1.4f, 1, 1);
-            var roof = PixelArt.Create("ShopAwning", "solid", Position + Vector2.up * .65f, 6, transform);
-            roof.color = PixelArt.Gold; roof.transform.localScale = new Vector3(1.7f, .25f, 1);
-            var sign = PixelArt.Create("ShopSign", "solid", Position + Vector2.up * .2f, 7, transform);
-            sign.color = PixelArt.Gold; sign.transform.localScale = Vector3.one * .3f;
+            // DungeonMap owns the single formal sprite and its 5x3 solid footprint.
+            // Interact with a reachable floor tile in front, never a blocked counter tile.
+            Position = run.Map.ShopCounterPosition;
             Refreshes = 0;
             Roll();
         }

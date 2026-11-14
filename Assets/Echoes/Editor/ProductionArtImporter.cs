@@ -15,6 +15,46 @@ namespace Echoes.Editor
 
         private static void Configure(TextureImporter importer)
         {
+            if (importer.assetPath == "Assets/Echoes/Resources/Art/" + StartStall.ArtPath + ".png")
+            {
+                importer.textureType = TextureImporterType.Sprite;
+                importer.spriteImportMode = SpriteImportMode.Single;
+                importer.spritePixelsPerUnit = 16;
+                importer.filterMode = FilterMode.Point;
+                importer.mipmapEnabled = false;
+                importer.wrapMode = TextureWrapMode.Clamp;
+                importer.alphaIsTransparency = true;
+                importer.npotScale = TextureImporterNPOTScale.None;
+                importer.textureCompression = TextureImporterCompression.Uncompressed;
+                var stallSettings = new TextureImporterSettings();
+                importer.ReadTextureSettings(stallSettings);
+                stallSettings.spriteAlignment = (int)SpriteAlignment.Custom;
+                stallSettings.spritePivot = new Vector2(.5f, 0);
+                importer.SetTextureSettings(stallSettings);
+                return;
+            }
+            if (importer.assetPath.StartsWith("Assets/Echoes/Resources/Art/Room/"))
+            {
+                importer.textureType = TextureImporterType.Sprite;
+                importer.spriteImportMode = SpriteImportMode.Single;
+                importer.spritePixelsPerUnit = 16;
+                importer.filterMode = FilterMode.Point;
+                importer.mipmapEnabled = false;
+                importer.wrapMode = TextureWrapMode.Clamp;
+                importer.alphaIsTransparency = true;
+                importer.npotScale = TextureImporterNPOTScale.None;
+                importer.textureCompression = TextureImporterCompression.Uncompressed;
+                string resourcePath = importer.assetPath.Substring("Assets/Echoes/Resources/".Length);
+                resourcePath = resourcePath.Substring(0, resourcePath.Length - 4);
+                var entry = System.Array.Find(RoomArt.Entries, e => e.Path == resourcePath);
+                if (entry == null) throw new System.InvalidOperationException("Room sprite has no definition: " + resourcePath);
+                var settings = new TextureImporterSettings();
+                importer.ReadTextureSettings(settings);
+                settings.spriteAlignment = (int)SpriteAlignment.Custom;
+                settings.spritePivot = entry.Ground ? new Vector2(.5f, .5f) : new Vector2(.5f, .125f);
+                importer.SetTextureSettings(settings);
+                return;
+            }
             string name = Path.GetFileNameWithoutExtension(importer.assetPath);
             int size = name == "hero" || name == "props" || name == "walker" || name == "guard" || name == "elite" ? 32 :
                 name == "boss" ? 64 : 16;
