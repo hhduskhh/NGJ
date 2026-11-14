@@ -140,12 +140,15 @@ Shader "Echoes/DungeonDarkness"
                     float aspect = abs(UNITY_MATRIX_P._m11 / UNITY_MATRIX_P._m00);
                     float corner = length(float2(aspect, 1));
                     float distanceFromCenter = length(offset * float2(aspect, 1));
-                    float front = lerp(0, corner + .18, _ScreenLightWave);
+                    float front = corner * _ScreenLightWave;
                     float behind = front - distanceFromCenter;
-                    float rim = 1 - smoothstep(.006, .024, abs(behind));
-                    float glow = smoothstep(-.024, 0, behind) * (1 - smoothstep(0, .18, behind));
-                    return half4(lerp(half3(.25, .85, .8), half3(.88, 1, .97), rim),
-                        max(.85 * rim, .32 * glow));
+                    if (behind >= 0)
+                    {
+                        float rim = 1 - smoothstep(.006, .024, behind);
+                        float glow = 1 - smoothstep(0, .18, behind);
+                        return half4(lerp(half3(.25, .85, .8), half3(.88, 1, .97), rim),
+                            max(.85 * rim, .32 * glow));
+                    }
                 }
                 float4 footprint = 0;
                 float2 mapUV = (input.world + .5) * _MapSize.zw;

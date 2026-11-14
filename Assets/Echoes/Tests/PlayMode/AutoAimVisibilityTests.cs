@@ -95,8 +95,8 @@ namespace Echoes.Tests
             Assert.IsTrue(vision.TryLightScreen());
             Assert.IsTrue(voice.isPlaying);
             Assert.AreEqual(15f, vision.ScreenLightCooldownRemaining, .01f);
-            Assert.AreEqual(1f, vision.VisibilityAt(destination));
-            Assert.AreSame(target, run.Player.FindVisibleTarget());
+            Assert.IsFalse(vision.IsVisible(destination));
+            Assert.AreNotSame(target, run.Player.FindVisibleTarget());
             Assert.IsFalse(vision.IsVisible(origin + Vector2.up * 1000));
             yield return null;
             Assert.IsTrue(cover.activeSelf);
@@ -104,6 +104,8 @@ namespace Echoes.Tests
             yield return new WaitForSeconds(run.Config.screenLightWaveDuration * .25f);
             float wave = material.GetFloat("_ScreenLightWave");
             Assert.That(wave, Is.InRange(.15f, .5f));
+            Assert.AreEqual(1f, vision.VisibilityAt(origin + Vector2.right * 3));
+            Assert.IsFalse(vision.IsVisible(destination));
             if (SystemInfo.graphicsDeviceType != UnityEngine.Rendering.GraphicsDeviceType.Null)
             {
                 System.IO.Directory.CreateDirectory("TestResults");
@@ -121,6 +123,7 @@ namespace Echoes.Tests
             yield return new WaitForSeconds(4f);
             Assert.IsFalse(cover.activeSelf);
             Assert.IsTrue(vision.IsVisible(destination));
+            Assert.AreSame(target, run.Player.FindVisibleTarget());
             yield return new WaitForSeconds(1.25f);
             Assert.IsTrue(cover.activeSelf);
             Assert.IsFalse(vision.IsVisible(destination));

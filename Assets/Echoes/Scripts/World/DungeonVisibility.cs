@@ -16,6 +16,9 @@ namespace Echoes
         private float screenLightEndsAt, screenLightReadyAt;
         private float screenLightStartedAt;
         public bool ScreenLightActive => Time.time < screenLightEndsAt;
+        private float ScreenLightWaveProgress => ScreenLightActive
+            ? Mathf.Clamp01((Time.time - screenLightStartedAt) / Mathf.Max(.05f, run.Config.screenLightWaveDuration))
+            : -1;
         public float ScreenLightCooldownRemaining => Mathf.Max(0, screenLightReadyAt - Time.time);
 
         public bool TryLightScreen()
@@ -67,8 +70,20 @@ namespace Echoes
             return p.z > 0 && p.x >= 0 && p.x <= 1 && p.y >= 0 && p.y <= 1;
         }
 
-        public bool CanSeeDanger(Vector2 point) => InCamera(point) &&
-            (ScreenLightActive || run.Map.HasLineOfSight(run.Player.transform.position, point));
+        private bool ReachedByScreenLight(Vector2 point)
+        {
+            float progress = ScreenLightWaveProgress;
+            if (progress < 0) return false;
+            Vector3 p = viewCamera.WorldToViewportPoint(point);
+            if (p.z <= 0 || p.x < 0 || p.x > 1 || p.y < 0 || p.y > 1) return false;
+            // Both gameplay and the shader measure the radius as a fraction of the viewport diagonal.
+            float aspect = viewCamera.aspect;
+            var offset = new Vector2((2 * p.x - 1) * aspect, 2 * p.y - 1);
+            return offset.sqrMagnitude <= progress * progress * (aspect * aspect + 1);
+        }
+
+        public bool CanSeeDanger(Vector2 point) => ReachedByScreenLight(point) ||
+            (InCamera(point) && run.Map.HasLineOfSight(run.Player.transform.position, point));
 
         public void Initialize(RunController controller)
         {
@@ -138,7 +153,7 @@ namespace Echoes
 
         public float VisibilityAt(Vector2 position)
         {
-            if (ScreenLightActive && InCamera(position)) return 1;
+            if (ReachedByScreenLight(position)) return 1;
             float visible = CoverageFrom(position, run.Player.transform.position, 0);
             foreach (var echo in echoes)
             {
@@ -205,10 +220,7 @@ namespace Echoes
 
         public void RefreshMask()
         {
-            // During the opening sweep the cover draws the wave instead of darkness.
-            float waveProgress = ScreenLightActive
-                ? Mathf.Clamp01((Time.time - screenLightStartedAt) / Mathf.Max(.05f, run.Config.screenLightWaveDuration))
-                : -1;
+            float waveProgress = ScreenLightWaveProgress;
             darkness.SetFloat("_ScreenLightWave", waveProgress);
             cover.gameObject.SetActive(waveProgress < 1);
             RemoveExpiredEchoes();
