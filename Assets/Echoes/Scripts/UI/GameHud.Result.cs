@@ -76,12 +76,13 @@ namespace Echoes
             Label(modal, $"武器  {slots.Count}/{WeaponInventory.Capacity}", new Vector2(400, -16), new Vector2(440, 30), 19, muted);
             for (int i = 0; i < WeaponInventory.Capacity; i++)
             {
-                var tile = Panel("Weapon" + i, modal, new Vector2(400 + i * 89, -54), new Vector2(82, 76), SlotColor);
-                if (i >= slots.Count) continue;
-                var weapon = slots[i];
-                ArtPanel("Icon", tile, new Vector2(9, -2), new Vector2(64, 64), art.Weapon(weapon.Kind, weapon.Tier), icon: true);
-                var color = ShopController.TierColor(weapon.Tier);
-                Panel("Tier", tile, new Vector2(6, -67), new Vector2(12 * (weapon.Tier + 1), 4), color);
+                var weapon = i < slots.Count ? slots[i] : null;
+                var frameColor = weapon == null ? SlotColor : ShopController.TierColor(weapon.Tier);
+                var tile = Panel("Weapon" + i, modal, new Vector2(400 + i * 89, -54), new Vector2(82, 76), frameColor);
+                if (weapon == null) continue;
+                const int border = 2;
+                Panel("Inset", tile, new Vector2(border, -border), tile.sizeDelta - Vector2.one * (2 * border), SlotColor);
+                ArtPanel("Icon", tile, Vector2.zero, new Vector2(64, 64), art.Weapon(weapon.Kind, weapon.Tier), new Vector2(.5f, .5f), icon: true);
                 var name = Label(modal, run.Player.Weapons.Definition(weapon).title, new Vector2(397 + i * 89, -134), new Vector2(89, 24), 12, Paper);
                 name.alignment = TMPro.TextAlignmentOptions.Top;
             }
