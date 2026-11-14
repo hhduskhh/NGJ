@@ -153,6 +153,7 @@ namespace Echoes.Tests
             Assert.AreSame(art.goldPickup, Object.FindObjectOfType<GoldPickup>().GetComponent<SpriteRenderer>().sprite);
 
             foreach (int kind in new[] { 1, 2, 0, 1, 2 }) Assert.IsTrue(run.Player.Weapons.Add(kind, 0));
+            run.Player.PlaceAt(run.Shop.Position);
             run.Shop.Credit(500);
             Assert.IsTrue(run.Shop.Open());
             yield return null;
