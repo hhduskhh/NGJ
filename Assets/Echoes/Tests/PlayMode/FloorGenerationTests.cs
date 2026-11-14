@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Linq;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -213,6 +214,40 @@ namespace Echoes.Tests
             run.ActivateBoss();
             run.Boss.TakeDamage(99999);
             Assert.AreEqual(RunState.Won, run.State, "Only the third boss ends the run");
+        }
+
+        [UnityTest]
+        public IEnumerator MiddleRoomsUsePerFloorWeightedSpawnDraws()
+        {
+            yield return Load();
+            var run = Object.FindObjectOfType<RunController>();
+            Assert.AreEqual(1, run.Floor);
+            for (int floor = 1; floor <= 3; floor++)
+            {
+                int index = floor - 1;
+                int draws = run.Config.spawnCellDraws[index];
+                int min = run.Config.spawnAmountMin[index];
+                int max = run.Config.spawnAmountMax[index];
+                var normal = run.Enemies.Where(e => !e.IsBoss).ToArray();
+                Assert.GreaterOrEqual(normal.Length, draws * min,
+                    "Every spawn draw adds at least its minimum amount on floor " + floor);
+                Assert.LessOrEqual(normal.Length, draws * max,
+                    "Spawn draws stay within the configured maximum on floor " + floor);
+                Assert.AreEqual(1, run.Enemies.Count(e => e.IsBoss), "Each floor has one boss");
+                foreach (var enemy in normal)
+                {
+                    var room = run.Map.RoomAtPosition(enemy.transform.position);
+                    Assert.IsNotNull(room, "Enemies spawn on the floor");
+                    Assert.AreEqual(RoomRole.Middle, room.Role,
+                        "Normal enemies spawn only in middle rooms");
+                    Assert.IsTrue(run.Map.IsWalkable(Vector2Int.RoundToInt(enemy.transform.position)),
+                        "Enemies spawn on walkable tiles");
+                }
+                if (floor == 3) break;
+                run.SetState(RunState.FloorCleared);
+                run.AdvanceFloor();
+                yield return null;
+            }
         }
     }
 }

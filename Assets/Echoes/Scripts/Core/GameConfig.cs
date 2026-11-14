@@ -44,9 +44,14 @@ namespace Echoes
         [Min(1)] public float altarEntranceDistance = 3;
         [Min(1)] public int generationAttempts = 100;
         [Range(0, 1)] public float extraDoorChance = .15f;
-        [Min(1)] public int enemiesPerCell = 7;
-        [Min(1)] public int minEnemiesPerRoom = 6;
-        [Min(1)] public int maxEnemiesPerRoom = 32;
+        [Tooltip("每层随机选择中间房格子的次数；索引 0/1/2 对应第 1/2/3 层。")]
+        public int[] spawnCellDraws = { 24, 32, 40 };
+        [Tooltip("每层每个格子的刷新权重；同一层内所有格子目前使用相同权重。")]
+        public int[] spawnCellWeights = { 1, 1, 1 };
+        [Tooltip("每层每次选中格子时生成的小怪数量下限。")]
+        public int[] spawnAmountMin = { 1, 2, 3 };
+        [Tooltip("每层每次选中格子时生成的小怪数量上限。")]
+        public int[] spawnAmountMax = { 3, 4, 5 };
         [Tooltip("Tile stride used to collect enemy spawn points; lower values add more points.")]
         [Min(1)] public int spawnCellStride = 2;
         [Header("Room traps")]

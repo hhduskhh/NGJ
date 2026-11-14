@@ -905,21 +905,38 @@ namespace Echoes
             return Rooms.Count > 0 ? Rooms[0].Center : Vector2.zero;
         }
 
-        public List<Vector2> SpawnCells(int roomIndex)
+        public sealed class SpawnArea
+        {
+            public Vector2Int Cell;
+            public readonly List<Vector2> Points = new List<Vector2>();
+        }
+
+        // Eligible spawn points grouped by room cell so selection can weight cells.
+        public List<SpawnArea> SpawnAreas(int roomIndex)
         {
             var room = Rooms[roomIndex];
             var noSpawn = RoomInterior.NoSpawnZones(room);
             int stride = Mathf.Max(1, run.Config.spawnCellStride);
-            var result = new List<Vector2>();
+            var result = new List<SpawnArea>();
             foreach (var cell in room.Cells)
             {
+                var area = new SpawnArea { Cell = cell };
                 int x0 = cell.x * CellWidth;
                 int y0 = WorldCellY(cell.y);
                 for (int x = x0 + 2; x < x0 + CellWidth - 1; x += stride)
                     for (int y = y0 + 2; y < y0 + CellHeight - 1; y += stride)
                         if (IsSpawnTile(room, x, y) && !InNoSpawnZone(noSpawn, x, y))
-                            result.Add(new Vector2(x, y));
+                            area.Points.Add(new Vector2(x, y));
+                if (area.Points.Count > 0) result.Add(area);
             }
+            return result;
+        }
+
+        // Flat shuffled list kept for generation tests and callers that need every point.
+        public List<Vector2> SpawnCells(int roomIndex)
+        {
+            var result = new List<Vector2>();
+            foreach (var area in SpawnAreas(roomIndex)) result.AddRange(area.Points);
             for (int i = result.Count - 1; i > 0; i--)
             {
                 int j = run.Random.Next(i + 1);
