@@ -143,7 +143,8 @@ namespace Echoes.Tests
             run.ActivateBoss();
             run.Boss.TakeDamage(99999);
             Assert.AreEqual(RunState.Won, run.State, "Third boss completes the same three-floor run");
-            yield return new WaitForSecondsRealtime(run.Config.victoryRevealSeconds + .15f);
+            yield return null;
+            run.Hud.HandleResultInput(true, false, false, false);
             yield return Capture("05-victory");
             run.SetState(RunState.Playing);
 
