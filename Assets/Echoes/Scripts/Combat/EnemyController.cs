@@ -16,6 +16,8 @@ namespace Echoes
         private float repath, lostSight, contactReady, wanderTimer, attackTimer, warningTimer;
         private LineRenderer warning;
         private CharacterArt art;
+        private SpriteRenderer muzzleWarning;
+        public bool IsGuard { get; private set; }
         public EnemyState State { get; private set; } = EnemyState.Sleeping;
         public bool IsBoss { get; private set; }
         public bool Alive => State != EnemyState.Dead;
@@ -23,7 +25,7 @@ namespace Echoes
         public float Health { get; private set; }
         public float MaxHealth { get; private set; }
         public bool IsWindingUp => warningTimer > 0;
-        public bool IsContactTelegraph => !IsBoss && State == EnemyState.Chasing &&
+        public bool IsContactTelegraph => !IsBoss && !IsGuard && State == EnemyState.Chasing &&
             Vector2.Distance(transform.position, run.Player.transform.position) > .8f &&
             Vector2.Distance(transform.position, run.Player.transform.position) < 1.4f;
         public Vector2 InvestigationTarget => destination;
@@ -46,7 +48,15 @@ namespace Echoes
             hitbox.radius = boss ? .64f : .32f;
             hitbox.offset = Vector2.zero;
             enemy.art = renderer.gameObject.AddComponent<CharacterArt>();
-            enemy.art.Initialize(boss ? "boss" : run.Enemies.Count % 2 == 0 ? "walker" : "guard");
+            enemy.IsGuard = !boss && run.Enemies.Count % 2 == 1;
+            enemy.art.Initialize(boss ? "boss" : enemy.IsGuard ? "guard" : "walker");
+            if (enemy.IsGuard)
+            {
+                enemy.muzzleWarning = PixelArt.Create("GuardMuzzleWarning", "guardMuzzle",
+                    position, DungeonVisibility.DangerOrder, enemy.transform);
+                enemy.muzzleWarning.color = PixelArt.Gold;
+                enemy.muzzleWarning.enabled = false;
+            }
             enemy.marker = PixelArt.Create("StateMarker", "sleepMarker", position + Vector2.up * (boss ? 3.7f : 1.85f),
                 35, enemy.transform);
             enemy.healthFill = PixelArt.Create("Health", "solid", position + Vector2.down * .4f,
@@ -54,7 +64,7 @@ namespace Echoes
             enemy.healthFill.transform.localScale = new Vector3(.8f, .06f, 1);
             enemy.healthFill.color = PixelArt.Red;
             enemy.repath = (float)run.Random.NextDouble() * .5f;
-            enemy.attackTimer = run.Config.bossAttackInterval;
+            enemy.attackTimer = boss ? run.Config.bossAttackInterval : 0;
             enemy.RefreshVisual();
             return enemy;
         }
@@ -71,8 +81,13 @@ namespace Echoes
         public void ActivateBoss()
         { State = EnemyState.Chasing; lastSeen = run.Player.transform.position; RefreshVisual(); }
 
-        private bool CanDetectPlayer() => Vector2.Distance(transform.position, run.Player.transform.position) <=
-            run.Config.WalkingDetectionRadius && run.Map.HasLineOfSight(transform.position, run.Player.transform.position);
+        private bool CanDetectPlayer()
+        {
+            float radius = run.Config.WalkingDetectionRadius;
+            if (IsGuard && State == EnemyState.Chasing) radius = Mathf.Max(radius, run.Config.guardRange);
+            return Vector2.Distance(transform.position, run.Player.transform.position) <= radius &&
+                run.Map.HasLineOfSight(transform.position, run.Player.transform.position);
+        }
 
         private void Update()
         {
@@ -88,6 +103,13 @@ namespace Echoes
                 if (lostSight > 2.5f) { State = EnemyState.Alert; destination = lastSeen; wanderTimer = 2; }
             }
             if (State == EnemyState.Chasing) destination = lastSeen;
+            if (IsGuard && UpdateGuardAttack(dt, seesPlayer, player))
+            {
+                body.velocity = Vector2.zero;
+                repath = 0;
+                RefreshVisual();
+                return;
+            }
             if (State == EnemyState.Investigating && Vector2.Distance(transform.position, destination) < .5f)
             { State = EnemyState.Alert; lastSeen = destination; wanderTimer = 1; }
             if (State == EnemyState.Alert)
@@ -105,7 +127,7 @@ namespace Echoes
             if (repath <= 0)
             { repath = .55f; path = run.Map.FindPath(transform.position, destination); pathIndex = 0; }
             Move();
-            if (Vector2.Distance(transform.position, player) < (IsBoss ? 1.15f : .8f) && Time.time >= contactReady)
+            if (!IsGuard && Vector2.Distance(transform.position, player) < (IsBoss ? 1.15f : .8f) && Time.time >= contactReady)
             {
                 contactReady = Time.time + run.Config.enemyAttackInterval;
                 art.Attack();
@@ -120,8 +142,48 @@ namespace Echoes
         {
             while (pathIndex < path.Count && Vector2.Distance(transform.position, path[pathIndex]) < .22f) pathIndex++;
             Vector2 direction = pathIndex < path.Count ? (path[pathIndex] - (Vector2)transform.position).normalized : Vector2.zero;
-            body.velocity = direction * run.Config.enemySpeed * (IsBoss ? .75f : 1);
+            float speed = IsBoss ? run.Config.bossSpeed : IsGuard ? run.Config.guardSpeed : run.Config.walkerSpeed;
+            body.velocity = direction * speed;
             if (direction.x != 0) sprite.flipX = direction.x < 0;
+        }
+
+        private bool UpdateGuardAttack(float dt, bool seesPlayer, Vector2 player)
+        {
+            attackTimer -= dt;
+            Vector2 origin = transform.position;
+            if (!seesPlayer || State != EnemyState.Chasing || !run.Visibility.InCamera(origin) ||
+                Vector2.Distance(player, origin) > run.Config.guardRange)
+            {
+                warningTimer = 0;
+                return false;
+            }
+            Vector2 direction = (player - origin).normalized;
+            sprite.flipX = direction.x < 0;
+            if (warningTimer > 0)
+            {
+                warningTimer -= dt;
+                if (warningTimer <= 0)
+                {
+                    Projectile.Create(run, origin, direction, run.Config.guardBulletSpeed,
+                        run.Config.enemyDamage * run.EnemyDamageScale, true);
+                    attackTimer = run.Config.guardShotInterval - run.Config.guardWindup;
+                    art.Attack();
+                }
+            }
+            else if (attackTimer <= 0) warningTimer = run.Config.guardWindup;
+            return true;
+        }
+
+        private void LateUpdate()
+        {
+            if (!muzzleWarning) return;
+            muzzleWarning.enabled = Alive && IsWindingUp && run.Visibility.CanSeeDanger(transform.position);
+            if (!muzzleWarning.enabled) return;
+            var offset = ((Vector2)(run.Player.transform.position - transform.position)).normalized * .25f;
+            muzzleWarning.transform.localPosition = offset;
+            muzzleWarning.enabled = run.Visibility.CanSeeDanger(muzzleWarning.transform.position);
+            float progress = 1 - warningTimer / run.Config.guardWindup;
+            muzzleWarning.transform.localScale = Vector3.one * Mathf.Lerp(.55f, 1f, progress);
         }
 
         private void UpdateBossAttack(float dt)

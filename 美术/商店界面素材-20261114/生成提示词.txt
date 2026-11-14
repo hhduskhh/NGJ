@@ -1,6 +1,21 @@
-生成方式：内置 image_gen；12 项分别生成，品质／按钮状态以各自基准图为编辑目标。
+生成方式：内置 image_gen；12 项分别生成，品质／按钮状态以各自基准图为编辑目标；组合预览按用户标注使用内置 image_gen 编辑。
 用途：寂响遗迹商店界面皮肤；清单已由用户确认。原图在源图/，正式尺寸图片在背景/、面板/、按钮/、图标/。
 导出仅做透明边界裁切、尺寸归一、最近邻采样及组合预览排版，保留生成图真实 Alpha；不进行 Unity 导入。
+
+[组合预览布局修订-20261114]
+输入：初版预览/shop_composite_preview.png（Git提交53e38c2中的版本）。输出：同路径修订版，按1600×900最近邻归一保存。
+Use case: precise-object-edit / text-localization.
+Edit target: the supplied 1600x900 pixel-art shop UI composite preview. Make ONLY these user-requested UI layout changes, retain the exact original illustration style, background, metal pixel panel frames, all item cards and their existing texts, weapon slots, sell buttons, currency and bottom statistics. This is a revision of the very same game interface, NOT a redesign.
+
+Coordinates below refer to the original 1600x900 image; retain 16:9.
+1. Remove the top explanatory sentence "购物时暂停 · 买走的商品不会自动补货 · 关闭再打开保留库存" completely and cleanly restore its indigo panel surface. No replacement sentence.
+2. From the cyan equipment heading keep ONLY "已装备 2/6". Remove all of "· 合成免费 · 出售返还基价50% · 保留最后一把", restoring the woven dark indigo behind it.
+3. Remove the entire SIX repeated bottom buttons at original x117..1480, y690..734 whose labels are "两把合成 → 升一级". Restore clean matching panel surface in this entire thin row. Keep the six sell buttons directly ABOVE that row, and keep both purchase-upgrade buttons inside the TOP item cards.
+4. Remove the two original wide buttons at x430..750 and x850..1170, y438..482. Restore their original dark indigo panel backgrounds.
+5. Relocate the existing refresh action to the far RIGHT under the item cards, in a smaller matching brass/teal button. Exact desired button bounds approximately x1324,y438,width148,height44; right aligned to the content right edge and centered around y460. Exact label "刷新 4 金币". Same button family; shorten only the horizontal middle, preserve stepped ends.
+6. Relocate the old "继续探索 [Esc]" shop exit action to the UPPER LEFT header, button bounds approximately x132,y96,width180,height44. Exact new label "退出 [Esc]". Same normal brass/teal button skin. This closes the shop; no new function.
+7. Replace the previous "补 给 商 店" at top left with ONLY the exact title "商店", now HORIZONTALLY CENTERED in the upper header, centered at x800,y112, warm golden text about32px. The old left title must disappear. Leave the currency in the upper right.
+8. Keep ALL other remaining data labels, four item cards, all six inventory slots, six sell buttons, lower stats, passive-inventory text, page button, footer and frame positions unchanged. No additions. No colored red/blue/green markup. No watermark. Crisp square pixel art. OPAQUE full image.
 
 [main]
 参考原图：无；依据项目已核对的风格与调色板生成
