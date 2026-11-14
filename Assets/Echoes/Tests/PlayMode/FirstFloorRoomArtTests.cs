@@ -16,7 +16,7 @@ namespace Echoes.Tests
             yield return SceneManager.LoadSceneAsync("Prototype");
             yield return null;
             var run = Object.FindObjectOfType<RunController>();
-            foreach (var entry in RoomArt.Entries)
+            foreach (var entry in RoomArt.ForFloor(1))
             {
                 var sprite = RoomArt.Sprite(entry.Kind);
                 Assert.AreEqual(entry.Canvas.x, sprite.rect.width, entry.Kind);

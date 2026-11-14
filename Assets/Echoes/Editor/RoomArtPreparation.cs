@@ -10,6 +10,7 @@ namespace Echoes.Editor
     public static class RoomArtPreparation
     {
         public const string SourceRoot = "美术/房间资源-第一层-20261114";
+        public const string SecondFloorSourceRoot = "美术/房间资源-第二层-20261114";
         [Serializable] private sealed class Sources { public Source[] items; }
         [Serializable] private sealed class Source { public string kind, file, prompt; }
         private static readonly string[] Palette = {
@@ -22,8 +23,20 @@ namespace Echoes.Editor
         [MenuItem("Echoes/Art/Prepare First Floor Room Sprites")]
         public static void Prepare()
         {
-            var sources = JsonUtility.FromJson<Sources>(File.ReadAllText(SourceRoot + "/sources.json"));
-            var palette = Array.ConvertAll(Palette, hex => {
+            Prepare(SourceRoot, 1, Palette);
+        }
+
+        [MenuItem("Echoes/Art/Prepare Second Floor Room Sprites")]
+        public static void PrepareSecondFloor() => Prepare(SecondFloorSourceRoot, 2, new[] {
+            "191d2c", "282733", "3d3c46", "62514f", "997059", "a16b49", "d99e60",
+            "354846", "54716d", "789087", "1c252b", "414d57", "66717a", "929594",
+            "332c2d", "493733", "714f3b", "b78454", "282f3b", "445565", "687987"
+        });
+
+        private static void Prepare(string sourceRoot, int floor, string[] paletteHex)
+        {
+            var sources = JsonUtility.FromJson<Sources>(File.ReadAllText(sourceRoot + "/sources.json"));
+            var palette = Array.ConvertAll(paletteHex, hex => {
                 ColorUtility.TryParseHtmlString("#" + hex, out var color); return (Color32)color;
             });
             foreach (var source in sources.items)
@@ -32,7 +45,7 @@ namespace Echoes.Editor
                 // The shared three-floor tuning-fork stall has its own approved source/export.
                 if (source.kind == "room_stall") continue;
                 var original = new Texture2D(2, 2, TextureFormat.RGBA32, false);
-                original.LoadImage(File.ReadAllBytes(SourceRoot + "/原始图/" + source.file));
+                original.LoadImage(File.ReadAllBytes(sourceRoot + "/原始图/" + source.file));
                 var pixels = original.GetPixels32();
                 int left = original.width, right = 0, bottom = original.height, top = 0;
                 for (int y = 0; y < original.height; y++)
@@ -74,19 +87,26 @@ namespace Echoes.Editor
             }
             AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
             Debug.Log("ECHOES_ROOM_ART_PREPARED " + sources.items.Length + " native sprites");
-            CreatePreview();
+            CreatePreview(sourceRoot, floor, floor == 1);
         }
 
         [MenuItem("Echoes/Art/Refresh Room Sprite Preview")]
         public static void CreatePreview()
         {
-            const int cell = 160, columns = 4, rows = 4;
+            CreatePreview(SourceRoot, 1, true);
+        }
+
+        private static void CreatePreview(string sourceRoot, int floor, bool includeCommon)
+        {
+            var entries = RoomArt.ForFloor(floor, includeCommon);
+            const int cell = 160, columns = 4;
+            int rows = Mathf.CeilToInt(entries.Length / (float)columns);
             var preview = new Texture2D(cell * columns, cell * rows, TextureFormat.RGBA32, false);
             var pixels = new Color32[preview.width * preview.height];
             for (int i = 0; i < pixels.Length; i++) pixels[i] = new Color32(23, 29, 42, 255);
-            for (int i = 0; i < RoomArt.Entries.Length; i++)
+            for (int i = 0; i < entries.Length; i++)
             {
-                var entry = RoomArt.Entries[i];
+                var entry = entries[i];
                 var image = new Texture2D(2, 2, TextureFormat.RGBA32, false);
                 image.LoadImage(File.ReadAllBytes("Assets/Echoes/Resources/" + entry.Path + ".png"));
                 var source = image.GetPixels32();
@@ -99,7 +119,7 @@ namespace Echoes.Editor
                 UnityEngine.Object.DestroyImmediate(image);
             }
             preview.SetPixels32(pixels); preview.Apply();
-            File.WriteAllBytes(SourceRoot + "/第一层资源预览.png", preview.EncodeToPNG());
+            File.WriteAllBytes(sourceRoot + (floor == 1 ? "/第一层资源预览.png" : "/第二层资源预览.png"), preview.EncodeToPNG());
             UnityEngine.Object.DestroyImmediate(preview);
         }
     }

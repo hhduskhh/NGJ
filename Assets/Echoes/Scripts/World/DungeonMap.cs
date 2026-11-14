@@ -423,7 +423,7 @@ namespace Echoes
                         }
                 }
             RenderDoorposts();
-            if (Floor == 1) RenderFirstFloorDoorDetails();
+            if (Floor <= 2) RenderNativeDoorDetails();
             RenderObstacles();
             RenderDecorations();
             PixelArt.Create("ChallengeAltar", "altar", AltarPosition, -120, generatedRoot);
@@ -496,7 +496,7 @@ namespace Echoes
             PixelArt.Create("Dressing_doorpost", "doorpost", position,
                 GameArt.FootOrder(position.y) + 1, generatedRoot);
 
-        private void RenderFirstFloorDoorDetails()
+        private void RenderNativeDoorDetails()
         {
             foreach (var door in Doors)
             {

@@ -41,9 +41,9 @@ namespace Echoes.Tests
                 }
             }
             Assert.Greater(checkedProps, 20);
-            // Floor 1 uses native P1 sprites; floor 2 still exercises the P0
+            // Floors 1-2 use native P1 sprites; floor 3 still exercises the P0
             // 1.5x-5x scale path that originally multiplied world collisions.
-            run.Map.Generate(run, 1);
+            run.Map.Generate(run, 2);
             Physics2D.SyncTransforms();
             foreach (var box in run.Map.GetComponentsInChildren<BoxCollider2D>())
             {
