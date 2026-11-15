@@ -309,13 +309,15 @@ namespace Echoes.Tests
                     var normal = run.Enemies.Where(e => !e.IsBoss).ToArray();
                     int rooms = run.Map.Rooms.Count(r => r.Role == RoomRole.Middle);
                     int cap = run.Config.maxInitialEnemiesPerRoom;
-                    int minimum = Mathf.Min(draws * min - rooms * (min - 1), rooms * cap);
+                    int minimum = floor == 2 ? draws * min : Mathf.Min(draws * min - rooms * (min - 1), rooms * cap);
                     Assert.That(normal.Length, Is.InRange(Mathf.Max(1, minimum), draws * max));
-                    foreach (var group in normal.GroupBy(e => run.Map.RoomAtPosition(e.transform.position)))
+                    var groups = normal.GroupBy(e => run.Map.RoomAtPosition(e.transform.position)).ToArray();
+                    foreach (var group in groups)
                     {
                         Assert.AreEqual(RoomRole.Middle, group.Key.Role);
-                        Assert.LessOrEqual(group.Count(), cap);
+                        if (floor == 1) Assert.LessOrEqual(group.Count(), cap);
                     }
+                    Debug.Log($"Floor {floor}: {normal.Length} initial enemies, largest room {groups.Max(g => g.Count())}");
                     run.SetState(RunState.FloorCleared);
                     run.AdvanceFloor();
                     yield return null;

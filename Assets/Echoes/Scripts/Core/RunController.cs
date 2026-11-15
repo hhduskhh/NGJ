@@ -107,7 +107,12 @@ namespace Echoes
             int max = Mathf.Max(min, FloorValue(config.spawnAmountMax, 3));
             int weight = Mathf.Max(1, FloorValue(config.spawnCellWeights, 1));
             int planned = 0;
-            int roomLimit = Mathf.Max(1, Floor == 3 ? config.finalFloorInitialEnemiesPerRoom : config.maxInitialEnemiesPerRoom);
+            int roomLimit = Floor switch
+            {
+                1 => Mathf.Max(1, config.maxInitialEnemiesPerRoom),
+                3 => Mathf.Max(1, config.finalFloorInitialEnemiesPerRoom),
+                _ => int.MaxValue
+            };
             var roomCounts = new int[Map.Rooms.Count];
             // Spawn rolls use their own per-floor seed so combat randomness cannot
             // shift the layout of later floors.
