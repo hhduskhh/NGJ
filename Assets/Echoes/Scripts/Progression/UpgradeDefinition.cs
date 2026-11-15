@@ -26,14 +26,14 @@ namespace Echoes
             new UpgradeDefinition("轻装行进", "移动速度 +15%", p => p.MoveScale += .15f,
                 available: p => p.EffectiveMoveScale < p.MaxMoveScale - .00001f),
             new UpgradeDefinition("应急修复", "生命上限 +20\n恢复 35 点生命", p => { p.MaxHealth += 20; p.Heal(35); }),
-            new UpgradeDefinition("共振扩音器", "枪声半径 +5（上限 12）\n每只围攻怪物增伤 +3 个百分点",
+            new UpgradeDefinition("共振扩音器", "枪声半径 +5（上限 12）\n每只围攻怪物增伤 +3%",
                 p => { p.NoiseRadiusBonus += 5; p.PressureBonusPerEnemy += .03f; }, true,
                 p => p.NoiseRadius < 12 || p.PressureBonus < .2f - .00001f),
             new UpgradeDefinition("诱饵调校", "响铃诱饵冷却缩短 2 秒\n下限 4 秒", p => p.DecoyCooldownReduction += 2,
                 available: p => p.DecoyCooldown > 4),
             new UpgradeDefinition("致命打击", "暴击伤害 +10 个百分点", p => p.CriticalDamageBonus += .1f,
                 available: p => p.CriticalMultiplier < 5 - .00001f),
-            new UpgradeDefinition("幸运四叶草", "金币翻倍概率 +8 个百分点\n闪避率 +8 个百分点（上限 50%）",
+            new UpgradeDefinition("幸运四叶草", "金币翻倍概率 +8%\n闪避率 +8%（上限 50%）",
                 p =>
                 {
                     p.DoubleLootChance = UnityEngine.Mathf.Clamp01(p.DoubleLootChance + .08f);
