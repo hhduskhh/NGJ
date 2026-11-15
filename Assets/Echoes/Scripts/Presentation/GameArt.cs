@@ -154,7 +154,8 @@ namespace Echoes
             string sheet = player ? "Common/" + Species + (laughing ? "Laugh" : "") : GameArt.Floor + Species;
             renderer2D.sprite = GameArt.Frame(sheet, CurrentFrame);
             if (enemy) enemy.UpdateDamageShape(renderer2D.sprite, renderer2D.flipX);
-            renderer2D.sortingOrder = GameArt.FootOrder(transform.position.y);
+            renderer2D.sortingOrder = enemy && enemy.IsBoss && enemy.Awake
+                ? DungeonVisibility.ActiveBossOrder : GameArt.FootOrder(transform.position.y);
             var tint = hurt > 0 && (int)(hurt * 40) % 2 == 0 ? new Color(1, .6f, .6f) : Color.white;
             if (corpseConfig)
             {

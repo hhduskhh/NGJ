@@ -32,6 +32,35 @@ namespace Echoes.Tests
             Physics2D.SyncTransforms();
         }
 
+        [UnityTest] public IEnumerator ActiveBossRendersAboveDarknessOnEveryFloor()
+        {
+            var cover = run.transform.Find("UnseenDungeon").GetComponent<SpriteRenderer>();
+            Camera.main.GetComponent<CameraFollow>().enabled = false;
+            for (int floor = 1; floor <= 3; floor++)
+            {
+                var boss = run.Boss;
+                var bodySprite = boss.GetComponent<SpriteRenderer>();
+                Camera.main.transform.position = bodySprite.bounds.center + Vector3.back * 10;
+                yield return null;
+                Assert.IsFalse(run.Visibility.IsVisible(boss.transform.position));
+                Assert.Less(bodySprite.sortingOrder, cover.sortingOrder);
+                run.ActivateBoss();
+                yield return new WaitForSeconds(.2f);
+                Assert.IsTrue(cover.gameObject.activeInHierarchy && bodySprite.enabled);
+                Assert.Greater(bodySprite.sortingOrder, cover.sortingOrder);
+                Assert.Less(bodySprite.sortingOrder, DungeonVisibility.DangerOrder);
+                if (floor == 1) RuntimeSmokeTests.Capture("TestResults/active-boss-in-darkness.png");
+                boss.TakeDamage(boss.Health);
+                yield return null;
+                Assert.Less(bodySprite.sortingOrder, cover.sortingOrder);
+                if (floor < 3)
+                {
+                    run.AdvanceFloor();
+                    yield return null;
+                }
+            }
+        }
+
         [UnityTest] public IEnumerator BossUsesFloorHealthAndAttackPatterns()
         {
             float[] expectedHealth = { 2200f, 7425f, 18700f };

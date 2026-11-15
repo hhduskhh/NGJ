@@ -63,7 +63,9 @@ namespace Echoes
         private Vector2 lastWalkPosition;
         private float walkingTime, nextWalkPulse;
         public IReadOnlyList<VisionPulse> Pulses => echoes;
-        public const int DangerOrder = 41; // Immediately above the darkness cover (40).
+        private const int DarknessOrder = 40;
+        public const int ActiveBossOrder = DarknessOrder + 1;
+        public const int DangerOrder = ActiveBossOrder + 1;
 
         public bool InCamera(Vector2 point)
         {
@@ -92,7 +94,7 @@ namespace Echoes
             viewCamera = Camera.main;
             darkness = new Material(Resources.Load<Shader>("DungeonDarkness"));
             CreateObstacleMask();
-            var renderer = PixelArt.Create("UnseenDungeon", "solid", Vector2.zero, 40, transform);
+            var renderer = PixelArt.Create("UnseenDungeon", "solid", Vector2.zero, DarknessOrder, transform);
             renderer.sharedMaterial = darkness;
             cover = renderer.transform;
             lastWalkPosition = run.Player.GetComponent<Rigidbody2D>().position;
