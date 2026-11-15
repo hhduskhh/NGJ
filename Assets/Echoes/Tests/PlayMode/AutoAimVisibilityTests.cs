@@ -178,6 +178,29 @@ namespace Echoes.Tests
         [UnityTest]
         public IEnumerator CrossbowHitsLitEnemyBeyondItsFormerTargetingRange() => VerifyLongShot(2);
 
+        [UnityTest]
+        public IEnumerator WhiteCrossbowKillsFirstFloorWalkerWithOnePressureStack()
+        {
+            var player = run.Player;
+            player.Weapons.Remove(0);
+            Assert.IsTrue(player.Weapons.Add(2, 0));
+            var slot = player.Weapons.Slots[0];
+            var walker = run.Enemies.First(e => !e.IsBoss && !e.IsElite && !e.IsGuard);
+            Vector2 point = origin + Vector2.right * 2;
+            EnemyRoleTests.PlaceEnemy(walker, point);
+            walker.Hear(origin);
+            run.Visibility.TryLightScreen();
+            yield return new WaitForSeconds(run.Config.screenLightWaveDuration);
+            run.RefreshPressure();
+            Assert.AreEqual(1, run.NearbyEnemies);
+            Assert.AreEqual(32f, walker.Health);
+            Assert.AreEqual(32.4f, player.Weapons.Definition(slot).damage[0] * run.DamageMultiplier, .001f);
+            slot.Cooldown = 0;
+            Assert.IsTrue(player.TryFire(point));
+            yield return new WaitForSeconds(.2f);
+            Assert.IsFalse(walker.Alive);
+        }
+
         private IEnumerator VerifyLongShot(int kind)
         {
             var weapons = run.Player.Weapons;

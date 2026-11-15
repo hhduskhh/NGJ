@@ -19,7 +19,7 @@ namespace Echoes
             new WeaponDefinition { title = "轰鸣霰弹枪", range = 4.5f, speed = 27, noise = 1.5f, pellets = 5, spread = 8,
                 prices = new[] {30,60,120,240}, damage = new[] {6f,10,18,32}, interval = new[] {.95f,.90f,.85f,.80f} },
             new WeaponDefinition { title = "静弦弩", range = 10, speed = 39, noise = .5f, pellets = 1,
-                prices = new[] {30,60,120,240}, damage = new[] {24f,43,77,138}, interval = new[] {1.1f,1.05f,1f,.95f} }
+                prices = new[] {30,60,120,240}, damage = new[] {30f,43,77,138}, interval = new[] {1.1f,1.05f,1f,.95f} }
         };
     }
 
