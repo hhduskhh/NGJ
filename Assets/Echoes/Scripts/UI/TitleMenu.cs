@@ -74,17 +74,17 @@ namespace Echoes
             backButton.colors = backColors;
             CardLabel(Rect("返回", back, 0, 0, 1, 1), "返回", 24, Paper, TextAlignmentOptions.Center);
 
-            firstHero = HeroCard(panel, .075f, Hero.Explorer, begin, config);
-            HeroCard(panel, .51f, Hero.Runner, begin, config);
+            firstHero = HeroCard(panel, Hero.Explorer, begin, config);
+            HeroCard(panel, Hero.Runner, begin, config);
             selection.SetActive(false);
         }
 
-        private Button HeroCard(RectTransform panel, float x, Hero hero, UnityAction<Hero> begin, GameConfig config)
+        private Button HeroCard(RectTransform panel, Hero hero, UnityAction<Hero> begin, GameConfig config)
         {
             bool runner = hero == Hero.Runner;
             string name = runner ? "主角二" : "主角一";
             Color accent = runner ? Mint : Brass;
-            var card = Rect(name, panel, x, .065f, x + .415f, .784f);
+            var card = Rect(name, panel, runner ? .407f : .075f, .105f, runner ? .925f : .387f, .763f);
             var button = MakeButton(card, () => begin(hero));
             var colors = button.colors;
             colors.normalColor = Rule;
@@ -93,38 +93,30 @@ namespace Echoes
             button.colors = colors;
 
             var body = Rect("卡面", card, .006f, .006f, .994f, .994f);
-            Fill(body, runner ? new Color32(22, 37, 40, 255) : new Color32(39, 35, 33, 255));
-            var portrait = Rect("角色原画", body, 0, .50f, 1, 1).gameObject.AddComponent<RawImage>();
+            Fill(body, new Color32(19, 36, 38, 255));
+            float imageBottom = runner ? .315f : 0f;
+            var portrait = Rect("角色原画", body, 0, imageBottom, 1, 1).gameObject.AddComponent<RawImage>();
             portrait.texture = Resources.Load<Texture2D>(runner ? "SelectRunner" : "SelectExplorer");
             portrait.raycastTarget = false;
-            Fill(Rect("画框", body, 0, .493f, 1, .50f), accent);
 
-            // The figure in the illustration and the actual in-game sprite can be compared at a glance.
-            var icon = Rect("游戏内形象", body, .81f, .335f, .965f, .487f).gameObject.AddComponent<Image>();
+            // Keep the in-game likeness visible on both illustrations.
+            var badge = Rect("精灵底板", body, .022f, imageBottom + .018f,
+                runner ? .114f : .175f, imageBottom + .148f);
+            Fill(badge, new Color32(14, 22, 25, 226));
+            var icon = Rect("游戏内形象", badge, .06f, .04f, .94f, .96f).gameObject.AddComponent<Image>();
             icon.sprite = GameArt.Get(GameArt.PlayerKind(hero));
             icon.preserveAspect = true;
             icon.raycastTarget = false;
-            CardLabel(Rect("编号", body, .045f, .419f, .62f, .476f), name, 19, accent);
-            CardLabel(Rect("定位", body, .041f, .321f, .72f, .429f), runner ? "追风" : "均衡型", 46, Paper);
-            Fill(Rect("属性分隔", body, .045f, .307f, .955f, .310f), Rule);
 
-            CardStat(body, .045f, "生命", (runner ? config.runnerHealth : config.playerHealth).ToString("0.#"));
-            CardStat(body, .36f, "移速", (runner ? config.runnerMoveSpeed : config.moveSpeed).ToString("0.#"));
-            CardStat(body, .665f, "初始伤害", (runner ? config.runnerBaseDamage : 1f).ToString("0%"));
-
-            var footer = Rect("特性", body, 0, 0, 1, .143f);
-            Fill(footer, runner ? new Color32(30, 56, 56, 255) : new Color32(61, 50, 37, 255));
-            string trait = runner
-                ? $"每 1% 移速加成转为 {config.runnerSpeedConversion:0.##}% 伤害，上限 +{config.runnerMaxDamageBonus:0%}"
-                : "标准火力与移速，生命充足";
-            CardLabel(Rect("说明", footer, .045f, .08f, .94f, .92f), trait, 24, accent);
+            if (runner)
+            {
+                Fill(Rect("画框", body, 0, imageBottom - .006f, 1, imageBottom), Mint);
+                CardLabel(Rect("能力", body, .04f, .181f, .97f, .291f), "移速转伤害", 40, Mint);
+                string conversion = $"每 1% 永久移速加成，伤害 +{config.runnerSpeedConversion:0.##}%，上限 +{config.runnerMaxDamageBonus:0%}";
+                CardLabel(Rect("被动", body, .04f, .101f, .97f, .183f), conversion, 25, Paper);
+                CardLabel(Rect("开局特点", body, .04f, .018f, .97f, .094f), "初始移速高，生命与起始伤害低", 21, Muted);
+            }
             return button;
-        }
-
-        private void CardStat(RectTransform card, float x, string title, string value)
-        {
-            CardLabel(Rect(title, card, x, .244f, x + .28f, .300f), title, 18, Muted);
-            CardLabel(Rect(title + "数值", card, x, .153f, x + .28f, .249f), value, 36, Paper);
         }
 
         private static void Fill(RectTransform rect, Color color)
