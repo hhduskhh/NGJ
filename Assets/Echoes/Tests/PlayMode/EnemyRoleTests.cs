@@ -119,7 +119,8 @@ namespace Echoes.Tests
                 if (floor == 1) Assert.Less(firstDash, 0);
                 else Assert.AreEqual(run.Config.bossDashInterval / rate, firstDash, .1f);
                 if (floor == 2) Assert.Less(firstBarrage, 0);
-                else Assert.AreEqual((run.Config.bossAttackInterval + run.Config.bossWarningDuration) / rate,
+                else Assert.AreEqual((run.Config.bossAttackInterval + run.Config.bossWarningDuration) /
+                    (floor == 3 ? rate * .7f : 1f),
                     firstBarrage, .1f);
                 if (floor < 3)
                 {
@@ -128,6 +129,29 @@ namespace Echoes.Tests
                     yield return null;
                 }
             }
+        }
+
+        [UnityTest] public IEnumerator SecondBossDashesHalfARoomOnClearGround()
+        {
+            run.ActivateBoss();
+            run.Boss.TakeDamage(run.Boss.Health);
+            run.AdvanceFloor();
+            yield return null;
+            var start = DungeonTestGeometry.FindClearLane(run, 24);
+            PlaceEnemy(run.Boss, start);
+            run.Player.PlaceAt(start + Vector2.right * 24);
+            run.ActivateBoss();
+            var body = run.Boss.GetComponent<Rigidbody2D>();
+            float launchX = body.position.x;
+            float deadline = Time.time + run.Config.bossDashInterval + .2f;
+            while (body.velocity.x < 5f && Time.time < deadline)
+            {
+                launchX = body.position.x;
+                yield return null;
+            }
+            Assert.Greater(body.velocity.x, 5f);
+            yield return new WaitForSeconds(run.Config.secondBossDashDuration);
+            Assert.GreaterOrEqual(body.position.x - launchX, DungeonMap.CellWidth * .5f - .01f);
         }
 
         [UnityTest] public IEnumerator BossSummonsAwakeMinionsUpToTheLimitOnEveryFloor()

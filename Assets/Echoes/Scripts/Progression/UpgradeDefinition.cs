@@ -33,9 +33,13 @@ namespace Echoes
                 available: p => p.DecoyCooldown > 4),
             new UpgradeDefinition("致命打击", "暴击伤害 +10 个百分点", p => p.CriticalDamageBonus += .1f,
                 available: p => p.CriticalMultiplier < 5 - .00001f),
-            new UpgradeDefinition("幸运四叶草", "幸运 +8%\n金币掉落翻倍概率增加 8 个百分点",
-                p => p.DoubleLootChance = UnityEngine.Mathf.Clamp01(p.DoubleLootChance + .08f),
-                available: p => p.DoubleLootChance < 1)
+            new UpgradeDefinition("幸运四叶草", "金币翻倍概率 +8 个百分点\n闪避率 +8 个百分点（上限 50%）",
+                p =>
+                {
+                    p.DoubleLootChance = UnityEngine.Mathf.Clamp01(p.DoubleLootChance + .08f);
+                    p.Passives.Dodge += .08f;
+                },
+                available: p => p.DoubleLootChance < 1 || p.Passives.Dodge < .5f)
         };
 
         public static List<UpgradeDefinition> Roll(Random random, PlayerController player = null)

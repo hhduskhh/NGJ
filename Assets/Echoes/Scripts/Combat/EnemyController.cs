@@ -17,7 +17,7 @@ namespace Echoes
         private int pathIndex;
         private float repath, lostSight, contactReady, wanderTimer, attackTimer, warningTimer;
         private LineRenderer warning;
-        private float dashCooldown, dashRemaining;
+        private float dashCooldown, dashRemaining, dashSpeed;
         private LineRenderer dashArrow;
         private float summonTimer;
         private Vector2 dashDirection;
@@ -231,7 +231,8 @@ namespace Echoes
             if (IsBoss)
             {
                 float attackTime = dt * (run.Floor == 3 ? run.Config.finalBossAttackRate : 1f);
-                if (run.Floor != 2) UpdateBossBarrage(attackTime);
+                if (run.Floor != 2) UpdateBossBarrage(dt,
+                    run.Floor == 3 ? run.Config.finalBossAttackRate * run.Config.finalBossBarrageRateScale : 1f);
                 if (run.Floor >= 2) UpdateBossDash(attackTime, player);
                 summonTimer -= dt;
                 if (summonTimer <= 0)
@@ -256,7 +257,7 @@ namespace Echoes
             {
                 dashStep = true;
                 float step = Mathf.Min(dashRemaining, Time.fixedDeltaTime);
-                body.velocity = dashDirection * (run.Config.bossDashSpeed * step / Time.fixedDeltaTime);
+                body.velocity = dashDirection * (dashSpeed * step / Time.fixedDeltaTime);
                 dashRemaining -= step;
                 repath = 0;
                 return;
@@ -402,6 +403,13 @@ namespace Echoes
             if (dashArrow) dashArrow.enabled = false;
             else dashDirection = (player - body.position).normalized;
             dashRemaining = run.Config.bossDashDuration;
+            dashSpeed = run.Config.bossDashSpeed;
+            if (run.Floor == 2)
+            {
+                dashRemaining = run.Config.secondBossDashDuration;
+                float distance = DungeonMap.CellWidth * run.Config.secondBossDashRoomFraction;
+                dashSpeed = distance / dashRemaining;
+            }
             dashCooldown = run.Config.bossDashInterval;
             dashHitPlayer = false;
             if (dashDirection.x != 0) sprite.flipX = dashDirection.x < 0;
@@ -441,8 +449,9 @@ namespace Echoes
             run.Player.TakeDamage(run.Config.bossDamage * run.EnemyDamageScale);
         }
 
-        private void UpdateBossBarrage(float dt)
+        private void UpdateBossBarrage(float dt, float rate)
         {
+            dt *= rate;
             if (warningTimer > 0)
             {
                 warningTimer -= dt;
@@ -467,7 +476,7 @@ namespace Echoes
             if (attackTimer <= 0)
             {
                 warningTimer = run.Config.bossWarningDuration;
-                run.Noise.PlayBossReady(warningTimer / (run.Floor == 3 ? run.Config.finalBossAttackRate : 1f));
+                run.Noise.PlayBossReady(warningTimer / rate);
                 warning = PixelArt.Circle("BossAttackTelegraph", transform, PixelArt.Red, .08f);
                 PixelArt.SetRadius(warning, 1);
             }

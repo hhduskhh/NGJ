@@ -97,6 +97,9 @@ MonoBehaviour:
   bossDashInterval: 1.4
   bossDashDuration: 0.32
   bossDashSpeed: 11
+  secondBossDashDuration: 0.8
+  secondBossDashRoomFraction: 0.5
+  finalBossBarrageRateScale: 0.7
   finalBossAttackRate: 2
   bossBulletSpeed: 6
   bossBulletScale: 1.35

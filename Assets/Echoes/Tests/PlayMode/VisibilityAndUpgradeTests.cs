@@ -17,9 +17,11 @@ namespace Echoes.Tests
             yield return null;
             var run = Object.FindObjectOfType<RunController>();
             var p = run.Player;
+            p.TakeDamage(25);
             p.MoveScale = 2;
             p.ShotIntervalScale = .01f;
             p.DoubleLootChance = 1;
+            p.Passives.Dodge = .5f;
             p.DecoyCooldownReduction = 20;
             p.NoiseRadiusBonus = 12;
             p.CriticalDamageBonus = 5;
@@ -35,8 +37,11 @@ namespace Echoes.Tests
             p.PressureBonusPerEnemy = .2f;
             for (int i = 0; i < run.RequiredExperience; i++) run.Enemies[i].TakeDamage(99999);
             Assert.AreEqual(2, run.Choices.Count);
+            float previousMaxHealth = p.MaxHealth;
             run.Hud.PressUpgradeKey(2);
-            run.ChooseUpgrade(0);
+            run.ChooseUpgrade(run.Choices.FindIndex(choice => choice.Title == "精密弹头"));
+            Assert.AreEqual(previousMaxHealth + 10, p.MaxHealth);
+            Assert.AreEqual(p.MaxHealth, p.Health);
             Assert.AreEqual(RunState.Playing, run.State);
         }
 
@@ -107,6 +112,7 @@ namespace Echoes.Tests
             Assert.AreEqual(run.Config.bonusPerEnemy + .03f, player.PressureBonus, .001f);
             Assert.AreEqual(2.1f, player.CriticalMultiplier, .001f);
             Assert.AreEqual(.08f, player.DoubleLootChance, .001f);
+            Assert.AreEqual(.08f, player.Passives.Dodge, .001f);
             Apply("快装枪机");
             Assert.AreEqual(startInterval * .64f, player.Weapons.Interval(slot), .0001f);
             for (int i = 0; i < 30; i++)

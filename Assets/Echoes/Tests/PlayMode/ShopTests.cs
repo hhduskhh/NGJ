@@ -261,14 +261,13 @@ namespace Echoes.Tests
             player.MoveScale += .5f;
             Assert.AreEqual(1.24f, player.TotalDamageScale, .001f);
             run.Shop.Close();
+            run.Config.firstLevelExperience = 100; // Isolate repair-on-kill healing from level-up healing.
             var enemies = run.Enemies.Where(e => !e.IsBoss).Take(12).ToArray();
             Assert.AreEqual(12, enemies.Length);
             for (int i = 0; i < enemies.Length; i++)
             {
                 enemies[i].TakeDamage(99999);
                 Assert.AreEqual(62 + (i + 1) / 6 * 8, player.Health, $"Kill {i + 1}");
-                if (run.State == RunState.Upgrade)
-                    run.ChooseUpgrade(run.Choices.FindIndex(choice => choice.Title != "应急修复"));
             }
         }
         [UnityTest] public IEnumerator WeaponVolleyRangeAndPiercing()

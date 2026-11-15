@@ -356,6 +356,8 @@ namespace Echoes
         {
             if (State != RunState.Upgrade || index < 0 || index >= Choices.Count) return;
             Choices[index].Apply(Player);
+            Player.MaxHealth += 10;
+            Player.Heal(Player.MaxHealth);
             Experience -= pendingUpgradeCost;
             Level++;
             pendingUpgradeCost = 0;

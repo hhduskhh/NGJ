@@ -142,6 +142,9 @@ namespace Echoes
         [Min(.05f)] public float finalDashWarningSeconds = .32f;
         [Min(.1f)] public float bossDashDuration = .32f;
         [Min(.1f)] public float bossDashSpeed = 11f;
+        [Min(.1f)] public float secondBossDashDuration = .8f;
+        [Min(.5f)] public float secondBossDashRoomFraction = .5f;
+        [Min(.01f)] public float finalBossBarrageRateScale = .7f;
         [Min(1)] public float finalBossAttackRate = 2f;
         [Min(1)] public float bossBulletSpeed = 6;
         [Min(1)] public float bossBulletScale = 1.35f;
