@@ -9,6 +9,7 @@ namespace Echoes
         private Vector2 launch, landing;
         private float flightProgress = 1;
         private SpriteRenderer visual;
+        private bool useSpecialSound;
 
         public static BellDecoy Create(RunController run, Vector2 position)
         {
@@ -23,6 +24,8 @@ namespace Echoes
         public static void Throw(RunController run, Vector2 origin, Vector2 target)
         {
             var bell = Create(run, origin);
+            bell.useSpecialSound = NoiseSystem.ScreenLightLaughEnabled;
+            if (bell.useSpecialSound) run.Noise.PlaySpecialDecoyThrow();
             bell.launch = origin;
             bell.landing = target;
             bell.flightProgress = 0;
@@ -54,7 +57,8 @@ namespace Echoes
             if (pulse <= 0)
             {
                 pulse = .8f;
-                run.Noise.Emit(transform.position, run.Config.decoyRadius + run.Player.Passives.DecoyRadius, NoiseKind.Decoy);
+                run.Noise.Emit(transform.position, run.Config.decoyRadius + run.Player.Passives.DecoyRadius,
+                    NoiseKind.Decoy, playDecoyBell: !useSpecialSound);
                 ArtEffect.Play((Vector2)transform.position + Vector2.up * .2f, false, PixelArt.Cyan);
             }
         }

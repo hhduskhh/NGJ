@@ -73,9 +73,8 @@ namespace Echoes
             clip.SetData(samples, 0); return clip;
         }
         public void PlayUiPress() => audioSource.PlayOneShot(click, .36f);
-        public void PlayDecoyThrow()
+        public void PlaySpecialDecoyThrow()
         {
-            if (!ScreenLightLaughEnabled) return;
             decoyThrowVoice.volume = run.Config.decoyThrowVolume;
             decoyThrowVoice.Play();
         }
@@ -223,13 +222,13 @@ namespace Echoes
                 audioSource.PlayOneShot(ambience, .18f);
             }
         }
-        public void Emit(Vector2 origin, float radius, NoiseKind kind)
+        public void Emit(Vector2 origin, float radius, NoiseKind kind, bool playDecoyBell = true)
         {
             run.Visibility.Reveal(origin, radius, kind == NoiseKind.Gunshot ? PixelArt.Gold : PixelArt.Cyan);
             var go = new GameObject(kind + "SoundWave");
             go.transform.position = origin;
             go.AddComponent<NoiseWave>().Initialize(run, radius);
-            if (kind == NoiseKind.Decoy) audioSource.PlayOneShot(bell);
+            if (kind == NoiseKind.Decoy && playDecoyBell) audioSource.PlayOneShot(bell);
             else if (kind == NoiseKind.Footstep) audioSource.PlayOneShot(footstep, .4f);
         }
     }

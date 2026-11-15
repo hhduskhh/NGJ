@@ -145,7 +145,6 @@ namespace Echoes
             if ((point - origin).sqrMagnitude > range * range + .0001f || !run.Map.HasClearInteractionPath(origin, point))
             { run.Hud.Notify("诱饵投掷路径被墙壁挡住", 2); return false; }
             BellDecoy.Throw(run, origin, point);
-            run.Noise.PlayDecoyThrow();
             decoyReadyAt = Time.time + DecoyCooldown;
             return true;
         }
