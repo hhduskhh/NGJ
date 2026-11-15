@@ -126,6 +126,7 @@ namespace Echoes
         [Min(1)] public float decoyCooldown = 12;
         [Header("Gatekeeper")]
         [Min(.1f)] public float bossSpeed = 2.55f;
+        [Min(.1f)] public float firstFloorBossSpeed = 2f;
         [Min(1)] public float bossHealth = 1100;
         [Min(1)] public float bossDamage = 14;
         [Min(.1f)] public float bossAttackInterval = .8f;

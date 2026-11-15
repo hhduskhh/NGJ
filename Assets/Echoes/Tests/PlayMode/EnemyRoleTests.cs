@@ -43,7 +43,9 @@ namespace Echoes.Tests
                 Vector2 player = run.Player.transform.position;
                 PlaceEnemy(boss, player + Vector2.left * 6);
                 run.ActivateBoss();
+                boss.TakeDamage(1, false); // Start pursuit immediately, before the first dash wind-up.
                 float started = Time.time;
+                float peakChaseSpeed = 0;
                 float firstDash = -1, firstBarrage = -1;
                 float arrowStarted = -1;
                 Vector2 lockedDirection = Vector2.zero;
@@ -51,6 +53,8 @@ namespace Echoes.Tests
                 while (Time.time - started < 2.1f)
                 {
                     yield return null;
+                    if (Time.time - started < .35f)
+                        peakChaseSpeed = Mathf.Max(peakChaseSpeed, body.velocity.magnitude);
                     var arrowObject = boss.transform.Find("DashDirection");
                     var arrow = arrowObject ? arrowObject.GetComponent<LineRenderer>() : null;
                     if (arrow && arrow.enabled && arrowStarted < 0)
@@ -82,6 +86,7 @@ namespace Echoes.Tests
                     windingUp = boss.IsWindingUp;
                 }
                 float rate = floor == 3 ? run.Config.finalBossAttackRate : 1f;
+                Assert.AreEqual(floor == 1 ? 2f : 2.55f, peakChaseSpeed, .01f);
                 if (floor == 1) Assert.Less(firstDash, 0);
                 else Assert.AreEqual(run.Config.bossDashInterval / rate, firstDash, .1f);
                 if (floor == 2) Assert.Less(firstBarrage, 0);

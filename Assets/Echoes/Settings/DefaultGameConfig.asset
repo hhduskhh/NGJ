@@ -89,6 +89,7 @@ MonoBehaviour:
   screenLightDuration: 5
   screenLightCooldown: 15
   bossSpeed: 2.55
+  firstFloorBossSpeed: 2
   bossHealth: 1100
   bossDamage: 14
   bossAttackInterval: 0.8

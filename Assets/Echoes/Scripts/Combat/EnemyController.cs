@@ -281,7 +281,8 @@ namespace Echoes
             while (pathIndex < path.Count && Vector2.Distance(position, path[pathIndex]) < .22f) pathIndex++;
             Vector2 delta = pathIndex < path.Count ? path[pathIndex] - position : Vector2.zero;
             Vector2 direction = delta.normalized;
-            float speed = IsBoss ? run.Config.bossSpeed : UsesRangedAttack ? run.Config.guardSpeed : run.Config.walkerSpeed;
+            float speed = UsesRangedAttack ? run.Config.guardSpeed : run.Config.walkerSpeed;
+            if (IsBoss) speed = run.Floor == 1 ? run.Config.firstFloorBossSpeed : run.Config.bossSpeed;
             // Advance at the physics cadence and stop at the waypoint, even
             // when a slow render frame contains several physics steps.
             body.velocity = direction * Mathf.Min(speed, delta.magnitude / Time.fixedDeltaTime);
