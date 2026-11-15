@@ -23,6 +23,12 @@ namespace Echoes.Tests
             p.DecoyCooldownReduction = 20;
             p.NoiseRadiusBonus = 12;
             p.CriticalDamageBonus = 5;
+            p.PressureBonusPerEnemy = .2f;
+            var movementChoices = UpgradeDefinition.Roll(run.Random, p);
+            Assert.AreEqual(3, movementChoices.Count);
+            Assert.IsTrue(movementChoices.Exists(c => c.Title == "轻装行进"), "Movement remains useful above the former cap");
+            p.MoveScale = 2.5f;
+            p.PressureBonusPerEnemy = 0;
             var choices = UpgradeDefinition.Roll(run.Random, p);
             Assert.AreEqual(3, choices.Count);
             Assert.IsTrue(choices.Exists(c => c.IncreasesNoise), "Pressure can still increase");
@@ -89,21 +95,29 @@ namespace Echoes.Tests
                 Assert.IsNotNull(PresentationArt.Current.Upgrade(card.Title), card.Title);
                 card.Apply(player);
             }
-            Assert.AreEqual(startInterval * .88f, player.Weapons.Interval(slot), .0001f);
+            Assert.AreEqual(startInterval * .8f, player.Weapons.Interval(slot), .0001f);
+            Assert.AreEqual(1.15f, player.MoveScale, .0001f);
             Assert.AreEqual(run.Config.decoyCooldown - 2, player.DecoyCooldown, .001f);
             Assert.AreEqual(run.Config.gunNoiseRadius + 5, player.NoiseRadius, .001f);
-            Assert.AreEqual(run.Config.bonusPerEnemy + .01f, player.PressureBonus, .001f);
-            Assert.AreEqual(2.08f, player.CriticalMultiplier, .001f);
+            Assert.AreEqual(run.Config.bonusPerEnemy + .03f, player.PressureBonus, .001f);
+            Assert.AreEqual(2.1f, player.CriticalMultiplier, .001f);
             Assert.AreEqual(.08f, player.DoubleLootChance, .001f);
+            Apply("快装枪机");
+            Assert.AreEqual(startInterval * .64f, player.Weapons.Interval(slot), .0001f);
             for (int i = 0; i < 30; i++)
             {
                 Apply("快装枪机");
                 Apply("诱饵调校");
                 Apply("幸运四叶草");
+                Apply("共振扩音器");
+                Apply("致命打击");
             }
             Assert.AreEqual(.05f, player.Weapons.Interval(slot), .0001f);
             Assert.AreEqual(4, player.DecoyCooldown);
             Assert.AreEqual(1, player.DoubleLootChance);
+            Assert.AreEqual(12, player.NoiseRadius);
+            Assert.AreEqual(.2f, player.PressureBonus, .0001f);
+            Assert.AreEqual(5, player.CriticalMultiplier);
             var enemy = run.Enemies[0];
             enemy.TakeDamage(99999);
             var coin = Object.FindObjectOfType<GoldPickup>();

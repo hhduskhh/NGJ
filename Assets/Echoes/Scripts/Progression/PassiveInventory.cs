@@ -34,7 +34,7 @@ namespace Echoes
             return true;
         }
         public float ConvertedDamage =>
-            (Has(ItemSpecial.SpeedDamage) ? Mathf.Clamp((player.MoveScale - 1 + MoveSpeed) * .6f, 0, .24f) : 0) +
+            (Has(ItemSpecial.SpeedDamage) ? Mathf.Clamp((player.MoveScale - 1 + MoveSpeed) * .8f, 0, .24f) : 0) +
             (Has(ItemSpecial.HealthDamage) ? Mathf.Min(.30f, Mathf.Floor(player.MaxHealth / 20) * .03f) : 0);
         public float ConvertedAttackSpeed => Has(ItemSpecial.DodgeSpeed) ? Mathf.Clamp(Dodge * .8f, 0, .32f) : 0;
         public void OnKill()

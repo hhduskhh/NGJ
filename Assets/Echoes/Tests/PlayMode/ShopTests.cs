@@ -255,9 +255,9 @@ namespace Echoes.Tests
                 Assert.IsFalse(player.Passives.CanAdd(offer.Item));
             }
             Assert.AreEqual(62, player.Health);
-            Assert.AreEqual(1.048f, player.TotalDamageScale, .001f);
+            Assert.AreEqual(1.064f, player.TotalDamageScale, .001f);
             player.MoveScale += .12f;
-            Assert.AreEqual(1.12f, player.TotalDamageScale, .001f);
+            Assert.AreEqual(1.16f, player.TotalDamageScale, .001f);
             player.MoveScale += .5f;
             Assert.AreEqual(1.24f, player.TotalDamageScale, .001f);
             run.Shop.Close();

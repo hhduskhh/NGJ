@@ -81,7 +81,7 @@ namespace Echoes
         private void FixedUpdate()
         {
             run.Visibility.UpdateWalking(body.position, Time.fixedDeltaTime);
-            body.velocity = run.State == RunState.Playing ? movement * run.Config.moveSpeed * Mathf.Clamp(MoveScale + Passives.MoveSpeed, .6f, 1.6f) : Vector2.zero;
+            body.velocity = run.State == RunState.Playing ? movement * run.Config.moveSpeed * Mathf.Clamp(MoveScale + Passives.MoveSpeed, .6f, 2.5f) : Vector2.zero;
         }
 
         private void UpdateAim(Vector2 manualPoint, bool forceManualAim)
