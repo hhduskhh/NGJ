@@ -65,6 +65,11 @@ namespace Echoes.Tests
             Vector2 origin = DungeonTestGeometry.FindClearLane(run, 9);
             player.PlaceAt(origin);
             Assert.IsTrue(player.TryThrowDecoy(origin + 20 * Vector2.right));
+            var voice = System.Array.Find(run.Noise.GetComponents<AudioSource>(),
+                source => source.clip && source.clip.name == "DecoyThrowSpecial");
+            Assert.IsNotNull(voice);
+            Assert.AreEqual(2f, voice.clip.length, .001f);
+            Assert.AreEqual(NoiseSystem.ScreenLightLaughEnabled, voice.isPlaying);
             Assert.IsFalse(player.TryThrowDecoy(origin));
             var bell = Object.FindObjectOfType<BellDecoy>();
             var start = bell.transform.position;

@@ -28,6 +28,7 @@ namespace Echoes
         private readonly float[] shotLevels = new float[3];
         private readonly AudioSource[] worldVoices = new AudioSource[12];
         private AudioSource pickupVoice, hurtVoice, bossVoice, screenLightVoice;
+        private AudioSource decoyThrowVoice;
         private int pickupFrame = -1, pickupIndex;
         private float nextAmbience, nextWake, duckUntil;
         private readonly Dictionary<EnemyController, bool> impacts = new Dictionary<EnemyController, bool>();
@@ -54,6 +55,8 @@ namespace Echoes
             bossVoice = Voice();
             bossVoice.clip = Load("BossReady");
             screenLightVoice = Voice();
+            decoyThrowVoice = Voice();
+            decoyThrowVoice.clip = Load("DecoyThrowSpecial");
             screenLightLaugh = Load("ScreenLightLaugh");
             screenLightChime = Load("ScreenLightChime");
             nextAmbience = Time.time + Random.Range(8f, 16f);
@@ -70,6 +73,12 @@ namespace Echoes
             clip.SetData(samples, 0); return clip;
         }
         public void PlayUiPress() => audioSource.PlayOneShot(click, .36f);
+        public void PlayDecoyThrow()
+        {
+            if (!ScreenLightLaughEnabled) return;
+            decoyThrowVoice.volume = run.Config.decoyThrowVolume;
+            decoyThrowVoice.Play();
+        }
         public void PlayScreenLight()
         {
             screenLightVoice.clip = ScreenLightLaughEnabled ? screenLightLaugh : screenLightChime;
@@ -150,11 +159,13 @@ namespace Echoes
             {
                 bossVoice.Pause();
                 screenLightVoice.Pause();
+                decoyThrowVoice.Pause();
             }
             else
             {
                 bossVoice.UnPause();
                 screenLightVoice.UnPause();
+                decoyThrowVoice.UnPause();
             }
         }
 

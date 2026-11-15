@@ -117,6 +117,7 @@ namespace Echoes
         [Min(.05f)] public float screenLightWaveDuration = .7f;
         [Min(.1f)] public float screenLightCooldown = 15;
         [Range(0, 1)] public float screenLightVolume = .16f;
+        [Range(0, 1)] public float decoyThrowVolume = .16f;
 
         [Header("Bell decoy")]
         [Min(1)] public float decoyRadius = 9;
