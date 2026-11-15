@@ -35,6 +35,9 @@ namespace Echoes
         public float EnemyDamageScale { get { return FloorScale(config.floorEnemyDamage); } }
         public float BossHealthScale { get { return FloorScale(config.floorBossHealth); } }
         public float Elapsed { get; private set; }
+        public const string BestClearTimeKey = "BestClearTimeCentiseconds";
+        public int ElapsedCentiseconds => Mathf.FloorToInt(Elapsed * 100f);
+        public static int BestClearCentiseconds => PlayerPrefs.GetInt(BestClearTimeKey, -1);
         public int Kills { get; private set; }
         public int Experience { get; private set; }
         public int Level { get; private set; } = 1;
@@ -310,7 +313,18 @@ namespace Echoes
             if (enemy.IsBoss)
             {
                 foreach (var gold in FindObjectsOfType<GoldPickup>()) gold.Collect();
-                SetState(Floor >= FloorTheme.Count ? RunState.Won : RunState.FloorCleared);
+                bool won = Floor >= FloorTheme.Count;
+                if (won)
+                {
+                    int best = BestClearCentiseconds;
+                    int current = ElapsedCentiseconds;
+                    if (best < 0 || current < best)
+                    {
+                        PlayerPrefs.SetInt(BestClearTimeKey, current);
+                        PlayerPrefs.Save();
+                    }
+                }
+                SetState(won ? RunState.Won : RunState.FloorCleared);
                 return;
             }
             bool doubleLoot = Player.DoubleLootChance > 0 && Random.NextDouble() < Player.DoubleLootChance;

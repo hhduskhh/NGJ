@@ -111,6 +111,7 @@ namespace Echoes.Tests
         [UnityTest]
         public IEnumerator CaptureFiveShapesStartBossNormalVisionAndVictory()
         {
+            using var record = new ClearTimeTestScope();
             ConfigureGameView();
             foreach (var enemy in run.Enemies) enemy.enabled = false;
             var cover = run.transform.Find("UnseenDungeon").GetComponent<SpriteRenderer>();

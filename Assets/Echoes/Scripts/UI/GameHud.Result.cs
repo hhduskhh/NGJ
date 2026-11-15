@@ -47,7 +47,10 @@ namespace Echoes
                 Label(modal, won ? "遗迹已净化" : "探索失败", new Vector2(132, -14), new Vector2(290, 60), 48, accent);
                 Label(modal, run.Map.Rooms[run.Map.CurrentRoom].Name, new Vector2(134, -76), new Vector2(250, 34), 21, Paper);
                 DrawDepthTrail(cleared);
-                Label(modal, $"等级 {run.Level}     击败 {run.Kills}     {(int)run.Elapsed / 60:00}:{(int)run.Elapsed % 60:00}", new Vector2(32, -190), new Vector2(354, 34), 21, Paper);
+                Label(modal, $"等级 {run.Level}    击败 {run.Kills}    本局 {FormatResultTime(run.ElapsedCentiseconds)}", new Vector2(32, -190), new Vector2(363, 34), 20, Paper);
+                int best = RunController.BestClearCentiseconds;
+                string bestText = best < 0 ? "暂无" : FormatResultTime(best);
+                Label(modal, $"最快通关  {bestText}", new Vector2(943, -101), new Vector2(248, 36), 21, Brass);
                 DrawResultEquipment();
             }
             var next = Button(modal, descend ? "下潜  [E]" : "再来一局", descend ? new Vector2(302, -25) : new Vector2(468, -155),
@@ -55,6 +58,9 @@ namespace Echoes
             SkinButton(next);
             if (cleared) BeginResultReveal();
         }
+
+        private static string FormatResultTime(int centiseconds) =>
+            $"{centiseconds / 6000:00}:{centiseconds / 100 % 60:00}.{centiseconds % 100:00}";
 
         private void DrawDepthTrail(bool cleared)
         {

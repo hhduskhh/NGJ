@@ -222,8 +222,10 @@ namespace Echoes.Tests
         }
 
         [UnityTest]
-        public IEnumerator BossDefeatAdvancesThroughThreeFloorsAndPreservesRunState()
+        public IEnumerator BossDefeatAdvancesThroughThreeFloorsAndPreservesRunState(
+            [ValueSource(nameof(PreviousClearTimes))] int previousBest)
         {
+            using var record = new ClearTimeTestScope(previousBest);
             yield return Load();
             var run = Object.FindObjectOfType<RunController>();
             var player = run.Player;
@@ -287,10 +289,19 @@ namespace Echoes.Tests
             Assert.AreEqual("Floor3/", GameArt.Floor);
             Assert.AreEqual(RunState.Playing, run.State);
 
+            Assert.AreEqual(previousBest, RunController.BestClearCentiseconds);
             run.ActivateBoss();
             run.Boss.TakeDamage(99999);
             Assert.AreEqual(RunState.Won, run.State, "Only the third boss ends the run");
+            int elapsed = run.ElapsedCentiseconds;
+            int expected = previousBest < 0 ? elapsed : Mathf.Min(previousBest, elapsed);
+            Assert.AreEqual(expected, RunController.BestClearCentiseconds);
+            run.Restart();
+            yield return null;
+            Assert.AreEqual(expected, RunController.BestClearCentiseconds);
         }
+
+        private static readonly int[] PreviousClearTimes = { -1, 0, int.MaxValue };
 
         [UnityTest]
         public IEnumerator MiddleRoomsUsePerFloorWeightedSpawnDraws()
