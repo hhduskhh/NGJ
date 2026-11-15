@@ -11,6 +11,7 @@ namespace Echoes
     {
         [SerializeField] private GameConfig config;
         [SerializeField, Range(0f, 1f)] private float musicVolume = 0.12f;
+        private AudioSource explorationMusic;
         public GameConfig Config => config;
         public Hero Character { get; private set; }
         internal static Hero NextCharacter { get; set; }
@@ -77,11 +78,19 @@ namespace Echoes
             Visibility.Initialize(this);
             Hud = gameObject.AddComponent<GameHud>();
             Hud.Initialize(this);
-            var explorationMusic = gameObject.AddComponent<AudioSource>();
+            explorationMusic = gameObject.AddComponent<AudioSource>();
             explorationMusic.playOnAwake = false;
-            explorationMusic.clip = Resources.Load<AudioClip>("EmptyCity");
             explorationMusic.loop = true;
             explorationMusic.volume = musicVolume;
+            NoiseSystem.SpecialAudioChanged += RefreshExplorationMusic;
+            RefreshExplorationMusic();
+        }
+
+        private void RefreshExplorationMusic()
+        {
+            var clip = Resources.Load<AudioClip>(NoiseSystem.ScreenLightLaughEnabled ? "RooftopMusic" : "EmptyCity");
+            if (explorationMusic.clip == clip) return;
+            explorationMusic.clip = clip;
             explorationMusic.Play();
         }
 
@@ -402,6 +411,7 @@ namespace Echoes
 
         private void OnDestroy()
         {
+            NoiseSystem.SpecialAudioChanged -= RefreshExplorationMusic;
             if (Random != null) Destroy(config);
             Time.timeScale = 1;
             AudioListener.volume = 1;

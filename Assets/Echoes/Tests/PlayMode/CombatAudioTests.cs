@@ -32,15 +32,29 @@ namespace Echoes.Tests
         }
 
         [UnityTest]
-        public IEnumerator EmptyCityLoopsAcrossAllFloors()
+        public IEnumerator SelectedMusicSwitchesAndLoopsAcrossAllFloors()
         {
             yield return SceneManager.LoadSceneAsync("Prototype");
             yield return null;
             var run = Object.FindObjectOfType<RunController>();
-            var clip = Resources.Load<AudioClip>("EmptyCity");
+            bool special = NoiseSystem.ScreenLightLaughEnabled;
+            var clip = Resources.Load<AudioClip>(special ? "RooftopMusic" : "EmptyCity");
             Assert.IsNotNull(clip);
             var music = run.GetComponents<AudioSource>().Single(source => source.clip == clip);
             Assert.IsTrue(music.loop);
+            try
+            {
+                NoiseSystem.ScreenLightLaughEnabled = !special;
+                yield return null;
+                Assert.AreEqual(special ? "EmptyCity" : "RooftopMusic", music.clip.name);
+                Assert.IsTrue(music.isPlaying);
+            }
+            finally
+            {
+                NoiseSystem.ScreenLightLaughEnabled = special;
+            }
+            yield return null;
+            Assert.AreSame(clip, music.clip);
             Assert.IsTrue(music.isPlaying);
             run.Player.PlaceAt(run.Map.BossPosition);
             yield return null;

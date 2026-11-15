@@ -8,6 +8,7 @@ namespace Echoes
     public sealed class NoiseSystem : MonoBehaviour
     {
         private const string ScreenLightLaughKey = "ScreenLightLaughEnabled";
+        public static event System.Action SpecialAudioChanged;
         public static bool ScreenLightLaughEnabled
         {
             get => PlayerPrefs.GetInt(ScreenLightLaughKey, 1) != 0;
@@ -15,6 +16,7 @@ namespace Echoes
             {
                 PlayerPrefs.SetInt(ScreenLightLaughKey, value ? 1 : 0);
                 PlayerPrefs.Save();
+                SpecialAudioChanged?.Invoke();
             }
         }
 
