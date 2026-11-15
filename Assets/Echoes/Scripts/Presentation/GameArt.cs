@@ -22,6 +22,7 @@ namespace Echoes
             return frames[Mathf.Clamp(index, 0, frames.Length - 1)];
         }
         public static string Floor => "Floor" + (Theme + 1) + "/";
+        public static string PlayerKind(Hero hero) => hero == Hero.Runner ? "runner" : "player";
         public static Sprite Get(string kind)
         {
             if (kind.StartsWith("room_")) return RoomArt.Sprite(kind);
@@ -36,6 +37,7 @@ namespace Echoes
                 case "raisedSpikes":
                 case "floorBomb": return Frame("Common/" + kind, 0);
                 case "player": return Frame("Common/hero", 0);
+                case "runner": return Frame("Common/runner", 0);
                 case "enemy": return Frame(Floor + "walker", 0);
                 case "walker":
                 case "guard":
@@ -149,7 +151,7 @@ namespace Echoes
                 CurrentFrame = enemy.State == EnemyState.Sleeping ? 0 :
                     enemy.IsWindingUp || enemy.IsContactTelegraph || pulse > 0 ? 4 : moving ? 2 + (int)(clock * 8) % 2 : 1;
             }
-            string sheet = laughing ? "Common/heroLaugh" : player ? "Common/hero" : GameArt.Floor + Species;
+            string sheet = player ? "Common/" + Species + (laughing ? "Laugh" : "") : GameArt.Floor + Species;
             renderer2D.sprite = GameArt.Frame(sheet, CurrentFrame);
             if (enemy) enemy.UpdateDamageShape(renderer2D.sprite, renderer2D.flipX);
             renderer2D.sortingOrder = GameArt.FootOrder(transform.position.y);

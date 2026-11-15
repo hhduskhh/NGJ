@@ -21,6 +21,12 @@ namespace Echoes
         [Header("Player")]
         [Min(1)] public float playerHealth = 100;
         [Min(.1f)] public float moveSpeed = 9f;
+        [Header("Escape Frog")]
+        [Min(1)] public float runnerHealth = 90;
+        [Min(.1f)] public float runnerMoveSpeed = 10.8f;
+        [Min(.1f)] public float runnerBaseDamage = .85f;
+        [Min(.01f)] public float runnerSpeedConversion = 1f;
+        [Min(0)] public float runnerMaxDamageBonus = 1f;
         [Min(1)] public float bulletDamage = 10;
         [Min(.05f)] public float shotInterval = .28f;
         [Min(1)] public float bulletSpeed = 33;

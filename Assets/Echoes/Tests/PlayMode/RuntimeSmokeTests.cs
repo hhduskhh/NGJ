@@ -256,11 +256,12 @@ namespace Echoes.Tests
             Assert.IsFalse(hint.activeInHierarchy);
         }
 
-        internal static void Capture(string path)
+        internal static void Capture(string path, Canvas canvas = null)
         {
             // Batch mode has no Game View backbuffer. Render the same camera and HUD to an explicit target.
             var camera = Camera.main;
-            var canvas = GameObject.Find("GameHUD").GetComponent<Canvas>();
+            if (!canvas) canvas = GameObject.Find("GameHUD").GetComponent<Canvas>();
+            Directory.CreateDirectory(Path.GetDirectoryName(path));
             var previousTarget = camera.targetTexture;
             var previousActive = RenderTexture.active;
             int previousSortingOrder = canvas.sortingOrder;

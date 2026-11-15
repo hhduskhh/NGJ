@@ -28,7 +28,13 @@ namespace Echoes
         public float AttackSpeed => Mathf.Max(.1f, 1 + Passives.AttackSpeed + Passives.ConvertedAttackSpeed) / ShotIntervalScale;
         public float CriticalChance => Mathf.Clamp01(.1f + Passives.Critical);
         public float CriticalMultiplier => Mathf.Clamp(2 + CriticalDamageBonus + Passives.CriticalDamage, 1, 5);
-        public float TotalDamageScale => Mathf.Max(.1f, DamageScale + Passives.Damage + Passives.ConvertedDamage +
+        private bool IsRunner => run.Character == Hero.Runner;
+        public float MaxMoveScale => IsRunner ? 1 + run.Config.runnerMaxDamageBonus / run.Config.runnerSpeedConversion : 2.5f;
+        public float EffectiveMoveScale => Mathf.Clamp(MoveScale + Passives.MoveSpeed, .6f, MaxMoveScale);
+        public float MovementSpeed => (IsRunner ? run.Config.runnerMoveSpeed : run.Config.moveSpeed) * EffectiveMoveScale;
+        public float ChaseWindBonus => IsRunner ? Mathf.Max(0, EffectiveMoveScale - 1) * run.Config.runnerSpeedConversion : 0;
+        public float TotalDamageScale => (IsRunner ? run.Config.runnerBaseDamage : 1) * Mathf.Max(.1f,
+            DamageScale + ChaseWindBonus + Passives.Damage + Passives.ConvertedDamage +
             (Passives.Has(ItemSpecial.LoneFighter) ? (run.NearbyEnemies <= 1 ? .3f : -.1f) : 0));
         public float PressureBonus => Mathf.Clamp(run.Config.bonusPerEnemy + PressureBonusPerEnemy + Passives.Pressure, 0, .2f);
         public int PressureCap => Mathf.Clamp(run.Config.bonusEnemyCap + Passives.PressureCap, 1, 12);
@@ -40,10 +46,11 @@ namespace Echoes
 
         public static PlayerController Create(RunController run, Vector2 position)
         {
-            var renderer = PixelArt.Create("Explorer", "player", position, 10);
+            bool runner = run.Character == Hero.Runner;
+            var renderer = PixelArt.Create("Explorer", GameArt.PlayerKind(run.Character), position, 10);
             var player = renderer.gameObject.AddComponent<PlayerController>();
             player.run = run; player.sprite = renderer;
-            player.MaxHealth = player.Health = run.Config.playerHealth;
+            player.MaxHealth = player.Health = runner ? run.Config.runnerHealth : run.Config.playerHealth;
             player.body = renderer.gameObject.AddComponent<Rigidbody2D>();
             player.body.gravityScale = 0;
             player.body.freezeRotation = true;
@@ -52,7 +59,7 @@ namespace Echoes
             hitbox.radius = .33f;
             hitbox.offset = Vector2.zero; // Bottom-pivot sprites must not auto-fit the collider to the head.
             player.art = renderer.gameObject.AddComponent<CharacterArt>();
-            player.art.Initialize("hero");
+            player.art.Initialize(runner ? "runner" : "hero");
             player.Passives = new PassiveInventory(player);
             player.pressureRing = PixelArt.Circle("PressureRadius", player.transform,
                 new Color(.36f, .89f, .86f, .16f), .025f);
@@ -81,7 +88,7 @@ namespace Echoes
         private void FixedUpdate()
         {
             run.Visibility.UpdateWalking(body.position, Time.fixedDeltaTime);
-            body.velocity = run.State == RunState.Playing ? movement * run.Config.moveSpeed * Mathf.Clamp(MoveScale + Passives.MoveSpeed, .6f, 2.5f) : Vector2.zero;
+            body.velocity = run.State == RunState.Playing ? movement * MovementSpeed : Vector2.zero;
         }
 
         private void UpdateAim(Vector2 manualPoint, bool forceManualAim)
@@ -145,6 +152,7 @@ namespace Echoes
             if ((point - origin).sqrMagnitude > range * range + .0001f || !run.Map.HasClearInteractionPath(origin, point))
             { run.Hud.Notify("诱饵投掷路径被墙壁挡住", 2); return false; }
             BellDecoy.Throw(run, origin, point);
+            if (IsRunner) art.Attack();
             decoyReadyAt = Time.time + DecoyCooldown;
             return true;
         }

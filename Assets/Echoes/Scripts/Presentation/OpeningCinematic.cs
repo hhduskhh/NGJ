@@ -13,10 +13,11 @@ namespace Echoes
             gameObject.AddComponent<TitleMenu>().Initialize(EnterDungeon);
         }
 
-        private void EnterDungeon()
+        private void EnterDungeon(Hero hero)
         {
             if (leaving) return;
             leaving = true;
+            RunController.NextCharacter = hero;
             SceneManager.LoadSceneAsync("Prototype");
         }
     }

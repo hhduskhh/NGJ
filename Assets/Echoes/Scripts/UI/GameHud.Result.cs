@@ -42,7 +42,8 @@ namespace Echoes
             }
             else
             {
-                ArtPanel("Explorer", modal, new Vector2(12, -14), new Vector2(116, 116), GameArt.Get("player"), icon: true);
+                ArtPanel("Explorer", modal, new Vector2(12, -14), new Vector2(116, 116),
+                    GameArt.Get(GameArt.PlayerKind(run.Character)), icon: true);
                 Label(modal, won ? "遗迹已净化" : "探索失败", new Vector2(132, -14), new Vector2(290, 60), 48, accent);
                 Label(modal, run.Map.Rooms[run.Map.CurrentRoom].Name, new Vector2(134, -76), new Vector2(250, 34), 21, Paper);
                 DrawDepthTrail(cleared);

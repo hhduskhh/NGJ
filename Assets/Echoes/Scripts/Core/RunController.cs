@@ -5,12 +5,15 @@ using UnityEngine.SceneManagement;
 namespace Echoes
 {
     public enum RunState { Playing, Upgrade, Paused, Shop, FloorCleared, Won, Lost, Backpack }
+    public enum Hero { Explorer, Runner }
 
     public sealed class RunController : MonoBehaviour
     {
         [SerializeField] private GameConfig config;
         [SerializeField, Range(0f, 1f)] private float musicVolume = 0.12f;
         public GameConfig Config => config;
+        public Hero Character { get; private set; }
+        internal static Hero NextCharacter { get; set; }
         public DungeonMap Map { get; private set; }
         public PlayerController Player { get; private set; }
         public NoiseSystem Noise { get; private set; }
@@ -54,6 +57,8 @@ namespace Echoes
             Time.timeScale = 1;
             AudioListener.volume = 1;
             config = Instantiate(config);
+            Character = NextCharacter;
+            NextCharacter = Hero.Explorer;
             if (restartSeed.HasValue) config.randomSeed = restartSeed.Value;
             restartSeed = null;
             Random = new System.Random(config.randomSeed);
@@ -383,6 +388,7 @@ namespace Echoes
         {
             var next = System.Guid.NewGuid().GetHashCode() & int.MaxValue;
             restartSeed = next == config.randomSeed ? next ^ 1 : next;
+            NextCharacter = Character;
             Time.timeScale = 1;
             SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
         }

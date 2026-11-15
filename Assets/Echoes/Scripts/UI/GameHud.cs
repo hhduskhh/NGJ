@@ -49,7 +49,7 @@ namespace Echoes
             var iron = new Color32(19, 25, 24, 226);
             var vitals = Panel("Vitals", canvas, new Vector2(24, -24), new Vector2(256, 76), iron);
             ArtPanel("Explorer", vitals, new Vector2(2, -6), new Vector2(64, 64),
-                GameArt.Get("player"), icon: true);
+                GameArt.Get(GameArt.PlayerKind(run.Character)), icon: true);
             healthText = Label(vitals, "", new Vector2(70, -5), new Vector2(180, 30), 24, Paper);
             healthBar = Bar(vitals, new Vector2(70, -34), new Vector2(174, 8), new Color32(198, 81, 64, 255));
             damageTrail = Instantiate(healthBar, healthBar.transform.parent);

@@ -149,7 +149,7 @@ namespace Echoes
             Stat("生命", $"{Mathf.CeilToInt(p.Health)} / {p.MaxHealth:0}");
             Stat("公共伤害", (p.TotalDamageScale - 1).ToString("+0%;-0%;0%"));
             Stat("攻速加成", (p.AttackSpeed - 1).ToString("+0%;-0%;0%"));
-            Stat("移动速度", Mathf.Clamp(p.MoveScale + p.Passives.MoveSpeed, .6f, 2.5f).ToString("0%"));
+            Stat("移动速度", $"{p.MovementSpeed:0.##}  ({p.EffectiveMoveScale:0%})");
             Stat("暴击率", p.CriticalChance.ToString("0%"));
             Stat("暴击倍率", $"× {p.CriticalMultiplier:0.00}");
             Stat("闪避率", Mathf.Clamp(p.Passives.Dodge, 0, .5f).ToString("0%"));
