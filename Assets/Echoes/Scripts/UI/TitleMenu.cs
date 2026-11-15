@@ -30,9 +30,9 @@ namespace Echoes
             fitter.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
             fitter.aspectRatio = (float)art.texture.width / art.texture.height;
             font = Resources.Load<TMP_FontAsset>("FusionPixelUI");
-            start = Hotspot("开始游戏", 414, () => ToggleSelection(true));
-            settingsButton = Hotspot("设置", 513, () => ToggleSettings(true));
-            Hotspot("退出游戏", 610, Quit);
+            start = Hotspot("开始游戏", .23f, () => ToggleSelection(true));
+            settingsButton = Hotspot("设置", .43f, () => ToggleSettings(true));
+            Hotspot("退出游戏", .63f, Quit);
 
             var panel = Rect("Settings Panel", poster, .018f, .23f, .32f, .60f);
             settings = panel.gameObject;
@@ -170,16 +170,15 @@ namespace Echoes
             return button;
         }
 
-        private Button Hotspot(string name, int topPixel, UnityAction action)
+        private Button Hotspot(string name, float left, UnityAction action)
         {
-            // Menu lettering is baked into the 1672 x 941 poster. Match its 400 x 88 plaque.
-            var rect = Rect(name, poster, 47f / 1672, 1 - (topPixel + 88) / 941f,
-                447f / 1672, 1 - topPixel / 941f);
+            var rect = Rect(name, poster, left, .09f, left + .14f, .19f);
             var graphic = rect.gameObject.AddComponent<Image>();
             graphic.canvasRenderer.cullTransparentMesh = false;
             graphic.color = Color.clear;
             var button = rect.gameObject.AddComponent<TitleMenuButton>();
             button.targetGraphic = graphic;
+            CardLabel(Rect("Label", rect, 0, 0, 1, 1), name, 38, Paper, TextAlignmentOptions.Center);
             button.onClick.AddListener(action);
             return button;
         }
