@@ -16,7 +16,7 @@ namespace Echoes
         private TMP_FontAsset font;
         private TextMeshProUGUI laughLabel;
 
-        public void Initialize(UnityAction<Hero> begin)
+        public void Initialize(UnityAction<Hero> begin, GameConfig config)
         {
             if (!EventSystem.current)
                 new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
@@ -46,43 +46,96 @@ namespace Echoes
             laughLabel = laughButton.GetComponentInChildren<TextMeshProUGUI>();
             PanelButton("返回", panel, .04f, () => ToggleSettings(false));
             settings.SetActive(false);
-            BuildSelection(begin);
+            BuildSelection(begin, config);
         }
 
-        private void BuildSelection(UnityAction<Hero> begin)
+        private static readonly Color Paper = new Color32(250, 239, 211, 255);
+        private static readonly Color Muted = new Color32(181, 183, 175, 255);
+        private static readonly Color Brass = new Color32(230, 180, 102, 255);
+        private static readonly Color Mint = new Color32(132, 217, 201, 255);
+        private static readonly Color Rule = new Color32(74, 80, 77, 255);
+
+        private void BuildSelection(UnityAction<Hero> begin, GameConfig config)
         {
             var panel = Rect("选择角色", poster, 0, 0, 1, 1);
             selection = panel.gameObject;
-            selection.AddComponent<Image>().color = new Color(.035f, .09f, .12f);
-            CardLabel(Rect("标题", panel, .12f, .80f, .88f, .94f), "选择角色", 52);
-            firstHero = HeroCard(panel, .14f, Hero.Explorer, "主角一", "均衡型", "标准移速与火力，生命充足", begin);
-            HeroCard(panel, .52f, Hero.Runner, "主角二", "追风", "移速转伤害，最高 +100%", begin);
-            var back = Rect("返回标题", panel, .42f, .055f, .58f, .15f);
-            MakeButton(back, () => ToggleSelection(false));
-            CardLabel(Rect("文字", back, 0, 0, 1, 1), "返回", 32);
+            var backdrop = panel.gameObject.AddComponent<RawImage>();
+            backdrop.texture = poster.GetComponent<RawImage>().texture;
+            backdrop.uvRect = new Rect(.54f, 0, .46f, 1);
+            backdrop.color = new Color32(28, 33, 37, 255);
+
+            CardLabel(Rect("标题", panel, .075f, .83f, .65f, .955f), "选择角色", 58, Paper);
+            Fill(Rect("分隔线", panel, .075f, .816f, .925f, .818f), Rule);
+            var back = Rect("返回标题", panel, .818f, .855f, .925f, .925f);
+            var backButton = MakeButton(back, () => ToggleSelection(false));
+            var backColors = backButton.colors;
+            backColors.normalColor = new Color32(43, 49, 48, 255);
+            backColors.highlightedColor = backColors.selectedColor = new Color32(92, 88, 69, 255);
+            backButton.colors = backColors;
+            CardLabel(Rect("返回", back, 0, 0, 1, 1), "返回", 24, Paper, TextAlignmentOptions.Center);
+
+            firstHero = HeroCard(panel, .075f, Hero.Explorer, begin, config);
+            HeroCard(panel, .51f, Hero.Runner, begin, config);
             selection.SetActive(false);
         }
 
-        private Button HeroCard(RectTransform panel, float x, Hero hero, string title, string trait,
-            string description, UnityAction<Hero> begin)
+        private Button HeroCard(RectTransform panel, float x, Hero hero, UnityAction<Hero> begin, GameConfig config)
         {
-            var card = Rect(title, panel, x, .20f, x + .34f, .78f);
+            bool runner = hero == Hero.Runner;
+            string name = runner ? "主角二" : "主角一";
+            Color accent = runner ? Mint : Brass;
+            var card = Rect(name, panel, x, .065f, x + .415f, .784f);
             var button = MakeButton(card, () => begin(hero));
             var colors = button.colors;
-            colors.normalColor = new Color(.12f, .22f, .25f);
-            colors.highlightedColor = colors.selectedColor = new Color(.24f, .37f, .38f);
-            colors.pressedColor = new Color(.32f, .39f, .32f);
+            colors.normalColor = Rule;
+            colors.highlightedColor = colors.selectedColor = accent;
+            colors.pressedColor = Color.white;
             button.colors = colors;
-            var portrait = Rect("肖像", card, .15f, .43f, .85f, .96f).gameObject.AddComponent<Image>();
-            portrait.sprite = GameArt.Get(GameArt.PlayerKind(hero));
-            portrait.preserveAspect = true;
+
+            var body = Rect("卡面", card, .006f, .006f, .994f, .994f);
+            Fill(body, runner ? new Color32(22, 37, 40, 255) : new Color32(39, 35, 33, 255));
+            var portrait = Rect("角色原画", body, 0, .50f, 1, 1).gameObject.AddComponent<RawImage>();
+            portrait.texture = Resources.Load<Texture2D>(runner ? "SelectRunner" : "SelectExplorer");
             portrait.raycastTarget = false;
-            CardLabel(Rect("名称", card, .03f, .28f, .97f, .48f), title + " · " + trait, 38);
-            CardLabel(Rect("特性", card, .04f, .08f, .96f, .24f), description, 25);
+            Fill(Rect("画框", body, 0, .493f, 1, .50f), accent);
+
+            // The figure in the illustration and the actual in-game sprite can be compared at a glance.
+            var icon = Rect("游戏内形象", body, .81f, .335f, .965f, .487f).gameObject.AddComponent<Image>();
+            icon.sprite = GameArt.Get(GameArt.PlayerKind(hero));
+            icon.preserveAspect = true;
+            icon.raycastTarget = false;
+            CardLabel(Rect("编号", body, .045f, .419f, .62f, .476f), name, 19, accent);
+            CardLabel(Rect("定位", body, .041f, .321f, .72f, .429f), runner ? "追风" : "均衡型", 46, Paper);
+            Fill(Rect("属性分隔", body, .045f, .307f, .955f, .310f), Rule);
+
+            CardStat(body, .045f, "生命", (runner ? config.runnerHealth : config.playerHealth).ToString("0.#"));
+            CardStat(body, .36f, "移速", (runner ? config.runnerMoveSpeed : config.moveSpeed).ToString("0.#"));
+            CardStat(body, .665f, "初始伤害", (runner ? config.runnerBaseDamage : 1f).ToString("0%"));
+
+            var footer = Rect("特性", body, 0, 0, 1, .143f);
+            Fill(footer, runner ? new Color32(30, 56, 56, 255) : new Color32(61, 50, 37, 255));
+            string trait = runner
+                ? $"每 1% 移速加成转为 {config.runnerSpeedConversion:0.##}% 伤害，上限 +{config.runnerMaxDamageBonus:0%}"
+                : "标准火力与移速，生命充足";
+            CardLabel(Rect("说明", footer, .045f, .08f, .94f, .92f), trait, 24, accent);
             return button;
         }
 
-        private void CardLabel(RectTransform rect, string value, int size)
+        private void CardStat(RectTransform card, float x, string title, string value)
+        {
+            CardLabel(Rect(title, card, x, .244f, x + .28f, .300f), title, 18, Muted);
+            CardLabel(Rect(title + "数值", card, x, .153f, x + .28f, .249f), value, 36, Paper);
+        }
+
+        private static void Fill(RectTransform rect, Color color)
+        {
+            var image = rect.gameObject.AddComponent<Image>();
+            image.color = color;
+            image.raycastTarget = false;
+        }
+
+        private void CardLabel(RectTransform rect, string value, int size, Color color,
+            TextAlignmentOptions alignment = TextAlignmentOptions.MidlineLeft)
         {
             var label = rect.gameObject.AddComponent<TextMeshProUGUI>();
             label.font = font;
@@ -90,7 +143,8 @@ namespace Echoes
             label.enableAutoSizing = true;
             label.fontSizeMin = 8;
             label.fontSizeMax = size;
-            label.alignment = TextAlignmentOptions.Center;
+            label.color = color;
+            label.alignment = alignment;
             label.raycastTarget = false;
         }
 
