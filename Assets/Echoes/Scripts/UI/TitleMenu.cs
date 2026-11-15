@@ -50,7 +50,6 @@ namespace Echoes
         }
 
         private static readonly Color Paper = new Color32(250, 239, 211, 255);
-        private static readonly Color Muted = new Color32(181, 183, 175, 255);
         private static readonly Color Brass = new Color32(230, 180, 102, 255);
         private static readonly Color Mint = new Color32(132, 217, 201, 255);
         private static readonly Color Rule = new Color32(74, 80, 77, 255);
@@ -84,7 +83,9 @@ namespace Echoes
             bool runner = hero == Hero.Runner;
             string name = runner ? "主角二" : "主角一";
             Color accent = runner ? Mint : Brass;
-            var card = Rect(name, panel, runner ? .407f : .075f, .105f, runner ? .925f : .387f, .763f);
+            const float cardWidth = .415f;
+            float left = runner ? .51f : .075f;
+            var card = Rect(name, panel, left, .105f, left + cardWidth, .763f);
             var button = MakeButton(card, () => begin(hero));
             var colors = button.colors;
             colors.normalColor = Rule;
@@ -93,15 +94,12 @@ namespace Echoes
             button.colors = colors;
 
             var body = Rect("卡面", card, .006f, .006f, .994f, .994f);
-            Fill(body, new Color32(19, 36, 38, 255));
-            float imageBottom = runner ? .315f : 0f;
-            var portrait = Rect("角色原画", body, 0, imageBottom, 1, 1).gameObject.AddComponent<RawImage>();
+            var portrait = body.gameObject.AddComponent<RawImage>();
             portrait.texture = Resources.Load<Texture2D>(runner ? "SelectRunner" : "SelectExplorer");
             portrait.raycastTarget = false;
 
             // Keep the in-game likeness visible on both illustrations.
-            var badge = Rect("精灵底板", body, .022f, imageBottom + .018f,
-                runner ? .114f : .175f, imageBottom + .148f);
+            var badge = Rect("精灵底板", body, .022f, .024f, .138f, .154f);
             Fill(badge, new Color32(14, 22, 25, 226));
             var icon = Rect("游戏内形象", badge, .06f, .04f, .94f, .96f).gameObject.AddComponent<Image>();
             icon.sprite = GameArt.Get(GameArt.PlayerKind(hero));
@@ -110,11 +108,10 @@ namespace Echoes
 
             if (runner)
             {
-                Fill(Rect("画框", body, 0, imageBottom - .006f, 1, imageBottom), Mint);
-                CardLabel(Rect("能力", body, .04f, .181f, .97f, .291f), "移速转伤害", 40, Mint);
+                var caption = Rect("说明底板", body, .138f, .024f, .978f, .154f);
+                Fill(caption, new Color32(14, 22, 25, 236));
                 string conversion = $"每 1% 永久移速加成，伤害 +{config.runnerSpeedConversion:0.##}%，上限 +{config.runnerMaxDamageBonus:0%}";
-                CardLabel(Rect("被动", body, .04f, .101f, .97f, .183f), conversion, 25, Paper);
-                CardLabel(Rect("开局特点", body, .04f, .018f, .97f, .094f), "初始移速高，生命与起始伤害低", 21, Muted);
+                CardLabel(Rect("被动", caption, .022f, .08f, .976f, .92f), conversion, 24, Paper);
             }
             return button;
         }
