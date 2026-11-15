@@ -244,6 +244,12 @@ namespace Echoes.Tests
             Assert.IsTrue(hint.activeInHierarchy);
             StringAssert.Contains("左键", action.text);
             Capture("TestResults/106-exit.png");
+            foreach (var line in hint.GetComponentsInChildren<TMPro.TMP_Text>())
+            {
+                line.ForceMeshUpdate();
+                Assert.AreEqual(1, line.textInfo.lineCount, line.text);
+                Assert.LessOrEqual(line.preferredWidth, line.rectTransform.rect.width, line.text);
+            }
 
             run.Player.PlaceAt(run.Map.Rooms[1].Center);
             yield return new WaitForSeconds(.1f);
