@@ -224,11 +224,37 @@ namespace Echoes.Tests
             yield return null;
         }
 
+        [UnityTest]
+        public IEnumerator FirstFloorSignsFollowPlayerProximity()
+        {
+            yield return SceneManager.LoadSceneAsync("Prototype");
+            yield return new WaitForSeconds(.4f);
+            var run = Object.FindObjectOfType<RunController>();
+            var hint = GameObject.Find("SignHint");
+            Assert.IsNotNull(hint, "The movement hint is readable before taking a step");
+            var action = hint.GetComponentInChildren<TMPro.TMP_Text>();
+            StringAssert.Contains("WASD", action.text);
+            Directory.CreateDirectory("TestResults");
+            Capture("TestResults/106-spawn.png");
+
+            var approach = run.Map.NearestFloor(run.Map.SignPosition + Vector2.left * 2);
+            run.Player.PlaceAt(approach);
+            run.Noise.Emit(approach, run.Config.playerVisionRadius, NoiseKind.Footstep);
+            yield return new WaitForSeconds(.4f);
+            Assert.IsTrue(hint.activeInHierarchy);
+            StringAssert.Contains("左键", action.text);
+            Capture("TestResults/106-exit.png");
+
+            run.Player.PlaceAt(run.Map.Rooms[1].Center);
+            yield return new WaitForSeconds(.1f);
+            Assert.IsFalse(hint.activeInHierarchy);
+        }
+
         internal static void Capture(string path)
         {
             // Batch mode has no Game View backbuffer. Render the same camera and HUD to an explicit target.
             var camera = Camera.main;
-            var canvas = Object.FindObjectOfType<Canvas>();
+            var canvas = GameObject.Find("GameHUD").GetComponent<Canvas>();
             var previousTarget = camera.targetTexture;
             var previousActive = RenderTexture.active;
             int previousSortingOrder = canvas.sortingOrder;

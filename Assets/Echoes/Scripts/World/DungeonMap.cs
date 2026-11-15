@@ -91,6 +91,7 @@ namespace Echoes
 
         public Vector2 ShopCounterPosition { get; private set; }
         public Vector2 SignPosition { get; private set; }
+        public Vector2 MovementSignPosition { get; private set; }
 
         public Vector2 BossPosition
         {
@@ -622,8 +623,19 @@ namespace Echoes
             RenderNativeDoorDetails();
             RenderObstacles();
             RenderDecorations();
-            Vector2 exit = Rooms[0].DoorOpenings[0].center - StartPosition;
+            Vector2 doorCenter = Rooms[0].DoorOpenings[0].center;
+            Vector2 exit = doorCenter - StartPosition;
             SignPosition = FindWalkableInRoom(StartPosition + new Vector2(1, 1), Rooms[0]);
+            if (Floor == 1)
+            {
+                MovementSignPosition = SignPosition;
+                PixelArt.Create("MovementSign", "signpost", MovementSignPosition,
+                    GameArt.FootOrder(MovementSignPosition.y), generatedRoot);
+                Vector2 outward = Mathf.Abs(exit.x) > Mathf.Abs(exit.y)
+                    ? Vector2.right * Mathf.Sign(exit.x) : Vector2.up * Mathf.Sign(exit.y);
+                Vector2 besideDoor = doorCenter - outward * 3 + Vector2.Perpendicular(outward) * 1.5f;
+                SignPosition = FindWalkableInRoom(besideDoor, Rooms[0]);
+            }
             int order = GameArt.FootOrder(SignPosition.y);
             var sign = PixelArt.Create("ExitSign", "signpost", SignPosition, order, generatedRoot);
             var arrow = PixelArt.Create("ExitArrow", "signArrow", SignPosition + Vector2.up * .94f, order + 1, sign.transform);

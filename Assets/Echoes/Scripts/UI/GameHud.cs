@@ -13,6 +13,8 @@ namespace Echoes
         private RectTransform mapPanel;
         private TMP_Text mapTitle;
         private TMP_Text screenLightStatus;
+        private RectTransform signPanel;
+        private TMP_Text signAction, signDetail;
         private Texture2D mapTexture;
         private UnityEngine.UI.RawImage mapImage;
         private RectTransform playerMarker;
@@ -84,6 +86,16 @@ namespace Echoes
             SkinButton(pack);
             noticeText = Label(canvas, "", new Vector2(0, 33), new Vector2(690, 42), 21, Paper, new Vector2(.5f, 0));
             noticeText.alignment = TextAlignmentOptions.Center;
+            signPanel = Panel("SignHint", transform, Vector2.zero, new Vector2(302, 76), iron);
+            var signCanvas = signPanel.gameObject.AddComponent<Canvas>();
+            signCanvas.renderMode = RenderMode.WorldSpace;
+            signCanvas.sortingOrder = DungeonVisibility.DangerOrder + 1;
+            signPanel.localScale = Vector3.one / 32f;
+            signPanel.pivot = new Vector2(.5f, 0);
+            Panel("BrassEdge", signPanel, Vector2.zero, new Vector2(3, 76), Brass);
+            signAction = Label(signPanel, "", new Vector2(16, -8), new Vector2(280, 32), 24, Brass);
+            signDetail = Label(signPanel, "", new Vector2(16, -43), new Vector2(280, 26), 20, Paper);
+            signPanel.gameObject.SetActive(false);
             bossText = Label(canvas, "", new Vector2(0, -22), new Vector2(520, 28), 18, PixelArt.Red, new Vector2(.5f, 1));
             bossText.alignment = TextAlignmentOptions.Center;
             bossBar = Bar(canvas, new Vector2(0, -52), new Vector2(450, 8), PixelArt.Red, new Vector2(.5f, 1));
@@ -122,10 +134,27 @@ namespace Echoes
             }
             else if (run.State == RunState.Playing && Vector2.Distance(run.Player.transform.position, run.Map.AltarPosition) < 3)
                 Notify("[E] 唤醒守关者", .2f);
-            if (run.State == RunState.Playing && Vector2.Distance(run.Player.transform.position, run.Map.SignPosition) < 3)
+            if (run.Floor > 1 && run.State == RunState.Playing && Vector2.Distance(run.Player.transform.position, run.Map.SignPosition) < 3)
                 Notify("WASD 移动 · 左键射击 · 沿箭头探索，到祭坛唤醒守关者", .2f);
             if (run.State == RunState.Playing && run.Shop.InRange) Notify("[E] 打开补给商店", .2f);
             if (run.State == RunState.Upgrade) ReadUpgradeKeys();
+        }
+
+        private void LateUpdate()
+        {
+            var map = run.Map;
+            bool reading = run.Floor == 1 && run.State == RunState.Playing && map.CurrentRoom == 0;
+            Vector2 player = run.Player.transform.position;
+            bool atExit = reading && Vector2.Distance(player, map.SignPosition) < 4.5f;
+            bool atSpawn = reading && Vector2.Distance(player, map.MovementSignPosition) < 3.5f;
+            signPanel.gameObject.SetActive(atExit || atSpawn);
+            if (!atExit && !atSpawn) return;
+
+            signAction.text = atExit ? "按住左键 · 自动瞄准射击" : "WASD 移动";
+            signDetail.text = atExit ? "门外的怪物会被声音惊醒" : "脚步会照亮四周";
+            Vector2 sign = atExit ? map.SignPosition : map.MovementSignPosition;
+            signPanel.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, atExit ? 302 : 180);
+            signPanel.position = sign + Vector2.up * 1.8f;
         }
 
         public void RebuildMinimap()
