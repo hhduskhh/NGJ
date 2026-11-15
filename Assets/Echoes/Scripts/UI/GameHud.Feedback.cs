@@ -95,7 +95,6 @@ namespace Echoes
 
         private void ResetScreenFeedback()
         {
-            CloseEnding();
             CancelChoicePress();
             if (lastEcho) Destroy(lastEcho.gameObject);
             resultPage = null;
@@ -117,15 +116,10 @@ namespace Echoes
             resultPage.alpha = 0;
             resultPage.interactable = resultPage.blocksRaycasts = false;
             modalBackdrop.GetComponent<UnityEngine.UI.Image>().color = Color.clear;
-            swallowMouseRelease = Input.GetMouseButton(0);
-            if (run.State == RunState.Won)
-            {
-                BeginEnding();
-                return;
-            }
             lastEcho = PixelArt.Circle("FinalEcho", run.transform, PixelArt.Gold);
             lastEcho.transform.position = run.Boss.transform.position;
             lastEcho.sortingOrder = 36;
+            swallowMouseRelease = Input.GetMouseButton(0);
         }
 
         private void SetRevealProgress(float t)
@@ -139,8 +133,7 @@ namespace Echoes
             }
             float page = Mathf.SmoothStep(0, 1, Mathf.InverseLerp(.38f, 1, t));
             resultPage.alpha = page;
-            var startShade = run.State == RunState.Won ? Color.black : Color.clear;
-            modalBackdrop.GetComponent<UnityEngine.UI.Image>().color = Color.Lerp(startShade, ResultShade, page);
+            modalBackdrop.GetComponent<UnityEngine.UI.Image>().color = Color.Lerp(Color.clear, ResultShade, page);
             if (t < 1) return;
             revealing = false;
             if (lastEcho) Destroy(lastEcho.gameObject);
@@ -150,7 +143,6 @@ namespace Echoes
         {
             if (!resultPage || Time.frameCount == revealFrame) return;
             bool confirm = Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter) ||
-                (endingPlayer && Input.GetKeyDown(KeyCode.Escape)) ||
                 Input.GetKeyDown(KeyCode.Space) || (run.State == RunState.FloorCleared && Input.GetKeyDown(KeyCode.E));
             HandleResultInput(confirm, Input.GetMouseButtonDown(0), Input.GetMouseButton(0), Input.GetMouseButtonUp(0));
         }
@@ -165,16 +157,6 @@ namespace Echoes
                 {
                     consumedFrame = Time.frameCount;
                     swallowMouseRelease = mouseHeld;
-                }
-                if (endingPlayer)
-                {
-                    if (!skip && !EndingFinished()) return;
-                    CloseEnding();
-                    if (!skip)
-                    {
-                        revealStart = Time.unscaledTime;
-                        return;
-                    }
                 }
                 SetRevealProgress(skip ? 1 : Mathf.Clamp01((Time.unscaledTime - revealStart) / revealDuration));
                 return;

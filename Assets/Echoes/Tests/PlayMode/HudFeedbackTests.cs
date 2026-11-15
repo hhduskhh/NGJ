@@ -94,35 +94,12 @@ namespace Echoes.Tests
             run.Hud.HandleResultInput(true, false, false, false);
             Assert.AreEqual(2, run.Floor);
             run.SetState(RunState.Won);
+            Assert.IsNull(Object.FindObjectOfType<UnityEngine.Video.VideoPlayer>());
             page = GameObject.Find("RunResult").GetComponent<CanvasGroup>();
             Assert.IsFalse(page.interactable);
-            yield return null;
-            Assert.IsNotNull(GameObject.Find("EndingFilm"));
-            run.Hud.HandleResultInput(true, false, false, false);
-            yield return null;
-            run.Hud.HandleResultInput(false, false, false, false);
-            Assert.AreEqual(RunState.Won, run.State);
+            yield return new WaitForSecondsRealtime(run.Config.victoryRevealSeconds + .15f);
             Assert.IsTrue(page.interactable);
             Assert.AreEqual(1, page.alpha);
-        }
-
-        [UnityTest]
-        public IEnumerator EndingDecodesAndReturnsToVictoryResult()
-        {
-            run.SetState(RunState.Won);
-            var page = GameObject.Find("RunResult").GetComponent<CanvasGroup>();
-            var film = GameObject.Find("EndingFilm").GetComponent<UnityEngine.Video.VideoPlayer>();
-            double latestTime = 0;
-            float deadline = Time.realtimeSinceStartup + 30;
-            while (!page.interactable && Time.realtimeSinceStartup < deadline)
-            {
-                if (film && film.texture) latestTime = System.Math.Max(latestTime, film.time);
-                yield return null;
-            }
-            Assert.Greater(latestTime, 14, "Expected decoded frames through the window shot.");
-            Assert.AreEqual(RunState.Won, run.State);
-            Assert.IsTrue(page.interactable);
-            Assert.IsNull(GameObject.Find("EndingFilm"));
         }
     }
 }
