@@ -334,6 +334,7 @@ namespace Echoes.Tests
                     entry.Stop();
                     var first = run.Enemies.Where(e => !e.IsBoss).ToArray();
                     int count = first.Length;
+                    Assert.LessOrEqual(count, run.Config.finalFloorInitialEnemiesPerRoom, room.Name);
                     total += count;
                     if (count > largest)
                     {
@@ -343,6 +344,8 @@ namespace Echoes.Tests
                     }
                     foreach (var enemy in first)
                     {
+                        Assert.AreEqual(run.Config.enemyHealth * run.EnemyHealthScale * (enemy.IsElite ? 3f : 1f),
+                            enemy.MaxHealth, .001f);
                         Assert.AreSame(room, run.Map.RoomAtPosition(enemy.transform.position));
                         Assert.IsTrue(run.Map.IsWalkable(Vector2Int.RoundToInt(enemy.transform.position)));
                     }
@@ -361,7 +364,10 @@ namespace Echoes.Tests
                     Assert.AreEqual(count - 1, run.Enemies.Count(e => !e.IsBoss));
                     Assert.IsTrue(run.Enemies.Any(e => !e.IsBoss && e.Health == health && e.Awake));
                 }
-                Assert.That(total, Is.InRange(draws * min, draws * max));
+                int middleRoomCount = run.Map.Rooms.Count(r => r.Role == RoomRole.Middle);
+                int roomCap = run.Config.finalFloorInitialEnemiesPerRoom;
+                int lowerBound = Mathf.Min(draws * min - middleRoomCount * (min - 1), middleRoomCount * roomCap);
+                Assert.That(total, Is.InRange(Mathf.Max(1, lowerBound), Mathf.Min(draws * max, middleRoomCount * roomCap)));
                 Debug.Log($"Floor {floor}: {total} initial enemies across rooms, largest room {largest}, entry frame {largestEntryMs:F1} ms");
                 run.Player.PlaceAt(largestRoom.Center);
                 yield return null;
