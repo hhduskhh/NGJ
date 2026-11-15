@@ -12,6 +12,7 @@ namespace Echoes
         private GameObject settings;
         private Button start, settingsButton, displayButton;
         private TMP_FontAsset font;
+        private TextMeshProUGUI laughLabel;
 
         public void Initialize(UnityAction begin)
         {
@@ -34,8 +35,14 @@ namespace Echoes
             var panel = Rect("Settings Panel", poster, .018f, .23f, .32f, .60f);
             settings = panel.gameObject;
             settings.AddComponent<Image>().color = new Color(.035f, .12f, .13f, .99f);
-            displayButton = PanelButton("切换全屏", panel, .52f, () => Screen.fullScreen = !Screen.fullScreen);
-            PanelButton("返回", panel, .12f, () => ToggleSettings(false));
+            displayButton = PanelButton("切换全屏", panel, .66f, () => Screen.fullScreen = !Screen.fullScreen);
+            var laughButton = PanelButton("全屏点亮大笑音效", panel, .35f, () =>
+            {
+                NoiseSystem.ScreenLightLaughEnabled = !NoiseSystem.ScreenLightLaughEnabled;
+                RefreshLaughLabel();
+            });
+            laughLabel = laughButton.GetComponentInChildren<TextMeshProUGUI>();
+            PanelButton("返回", panel, .04f, () => ToggleSettings(false));
             settings.SetActive(false);
         }
 
@@ -96,8 +103,17 @@ namespace Echoes
             foreach (Transform child in poster)
                 if (child.GetComponent<Button>()) child.gameObject.SetActive(!open);
             settings.SetActive(open);
-            if (open) displayButton.Select();
+            if (open)
+            {
+                RefreshLaughLabel();
+                displayButton.Select();
+            }
             else if (!Input.GetMouseButtonUp(0)) settingsButton.Select();
+        }
+
+        private void RefreshLaughLabel()
+        {
+            laughLabel.text = "全屏点亮大笑音效  " + (NoiseSystem.ScreenLightLaughEnabled ? "开" : "关");
         }
 
         private void Update()

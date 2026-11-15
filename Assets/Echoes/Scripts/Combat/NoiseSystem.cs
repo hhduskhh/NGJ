@@ -7,10 +7,22 @@ namespace Echoes
 
     public sealed class NoiseSystem : MonoBehaviour
     {
+        private const string ScreenLightLaughKey = "ScreenLightLaughEnabled";
+        public static bool ScreenLightLaughEnabled
+        {
+            get => PlayerPrefs.GetInt(ScreenLightLaughKey, 1) != 0;
+            set
+            {
+                PlayerPrefs.SetInt(ScreenLightLaughKey, value ? 1 : 0);
+                PlayerPrefs.Save();
+            }
+        }
+
         private RunController run;
         private AudioSource audioSource;
         private AudioClip bell, footstep, click, coin;
         private AudioClip pickup, hit, wake, enemyStep, guardReady, ambience;
+        private AudioClip screenLightLaugh, screenLightChime;
         private readonly AudioClip[] shots = new AudioClip[3];
         private readonly AudioSource[] shotVoices = new AudioSource[3];
         private readonly float[] shotLevels = new float[3];
@@ -42,7 +54,8 @@ namespace Echoes
             bossVoice = Voice();
             bossVoice.clip = Load("BossReady");
             screenLightVoice = Voice();
-            screenLightVoice.clip = Load("ScreenLightLaugh");
+            screenLightLaugh = Load("ScreenLightLaugh");
+            screenLightChime = Load("ScreenLightChime");
             nextAmbience = Time.time + Random.Range(8f, 16f);
             bell = Tone("BellPlaceholder", 640, .2f);
             footstep = Tone("FootstepPlaceholder", 75, .045f);
@@ -59,6 +72,7 @@ namespace Echoes
         public void PlayUiPress() => audioSource.PlayOneShot(click, .36f);
         public void PlayScreenLight()
         {
+            screenLightVoice.clip = ScreenLightLaughEnabled ? screenLightLaugh : screenLightChime;
             screenLightVoice.volume = run.Config.screenLightVolume;
             screenLightVoice.Play();
         }

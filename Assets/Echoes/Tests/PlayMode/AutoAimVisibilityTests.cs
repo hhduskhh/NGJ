@@ -93,12 +93,16 @@ namespace Echoes.Tests
             var laugh = Resources.Load<AudioClip>("CombatAudio/ScreenLightLaugh");
             Assert.IsNotNull(laugh);
             Assert.AreEqual(4f, laugh.length, .01f);
-            var voice = run.Noise.GetComponents<AudioSource>().Single(source => source.clip == laugh);
+            var chime = Resources.Load<AudioClip>("CombatAudio/ScreenLightChime");
+            Assert.IsNotNull(chime);
+            bool originalLaugh = NoiseSystem.ScreenLightLaughEnabled;
+            var expected = originalLaugh ? laugh : chime;
             run.SetState(RunState.Paused);
             Assert.IsFalse(vision.TryLightScreen());
-            Assert.IsFalse(voice.isPlaying);
+            Assert.IsFalse(run.Noise.GetComponents<AudioSource>().Any(source => source.clip == expected && source.isPlaying));
             run.SetState(RunState.Playing);
             Assert.IsTrue(vision.TryLightScreen());
+            var voice = run.Noise.GetComponents<AudioSource>().Single(source => source.clip == expected);
             Assert.IsTrue(voice.isPlaying);
             Assert.AreEqual(15f, vision.ScreenLightCooldownRemaining, .01f);
             Assert.IsFalse(vision.IsVisible(destination));
@@ -143,7 +147,21 @@ namespace Echoes.Tests
             Assert.IsFalse(vision.TryLightScreen());
             Assert.IsFalse(voice.isPlaying);
             yield return new WaitForSeconds(vision.ScreenLightCooldownRemaining + .25f);
-            Assert.IsTrue(vision.TryLightScreen());
+            run.SetState(RunState.Paused);
+            GameObject.Find("OpenSettings").GetComponent<UnityEngine.UI.Button>().onClick.Invoke();
+            try
+            {
+                GameObject.Find("ScreenLightLaughToggle").GetComponent<UnityEngine.UI.Button>().onClick.Invoke();
+                Assert.AreEqual(!originalLaugh, NoiseSystem.ScreenLightLaughEnabled);
+                run.SetState(RunState.Playing);
+                Assert.IsTrue(vision.TryLightScreen());
+                Assert.AreSame(originalLaugh ? chime : laugh, voice.clip);
+                Assert.IsTrue(voice.isPlaying);
+            }
+            finally
+            {
+                NoiseSystem.ScreenLightLaughEnabled = originalLaugh;
+            }
         }
 
         [UnityTest]

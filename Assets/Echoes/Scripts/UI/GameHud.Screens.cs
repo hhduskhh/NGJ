@@ -88,7 +88,13 @@ namespace Echoes
                 run.SetFeelDebugMode(!run.FeelDebugMode);
                 RefreshModal();
             }).name = "FeelDebugModeToggle";
-            Label(modal, "本次探索可免费购买商品和刷新货架。\n关闭后恢复正常消费，已有金币和拾取收益保留。\n重新开始探索时自动关闭。", new Vector2(40, -224), new Vector2(780, 136), 22, muted);
+            Label(modal, "本次探索可免费购买商品和刷新货架。\n关闭后恢复正常消费，已有金币和拾取收益保留。\n重新开始探索时自动关闭。", new Vector2(40, -207), new Vector2(780, 96), 22, muted);
+            Label(modal, "全屏点亮大笑音效", new Vector2(40, -316), new Vector2(490, 52), 24, Paper);
+            Button(modal, NoiseSystem.ScreenLightLaughEnabled ? "已开启" : "已关闭", new Vector2(300, -310), new Vector2(180, 54), () =>
+            {
+                NoiseSystem.ScreenLightLaughEnabled = !NoiseSystem.ScreenLightLaughEnabled;
+                RefreshModal();
+            }).name = "ScreenLightLaughToggle";
             Button(modal, "返回暂停页", new Vector2(-284, -385), new Vector2(212, 58), () =>
             {
                 settingsOpen = false;
