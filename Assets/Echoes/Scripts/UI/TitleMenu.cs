@@ -36,7 +36,7 @@ namespace Echoes
             settings = panel.gameObject;
             settings.AddComponent<Image>().color = new Color(.035f, .12f, .13f, .99f);
             displayButton = PanelButton("切换全屏", panel, .66f, () => Screen.fullScreen = !Screen.fullScreen);
-            var laughButton = PanelButton("全屏点亮大笑音效", panel, .35f, () =>
+            var laughButton = PanelButton("特殊音效", panel, .35f, () =>
             {
                 NoiseSystem.ScreenLightLaughEnabled = !NoiseSystem.ScreenLightLaughEnabled;
                 RefreshLaughLabel();
@@ -113,7 +113,7 @@ namespace Echoes
 
         private void RefreshLaughLabel()
         {
-            laughLabel.text = "全屏点亮大笑音效  " + (NoiseSystem.ScreenLightLaughEnabled ? "开" : "关");
+            laughLabel.text = "特殊音效  " + (NoiseSystem.ScreenLightLaughEnabled ? "开" : "关");
         }
 
         private void Update()
